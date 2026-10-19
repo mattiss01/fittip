@@ -116,6 +116,45 @@ export class GoalSuggestions {
     };
   }
 
+  /**
+   * ADR-035. The coach's "don't repeat" list: the open ones, and those
+   * rejected on or after `since`. Titles and dates only; assembly applies the
+   * window again and keeps the newest ten.
+   */
+  async listForCoach(since: string): Promise<
+    {
+      title: string;
+      status: "proposed" | "rejected";
+      createdAt: string;
+      decidedAt: string | null;
+    }[]
+  > {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(since)) {
+      throw new GoalSuggestionPersistenceError();
+    }
+    const userId = await this.getVerifiedUserId();
+    const { data, error } = await this.client
+      .from("goal_suggestions")
+      .select("title, status, created_at, decided_at")
+      .eq("user_id", userId)
+      .or(`status.eq.proposed,and(status.eq.rejected,decided_at.gte.${since})`)
+      .order("created_at", { ascending: false })
+      .limit(40);
+    if (error) throw new GoalSuggestionPersistenceError();
+    return data.flatMap((row) =>
+      row.status === "proposed" || row.status === "rejected"
+        ? [
+            {
+              title: row.title,
+              status: row.status,
+              createdAt: row.created_at,
+              decidedAt: row.decided_at,
+            },
+          ]
+        : [],
+    );
+  }
+
   /** Accept as Core or Supporting, or Reject. */
   async decide(input: {
     suggestionId: string;

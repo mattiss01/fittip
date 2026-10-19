@@ -123,11 +123,16 @@ export async function generateRoadmapProposal(
   // when the declined proposal answered a change request: read from the stored
   // request, never from the form, and the database decides the same way.
   let changeRoadmap = input.changeRoadmap === true;
+  // Asking again answers the same note, so the coach is sent it again (owner,
+  // 19 Oct 2026): it went missing, and the coach answered the feedback alone.
+  // Read from the predecessor, as the change is, never from the form.
+  let planningNote = input.planningNote;
   if (input.previousProposalId !== null) {
     const previous = await roadmaps.getProposal(input.previousProposalId);
     if (!previous) throw new RoadmapConflictError("not-available");
     previousProposal = reducePreviousProposal(previous.content);
     changeRoadmap = previous.changesRoadmap;
+    planningNote = previous.planningNote;
   }
 
   // The fingerprint is what makes a reused key with different input a conflict
@@ -140,7 +145,7 @@ export async function generateRoadmapProposal(
     input.endDate,
     String(input.expectedHeadRevision),
     input.previousProposalId ?? "initial",
-    String(input.planningNote?.length ?? 0),
+    String(planningNote?.length ?? 0),
     String(input.regenerationFeedback?.length ?? 0),
     // ADR-028. Added only for a change request, so every other request's
     // fingerprint is what it was and a key in flight across a deploy still
@@ -154,7 +159,7 @@ export async function generateRoadmapProposal(
     startDate: input.startDate,
     endDate: input.endDate,
     expectedHeadRevision: input.expectedHeadRevision,
-    planningNote: input.planningNote,
+    planningNote,
     previousProposalId: input.previousProposalId,
     regenerationFeedback: input.regenerationFeedback,
     ...(changeRoadmap ? { changeRoadmap: true } : {}),
@@ -206,7 +211,7 @@ export async function generateRoadmapProposal(
       compose: {
         horizonStartDate: input.startDate,
         horizonEndDate: input.endDate,
-        planningNote: input.planningNote,
+        planningNote,
         regenerationFeedback: input.regenerationFeedback,
         previousProposal,
         ...(changeRoadmap ? { changeRoadmap: true } : {}),
@@ -235,7 +240,7 @@ export async function generateRoadmapProposal(
     modelCode: binding.modelCode,
     rateCardVersion: binding.rateCard.version,
     spendReservationId: outcome.spendReservationId,
-    planningNote: input.planningNote,
+    planningNote,
     regenerationFeedback: input.regenerationFeedback,
     content: outcome.proposal as RoadmapProposal,
     sources: outcome.sources,
@@ -252,15 +257,13 @@ export async function generateRoadmapProposal(
   );
   // ADR-034. A change request may still state a new objective ("a half
   // marathon in spring"), which is exactly a goal, so it is not excluded.
-  // Not on "ask again", as on the plan: the first answer to a note made any
-  // suggestion it holds.
-  if (input.previousProposalId === null) {
-    await recordGoalSuggestion(
-      "roadmap",
-      claim.completionToken,
-      outcome.goalSuggestion,
-    );
-  }
+  // "Ask again" may suggest too (owner, 19 Oct 2026): what the first answer
+  // suggested is on the coach's "don't repeat" list by now (ADR-035).
+  await recordGoalSuggestion(
+    "roadmap",
+    claim.completionToken,
+    outcome.goalSuggestion,
+  );
   return { status: "proposal", proposalId, memoryCandidateCount };
 }
 

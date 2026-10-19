@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildCoachAIContext,
+  dropAlreadySuggested,
+  selectAlreadySuggested,
   selectRecentSafetyFlagDays,
   byteLength,
   COACH_AI_CONTEXT_LIMITS,
@@ -251,6 +253,7 @@ describe("coach AI context assembly", () => {
       bytes.planningNote +
       bytes.regenerationFeedback +
       bytes.previousProposal +
+      bytes.alreadySuggested +
       bytes.roadmap;
     // The envelope: the keys, three dates, a flag, and at most twelve goal
     // ids outside the horizon.
@@ -434,7 +437,8 @@ describe("the per-source context allocation", () => {
       limits.bytes.planCommitments +
       limits.bytes.planningNote +
       limits.bytes.regenerationFeedback +
-      limits.bytes.previousProposal;
+      limits.bytes.previousProposal +
+      limits.bytes.alreadySuggested;
 
     expect(sumOfParts).toBeLessThanOrEqual(limits.bytes.total);
   });
@@ -445,7 +449,7 @@ describe("the per-source context allocation", () => {
     // guard over the whole message set. Measured against the prefix budget
     // `openai-prompt.test.ts` enforces rather than against today's prefix, so
     // this cannot pass only because the prompt happens to be short right now.
-    const staticPrefixBudget = 7_800;
+    const staticPrefixBudget = 8_400;
     const wrapperAllowance = 64;
     const estimatedTokens = Math.ceil(
       (staticPrefixBudget + wrapperAllowance + limits.bytes.total) / 4,
@@ -457,7 +461,9 @@ describe("the per-source context allocation", () => {
     // planned sessions with minutes and the roadmap in force: 14,179. ADR-028
     // (13 October 2026) lets a change request send the whole roadmap in place
     // of its outline, and raised the ceiling to 18,000 for it.
-    expect(estimatedTokens).toBe(17_891);
+    // ADR-035 (19 October 2026) sends the "don't repeat" list, inside the
+    // 20,000 ceiling of ADR-034.
+    expect(estimatedTokens).toBe(19_341);
     expect(estimatedTokens).toBeLessThanOrEqual(
       COACH_AI_LIVE_LIMITS.maxInputTokens,
     );
@@ -2256,5 +2262,144 @@ describe("fill_session_activities assembly", () => {
       limits.bytes.sessionDetail;
     expect(sumOfParts).toBeLessThan(limits.bytes.total);
     expect(byteLength("")).toBe(0);
+  });
+});
+
+describe("the don't-repeat list (ADR-035)", () => {
+  const suggested = (overrides: Partial<MemoryItemView>) =>
+    memoryItem({
+      provenance: "inferred_proposed",
+      status: "proposed",
+      ...overrides,
+    });
+
+  it("lists open and lately rejected suggestions, and never as memory", () => {
+    const assembled = build({
+      memory: [
+        memoryItem({ content: "Owner wrote this." }),
+        suggested({
+          id: "c3000000-0000-4000-8000-000000000002",
+          content: "Open one.",
+        }),
+        suggested({
+          id: "c3000000-0000-4000-8000-000000000003",
+          status: "rejected",
+          content: "Rejected 60 days ago.",
+          updatedAt: "2026-06-11T08:00:00.000Z",
+        }),
+        suggested({
+          id: "c3000000-0000-4000-8000-000000000004",
+          status: "rejected",
+          content: "Rejected 61 days ago.",
+          updatedAt: "2026-06-10T08:00:00.000Z",
+        }),
+        suggested({
+          id: "c3000000-0000-4000-8000-000000000005",
+          status: "active",
+          content: "Accepted one.",
+        }),
+      ],
+      goalSuggestions: [
+        {
+          title: "Run 5 km",
+          status: "proposed",
+          createdAt: "2026-08-01T00:00:00Z",
+          decidedAt: null,
+        },
+        {
+          title: "Old no",
+          status: "rejected",
+          createdAt: "2026-05-01T00:00:00Z",
+          decidedAt: "2026-06-01T00:00:00Z",
+        },
+        {
+          title: "Recent no",
+          status: "rejected",
+          createdAt: "2026-07-01T00:00:00Z",
+          decidedAt: "2026-07-02T00:00:00Z",
+        },
+      ],
+    });
+
+    expect(assembled.context.alreadySuggested).toEqual({
+      memory: ["Open one.", "Rejected 60 days ago."],
+      goals: ["Run 5 km", "Recent no"],
+    });
+    expect(assembled.context.memory.map((item) => item.content)).toEqual([
+      "Owner wrote this.",
+      "Accepted one.",
+    ]);
+  });
+
+  it("is sent on the plan and the roadmap and not on a fill", () => {
+    expect(build().context.alreadySuggested).toEqual({ memory: [], goals: [] });
+    expect(
+      COACH_AI_CONTEXT_LIMITS.create_seven_day_plan.bytes.alreadySuggested,
+    ).toBeGreaterThan(0);
+    expect(
+      COACH_AI_CONTEXT_LIMITS.fill_session_activities.bytes.alreadySuggested,
+    ).toBe(0);
+  });
+
+  it("keeps the newest, cuts long wording and trims to its allocation", () => {
+    const memory = Array.from({ length: 25 }, (_, index) =>
+      suggested({
+        id: `c3000000-0000-4000-8000-${String(index).padStart(12, "0")}`,
+        content: `${String(index).padStart(2, "0")} ${"€".repeat(400)}`,
+        updatedAt: `2026-08-${String((index % 9) + 1).padStart(2, "0")}T${String(index).padStart(2, "0")}:00:00.000Z`,
+      }),
+    );
+    const goals = Array.from({ length: 12 }, (_, index) => ({
+      title: "g".repeat(120),
+      status: "proposed" as const,
+      createdAt: `2026-08-01T${String(index).padStart(2, "0")}:00:00Z`,
+      decidedAt: null,
+    }));
+    const limit = COACH_AI_CONTEXT_LIMITS.create_roadmap.bytes.alreadySuggested;
+
+    const listed = selectAlreadySuggested(memory, goals, TODAY, limit);
+
+    expect(byteLength(JSON.stringify(listed))).toBeLessThanOrEqual(limit);
+    expect(listed.goals).toHaveLength(10);
+    expect(listed.memory.length).toBeGreaterThan(0);
+    expect(Array.from(listed.memory[0] ?? "")).toHaveLength(160);
+    // The newest first: 08-09 at 17:00 is index 17.
+    expect(listed.memory[0]?.startsWith("17 ")).toBe(true);
+
+    const ascii = selectAlreadySuggested(
+      memory.map((item) => ({ ...item, content: "m".repeat(400) })),
+      goals,
+      TODAY,
+      limit,
+    );
+    // In ASCII the whole of twenty and ten fit.
+    expect(ascii.memory).toHaveLength(20);
+    expect(ascii.goals).toHaveLength(10);
+  });
+});
+
+describe("dropping an exact repeat (ADR-035)", () => {
+  it("drops a suggestion worded as one on the list, case and spacing aside", () => {
+    const kept = dropAlreadySuggested(
+      { memory: ["Runs before work."], goals: ["Run 5 km twice a week"] },
+      [
+        { memoryType: "preference", content: "runs  before work" },
+        { memoryType: "preference", content: "Prefers evening runs." },
+      ],
+      { title: "Run 5 KM twice a week.", desiredOutcome: "x" },
+    );
+
+    expect(kept.memoryCandidates.map((item) => item.content)).toEqual([
+      "Prefers evening runs.",
+    ]);
+    expect(kept.goalSuggestion).toBeNull();
+  });
+
+  it("keeps everything on a call that sends no list", () => {
+    const goal = { title: "Run 5 km" };
+    expect(dropAlreadySuggested(undefined, [{ content: "a" }], goal)).toEqual({
+      memoryCandidates: [{ content: "a" }],
+      goalSuggestion: goal,
+    });
   });
 });

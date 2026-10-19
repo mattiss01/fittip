@@ -3,6 +3,7 @@ import "server-only";
 import { isoDateInTimezone, shiftIsoDate } from "@/lib/date/local-date";
 import type { ProfileDetailsView } from "@/lib/profile/profile-contract";
 import {
+  ALREADY_SUGGESTED_REJECTED_DAYS,
   CoachAIContextBelowMinimumError,
   COACH_AI_CONTEXT_LIMITS,
   selectRecentSafetyFlagDays,
@@ -23,6 +24,7 @@ import {
 import { readPlanWindowToppedUp } from "@/server/completions/plan-window-top-up";
 import { createCompletionLog } from "@/server/repositories/completion-log-repository";
 import { createGoalRepository } from "@/server/repositories/goal-repository";
+import { createGoalSuggestions } from "@/server/repositories/goal-suggestion-repository";
 import { createMemoryRepository } from "@/server/repositories/memory-repository";
 import type { CoachProfileRecords } from "@/server/profile/coach-profile-context";
 import { createPersonalActivityLibrary } from "@/server/repositories/personal-activity-repository";
@@ -183,6 +185,7 @@ export class OwnedRecordsCoachAIContextSource implements CoachAIContextSource {
       roadmapVersion,
       library,
       savedSessions,
+      goalSuggestions,
     ] = await Promise.all([
       // ADR-023: the athlete's basics and the training setup. The same row
       // the identity check above read, asked for again for its other columns;
@@ -239,6 +242,13 @@ export class OwnedRecordsCoachAIContextSource implements CoachAIContextSource {
       // the plan and the roadmap stay without the library (decision 4).
       fillsSession ? (await createPersonalActivityLibrary()).list() : [],
       fillsSession ? (await createSavedSessionLibrary()).list() : [],
+      // ADR-035: the coach's own goal suggestions, for its "don't repeat"
+      // list. A fill suggests nothing and reads none.
+      fillsSession
+        ? []
+        : (await createGoalSuggestions()).listForCoach(
+            shiftIsoDate(today, -ALREADY_SUGGESTED_REJECTED_DAYS),
+          ),
     ]);
 
     // What ADR-013's window holds. For every operation but a fill that is
@@ -341,6 +351,7 @@ export class OwnedRecordsCoachAIContextSource implements CoachAIContextSource {
       memoryCollectionRevision: memory.revision,
       goals: goals.goals,
       memory: memory.items,
+      goalSuggestions,
       training,
       profile: details === null ? null : toCoachProfileRecords(details),
       timezoneName,

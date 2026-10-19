@@ -451,6 +451,14 @@ export type CoachAIContext = {
   recentSafetyFlagsWithheld?: number;
   /** True when any eligible completion carries one of the four safety flags. */
   hasSafetySignal: boolean;
+  /**
+   * ADR-035. What the coach already suggested and the athlete has not
+   * accepted: still open, or rejected in the last 60 days. Sent only so it is
+   * not suggested again; it is not a fact about the athlete and nothing is
+   * planned from it. Present for the plan and the roadmap, absent for a fill,
+   * which suggests neither.
+   */
+  alreadySuggested?: CoachAIAlreadySuggested;
   planningNote: string | null;
   regenerationFeedback: string | null;
   /**
@@ -693,6 +701,15 @@ export type CoachAIGoalSuggestion = {
   sports: string[];
   /** Only when the note names a date. */
   targetDate: string | null;
+};
+
+/**
+ * ADR-035. The "don't repeat" list: memory suggestions by their wording, cut
+ * to 160 characters, and goal suggestions by their title.
+ */
+export type CoachAIAlreadySuggested = {
+  memory: string[];
+  goals: string[];
 };
 
 /**

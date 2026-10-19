@@ -11,7 +11,11 @@ const {
   createSavedSessionsMock,
   createCancellationsMock,
   createCoachCancellationsMock,
+  createGoalSuggestionsMock,
+  listGoalSuggestionsForCoach,
 } = vi.hoisted(() => ({
+  createGoalSuggestionsMock: vi.fn(),
+  listGoalSuggestionsForCoach: vi.fn(),
   createCancellationsMock: vi.fn(),
   createCoachCancellationsMock: vi.fn(),
   createLibraryMock: vi.fn(),
@@ -34,6 +38,16 @@ vi.mock("@/server/repositories/goal-repository", async (original) => {
     await original<typeof import("@/server/repositories/goal-repository")>();
   return { ...actual, createGoalRepository: createGoalMock };
 });
+vi.mock(
+  "@/server/repositories/goal-suggestion-repository",
+  async (original) => {
+    const actual =
+      await original<
+        typeof import("@/server/repositories/goal-suggestion-repository")
+      >();
+    return { ...actual, createGoalSuggestions: createGoalSuggestionsMock };
+  },
+);
 vi.mock("@/server/repositories/memory-repository", async (original) => {
   const actual =
     await original<typeof import("@/server/repositories/memory-repository")>();
@@ -169,6 +183,10 @@ describe("the production coaching context source", () => {
     });
     createGoalMock.mockResolvedValue({ list: listGoals });
     createMemoryMock.mockResolvedValue({ list: listMemory });
+    listGoalSuggestionsForCoach.mockResolvedValue([]);
+    createGoalSuggestionsMock.mockResolvedValue({
+      listForCoach: listGoalSuggestionsForCoach,
+    });
     createCompletionLogMock.mockResolvedValue({ list: listCompletions });
     createRollingPlanMock.mockResolvedValue({
       getPlanSlice,
@@ -302,6 +320,23 @@ describe("the production coaching context source", () => {
 
       expect(records.sessionDetail).toBeNull();
     });
+  });
+
+  it("reads the coach's goal suggestions of the last 60 days for the plan and the roadmap (ADR-035)", async () => {
+    const open = {
+      title: "Run 5 km",
+      status: "proposed",
+      createdAt: "2026-08-01T00:00:00Z",
+      decidedAt: null,
+    };
+    listGoalSuggestionsForCoach.mockResolvedValue([open]);
+
+    const plan = await source("create_seven_day_plan").load(OWNER);
+    await source("create_roadmap").load(OWNER);
+
+    expect(listGoalSuggestionsForCoach).toHaveBeenCalledTimes(2);
+    expect(listGoalSuggestionsForCoach).toHaveBeenCalledWith("2026-06-05");
+    expect(plan.goalSuggestions).toEqual([open]);
   });
 
   it("reads no library and no saved sessions for the plan or the roadmap", async () => {
