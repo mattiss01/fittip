@@ -132,6 +132,63 @@ describe("PlanManager", () => {
     expect(screen.queryByText("Create session")).toBeNull();
   });
 
+  // Owner, 19 Oct 2026: a card dragged onto another open day moves there.
+  it("moves a session dropped on another open day, and on no other", () => {
+    renderManager(INITIAL_PLAN_ACTION_STATE, [session()]);
+    const card = day(TODAY).querySelector<HTMLElement>("[data-draggable]")!;
+    const pointAt = vi.fn();
+    document.elementFromPoint = pointAt;
+
+    // jsdom has no PointerEvent: a mouse event carries the coordinates.
+    const pointer = (
+      target: EventTarget,
+      type: string,
+      init: { clientX?: number; clientY?: number } = {},
+    ) => {
+      const event = new MouseEvent(type, {
+        bubbles: true,
+        button: 0,
+        ...init,
+      });
+      Object.assign(event, { pointerId: 1, pointerType: "mouse" });
+      fireEvent(target as Element, event);
+    };
+    const dragTo = (target: HTMLElement) => {
+      pointAt.mockReturnValue(target);
+      pointer(card, "pointerdown", { clientX: 10, clientY: 10 });
+      pointer(document, "pointermove", { clientX: 10, clientY: 60 });
+      pointer(document, "pointerup");
+    };
+
+    // A day before today takes nothing.
+    dragTo(day("2026-08-18"));
+    expect(action).not.toHaveBeenCalled();
+
+    dragTo(day(DATES[2]));
+    expect(action).toHaveBeenCalledOnce();
+    const sent = action.mock.calls[0][0] as FormData;
+    expect(Object.fromEntries(sent)).toEqual({
+      operation: "move",
+      sessionId: session().id,
+      localDate: DATES[2],
+      expectedRevision: "3",
+    });
+    Reflect.deleteProperty(document, "elementFromPoint");
+  });
+
+  it("offers no drag on a logged session", () => {
+    renderManager(INITIAL_PLAN_ACTION_STATE, [
+      session({
+        log: {
+          completionId: "c",
+          outcome: "completed",
+          actualLocalDate: TODAY,
+        },
+      }),
+    ]);
+    expect(day(TODAY).querySelector("[data-draggable]")).toBeNull();
+  });
+
   it("pages between weeks with the arrows and the tiles", () => {
     renderManager(INITIAL_PLAN_ACTION_STATE, [
       session({ localDate: DATES[13], expectedDurationMinutes: 90 }),
