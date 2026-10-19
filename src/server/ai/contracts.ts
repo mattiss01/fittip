@@ -288,20 +288,37 @@ export type CoachAIPreviousProposalReference = {
  */
 export type CoachAIPreviousPlanReference = {
   weekDescription: string;
+  /**
+   * Every session it proposed, with the owner's decision on it (owner, 19 Oct
+   * 2026: "the coach should get all decisions"). Their choices, not their
+   * words. What was accepted, replaced or added beside reaches the plan with
+   * the new answer, so the coach counts it and does not propose it again.
+   */
   days: {
     date: string;
     title: string;
     sport: string;
     durationMinutes: number;
+    decision: PreviousPlanSessionDecision;
+    /** The owner's session it stood in for, while that is on the plan. */
+    replaces?: { date: string; title: string };
   }[];
-  /**
-   * The positions in `days` of the sessions the owner accepted. Their choice,
-   * not their words: those reach the plan with the replacement, so the coach
-   * counts them and does not propose them again (owner, 17 Oct 2026). A list
-   * rather than a mark per day, to stay inside the 5,900-byte allocation.
-   */
-  kept?: number[];
+  /** The sessions it suggested cancelling (ADR-033), each with the decision. */
+  cancels?: {
+    date: string;
+    title: string;
+    decision: PreviousPlanCancelDecision;
+  }[];
 };
+
+export type PreviousPlanSessionDecision =
+  | "accepted"
+  | "replaced"
+  | "addedBeside"
+  | "rejected"
+  | "undecided";
+
+export type PreviousPlanCancelDecision = "cancelled" | "kept" | "undecided";
 
 /**
  * One activity as the coach is shown it: in a session, a saved session, or

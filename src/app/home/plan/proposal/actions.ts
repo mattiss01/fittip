@@ -296,9 +296,10 @@ export async function regeneratePlanProposalAction(
       // What was open travels to the next proposal, as the note does: the
       // owner left those sessions open, and asking again does not take that
       // back, nor open one they never saw on the form. Only the ones that can
-      // still change: a session just replaced or cancelled by the finish above
-      // is no longer active, and one logged or cancelled since would refuse
-      // the whole request after the review has already closed.
+      // still change: one logged or cancelled since would refuse the whole
+      // request, and one the previous proposal's accepted replace or cancel
+      // is about to cancel, when the new answer closes it, is going away
+      // (owner, 19 Oct 2026).
       const [marked, completions] = await Promise.all([
         proposals.listReplaceableSessions(source.generationId),
         (await createCompletionLog()).findByPlanSessions(
@@ -315,9 +316,30 @@ export async function regeneratePlanProposalAction(
           )
           .map((session) => session.id),
       );
+      const goingAway = new Set(
+        source.items
+          .filter(
+            (item) =>
+              item.decision === "staged" && item.replacesSessionId !== null,
+          )
+          .map((item) => item.replacesSessionId),
+      );
       const replaceableSessionIds = marked
         .map((mark) => mark.sessionId)
-        .filter((id) => stillReplaceable.has(id));
+        .filter((id) => stillReplaceable.has(id) && !goingAway.has(id));
+      // The coach is told which of the owner's sessions each item replaced,
+      // by name (owner, 19 Oct 2026).
+      const replacedSessions = new Map(
+        slice.sessions.map((session) => [
+          session.id,
+          { localDate: session.localDate, title: session.title },
+        ]),
+      );
+      // Checked again with the names, still before anything is paid for:
+      // a title in a wide script can take the reduction past its bytes.
+      if (!previousPlanFits(source, replacedSessions)) {
+        return invalid(OUTCOMES.regenerationTooLarge, submission);
+      }
 
       const result = await generatePlanProposal(
         {
@@ -327,6 +349,7 @@ export async function regeneratePlanProposalAction(
           dayCount,
           expectedPlanRevision: slice.revision,
           replaceableSessionIds,
+          replacedSessions,
           planningNote: source.planningNote,
           idempotencyKey: `${idempotencyKey}-regen`,
           previousProposalId: proposalId,
