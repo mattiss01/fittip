@@ -44,8 +44,9 @@ pointed, so the new Lock lives where ADR-024 put the tick.
 6. **What a review cancelled is recorded beside the plan.** `plan_proposal_cancellations`
    holds each session a finished review cancelled, its proposal, the session that replaced
    it if any, and the session's `cancelled_at`. A replaced session is not shown on its day
-   while that row matches its current cancellation; the replacement's page offers to bring
-   it back (reactivate). No cancellation reason is written for it: those reasons are sent
+   while that row matches its current cancellation and its replacement is still active on
+   the same day; the replacement's page offers to bring it back (reactivate). Once the
+   replacement is cancelled or moved, the old session shows again with its own Reactivate. No cancellation reason is written for it: those reasons are sent
    to the coach as the athlete's own words, and this text would be the app's or the
    coach's. The page composes the reason from the record instead.
 
