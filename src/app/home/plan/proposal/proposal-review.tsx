@@ -467,7 +467,10 @@ function PlannedSession({
   session: PlannedSessionSummary;
   expectedPlanRevision: number;
   isPast: boolean;
-  /** The proposed session that would replace this one, if any still can. */
+  /**
+   * The proposed session that would replace this one, or the coach's
+   * suggestion to cancel it (ADR-033), if either still can happen.
+   */
   replacement: ProposalReplacement | null;
 }) {
   const [state, action, pending] = useActionState(
@@ -481,9 +484,9 @@ function PlannedSession({
       className={styles.planned}
       data-cancelled={cancelled}
       data-session-id={session.id}
-      // "chosen" once the owner picked Replace: the card is struck through,
-      // so what leaves the plan is plain at a glance (owner, 9 Oct 2026).
-      // "offered" while the choice is still open.
+      // "chosen" once the owner picked Replace or Cancel it: the card is
+      // struck through, so what leaves the plan is plain at a glance (owner,
+      // 9 Oct 2026). "offered" while the choice is still open.
       data-replaced={
         replacement === null
           ? undefined
@@ -506,9 +509,13 @@ function PlannedSession({
         >
           {replacement === null
             ? COPY.alreadyPlannedBadge
-            : replacement.isChosen
-              ? COPY.willBeReplacedBadge
-              : COPY.canBeReplacedBadge}
+            : replacement.kind === "cancel"
+              ? replacement.isChosen
+                ? COPY.willBeCancelledBadge
+                : COPY.mayBeCancelledBadge
+              : replacement.isChosen
+                ? COPY.willBeReplacedBadge
+                : COPY.mayBeReplacedBadge}
         </span>
       </header>
       <p className={styles.meta}>
@@ -524,9 +531,13 @@ function PlannedSession({
       </p>
       {replacement === null ? null : (
         <p className={styles.replacementNote}>
-          {replacement.isChosen
-            ? COPY.plannedWillBeReplaced(replacement.title)
-            : COPY.plannedMayBeReplaced(replacement.title)}
+          {replacement.kind === "cancel"
+            ? replacement.isChosen
+              ? COPY.plannedWillBeCancelled
+              : COPY.plannedMayBeCancelled
+            : replacement.isChosen
+              ? COPY.plannedWillBeReplaced(replacement.title)
+              : COPY.plannedMayBeReplaced(replacement.title)}
         </p>
       )}
 
@@ -650,8 +661,12 @@ function ProposedItem({
     INITIAL_PLAN_PROPOSAL_ACTION_STATE,
   );
 
-  // Every item is a proposed session since 17 Oct 2026; free days are no
-  // longer offered as recovery days (owner).
+  if (item.kind === "cancel") {
+    return <CancelItem proposalId={proposalId} item={item} />;
+  }
+
+  // Every other item is a proposed session since 17 Oct 2026; free days are
+  // no longer offered as recovery days (owner).
   const title = item.title ?? "";
   // A session it can still stand in for. Once that session is logged,
   // cancelled or gone, the finish adds this one and deletes nothing, so the
@@ -766,6 +781,101 @@ function ProposedItem({
           pending={pending}
           label={COPY.resetAction}
           accessibleLabel={COPY.resetActionFor(title)}
+        />
+      </form>
+
+      <p
+        className={
+          state.status === "idle" ? styles.srOnly : styles.inlineNotice
+        }
+        data-state={pending ? "pending" : state.status}
+        role="status"
+        aria-live="polite"
+      >
+        {pending ? "Saving your choice…" : state.message}
+      </p>
+    </article>
+  );
+}
+
+/**
+ * A planned session the coach suggests calling off (ADR-033): its title, the
+ * coach's reason, and two choices. Once the session is logged, cancelled or
+ * gone, there is nothing to cancel, so only Keep is offered and the card says
+ * why: the review still needs a choice before it can finish.
+ */
+function CancelItem({
+  proposalId,
+  item,
+}: {
+  proposalId: string;
+  item: ProposalTimelineItem;
+}) {
+  const [state, action, pending] = useActionState(
+    decidePlanProposalItemAction,
+    INITIAL_PLAN_PROPOSAL_ACTION_STATE,
+  );
+  const title = item.replaces?.title ?? item.title ?? "";
+  const available = item.replaces?.available === true;
+
+  return (
+    <article
+      className={styles.proposed}
+      data-decision={item.decision}
+      data-kind="cancel"
+    >
+      <header className={styles.cardHeader}>
+        <h3>{COPY.cancelItemTitle(title)}</h3>
+        <span className={styles.badge} data-kind={item.decision}>
+          <CoachSpark size={13} />
+          {item.decision === "staged"
+            ? COPY.willBeCancelledBadge
+            : item.decision === "rejected"
+              ? COPY.keptBadge
+              : COPY.proposedBadge}
+        </span>
+      </header>
+      {available ? null : (
+        <p className={styles.rationale} data-replaces="unavailable">
+          {COPY.cancelUnavailable(item.replaces?.title ?? null)}
+        </p>
+      )}
+      {item.rationale === null ? null : (
+        <p className={styles.rationale}>
+          <span className={styles.sectionLabel}>{COPY.cancelReasonLabel}</span>{" "}
+          {item.rationale}
+        </p>
+      )}
+
+      <form
+        className={styles.choices}
+        action={action}
+        key={`decide-${item.ordinal}-${state.submission}`}
+      >
+        <input type="hidden" name="proposalId" value={proposalId} />
+        <input type="hidden" name="ordinal" value={item.ordinal} />
+        {available ? (
+          <ChoiceButton
+            decision="staged"
+            current={item.decision}
+            pending={pending}
+            label={COPY.cancelItemAction}
+            accessibleLabel={COPY.cancelItemActionFor(title)}
+          />
+        ) : null}
+        <ChoiceButton
+          decision="rejected"
+          current={item.decision}
+          pending={pending}
+          label={COPY.keepItemAction}
+          accessibleLabel={COPY.keepItemActionFor(title)}
+        />
+        <ChoiceButton
+          decision="proposed"
+          current={item.decision}
+          pending={pending}
+          label={COPY.resetAction}
+          accessibleLabel={COPY.resetActionFor(COPY.cancelItemTitle(title))}
         />
       </form>
 

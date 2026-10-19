@@ -162,7 +162,11 @@ describe("an item that would replace a planned session (ADR-024)", () => {
         day({
           items: [replacing(true)],
           replacements: {
-            [SESSION_ID]: { title: "Tempo run", isChosen: false },
+            [SESSION_ID]: {
+              kind: "replace",
+              title: "Tempo run",
+              isChosen: false,
+            },
           },
         }),
       ],
@@ -182,7 +186,7 @@ describe("an item that would replace a planned session (ADR-024)", () => {
     expect(
       screen.getByText(COPY.plannedMayBeReplaced("Tempo run")),
     ).toBeVisible();
-    expect(screen.getByText(COPY.canBeReplacedBadge)).toBeVisible();
+    expect(screen.getByText(COPY.mayBeReplacedBadge)).toBeVisible();
   });
 
   it("strikes the owner's session through once Replace is chosen", () => {
@@ -191,7 +195,11 @@ describe("an item that would replace a planned session (ADR-024)", () => {
         day({
           items: [{ ...replacing(true), decision: "staged" }],
           replacements: {
-            [SESSION_ID]: { title: "Tempo run", isChosen: true },
+            [SESSION_ID]: {
+              kind: "replace",
+              title: "Tempo run",
+              isChosen: true,
+            },
           },
         }),
       ],
@@ -216,6 +224,94 @@ describe("an item that would replace a planned session (ADR-024)", () => {
       }),
     ).toBeNull();
     expect(screen.getByText(COPY.replaceUnavailable("Easy run"))).toBeVisible();
+  });
+});
+
+describe("a planned session the coach suggests cancelling (ADR-033)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    useActionStateMock.mockImplementation(
+      (_action: unknown, initial: unknown) => [initial, vi.fn(), false],
+    );
+  });
+
+  afterEach(cleanup);
+
+  const cancelling = (available: boolean) => ({
+    ordinal: 0,
+    kind: "cancel" as const,
+    localDate: "2026-09-21",
+    decision: "proposed" as const,
+    title: "Easy run",
+    sport: null,
+    intent: null,
+    expectedDurationMinutes: null,
+    rationale: "Your shin needs two easy days.",
+    contentIndex: null,
+    replacesSessionId: SESSION_ID,
+    replaces: { title: "Easy run", expectedDurationMinutes: 45, available },
+  });
+
+  it("offers Cancel it and Keep it, with the coach's reason", () => {
+    renderReview({
+      days: [
+        day({
+          items: [cancelling(true)],
+          replacements: {
+            [SESSION_ID]: { kind: "cancel", title: "", isChosen: false },
+          },
+        }),
+      ],
+    });
+
+    expect(
+      screen.getByRole("heading", { name: COPY.cancelItemTitle("Easy run") }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("button", {
+        name: COPY.cancelItemActionFor("Easy run"),
+      }),
+    ).toHaveAttribute("value", "staged");
+    expect(
+      screen.getByRole("button", { name: COPY.keepItemActionFor("Easy run") }),
+    ).toHaveAttribute("value", "rejected");
+    expect(screen.getByText("Your shin needs two easy days.")).toBeVisible();
+    expect(screen.getByText(COPY.plannedMayBeCancelled)).toBeVisible();
+    expect(screen.getByText(COPY.mayBeCancelledBadge)).toBeVisible();
+    // There is nothing to add beside a cancel.
+    expect(screen.queryByRole("button", { name: /beside/i })).toBeNull();
+  });
+
+  it("strikes the owner's session through once Cancel it is chosen", () => {
+    const { container } = renderReview({
+      days: [
+        day({
+          items: [{ ...cancelling(true), decision: "staged" }],
+          replacements: {
+            [SESSION_ID]: { kind: "cancel", title: "", isChosen: true },
+          },
+        }),
+      ],
+    });
+
+    expect(
+      container.querySelector(`[data-session-id="${SESSION_ID}"]`),
+    ).toHaveAttribute("data-replaced", "chosen");
+    expect(screen.getByText(COPY.plannedWillBeCancelled)).toBeVisible();
+  });
+
+  it("offers only Keep once there is nothing left to cancel", () => {
+    renderReview({ days: [day({ items: [cancelling(false)] })] });
+
+    expect(
+      screen.queryByRole("button", {
+        name: COPY.cancelItemActionFor("Easy run"),
+      }),
+    ).toBeNull();
+    expect(
+      screen.getByRole("button", { name: COPY.keepItemActionFor("Easy run") }),
+    ).toBeVisible();
+    expect(screen.getByText(COPY.cancelUnavailable("Easy run"))).toBeVisible();
   });
 });
 

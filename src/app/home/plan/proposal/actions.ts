@@ -100,8 +100,9 @@ export async function generatePlanProposalAction(
     const startDate = parsePlanStartDate(draft.startDate, today);
     const dayCount = parsePlanDayCount(draft.dayCount);
     const planningNote = parsePlanningNote(draft.planningNote);
-    // What the owner ticked as "can be replaced". Everything else on the
-    // chosen days stays; the database decides whether each tick is allowed.
+    // What the owner left open: every listed session they did not lock
+    // (ADR-033). Everything else on the chosen days stays; the database
+    // decides whether each one may be offered.
     const replaceableSessionIds = parseReplaceableSessionIds(
       formData.getAll("replaceable"),
     );
@@ -292,11 +293,12 @@ export async function regeneratePlanProposalAction(
       const endDate = shiftIsoDate(startDate, dayCount - 1);
       const slice = await plan.getPlanSlice(startDate, endDate);
 
-      // The marks travel to the next proposal, as the note does: the owner
-      // said those sessions may go, and asking again does not take that back.
-      // Only the ones that can still be replaced: a session just replaced by
-      // the finish above is gone, and one logged or cancelled since would
-      // refuse the whole request after the review has already closed.
+      // What was open travels to the next proposal, as the note does: the
+      // owner left those sessions open, and asking again does not take that
+      // back, nor open one they never saw on the form. Only the ones that can
+      // still change: a session just replaced or cancelled by the finish above
+      // is no longer active, and one logged or cancelled since would refuse
+      // the whole request after the review has already closed.
       const [marked, completions] = await Promise.all([
         proposals.listReplaceableSessions(source.generationId),
         (await createCompletionLog()).findByPlanSessions(

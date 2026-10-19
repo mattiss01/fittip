@@ -138,15 +138,16 @@ export type CoachAIMissedSessionReference = {
  * `durationMinutes` travels on every entry of the roadmap and the plan
  * (ADR-023 decisions 6 and 11). `replaceHandle` travels for
  * `create_seven_day_plan` only, and only on a session inside the days being
- * planned (ADR-024): the handle the coach may name to replace it when the
- * owner marked it "can be replaced". Elsewhere its key is absent, not null.
+ * planned (ADR-024): the handle the coach may name to replace it, or to
+ * suggest cancelling it, when the owner left it open (ADR-033). Elsewhere its
+ * key is absent, not null.
  */
 export type CoachAIPlanCommitmentReference = {
   localDate: string;
   title: string;
   sport: string;
   durationMinutes?: number | null;
-  /** `r1`, `r2`…, or null for a session that stays. Never a session id. */
+  /** `r1`, `r2`…, or null for a locked session. Never a session id. */
   replaceHandle?: string | null;
   /**
    * Present only on a session the athlete called off: their reason, or null
@@ -746,11 +747,21 @@ export type SevenDayPlanSession = {
   alternatives?: SevenDayPlanAlternative[];
   rationale: string;
   /**
-   * ADR-024. The handle of a planned session this one stands in for, which
-   * the owner marked "can be replaced" for this request. Absent when it
-   * replaces nothing, which is the ordinary case.
+   * ADR-024, ADR-033. The handle of a planned session this one stands in for,
+   * which the owner left open (did not lock) for this request. Absent when it
+   * replaces nothing.
    */
   replaces?: string;
+};
+
+/**
+ * ADR-033. A planned session the coach suggests calling off, named by the
+ * handle of a session the owner left open, with why. The owner accepts or
+ * rejects it in the review like any other item.
+ */
+export type SevenDayPlanCancel = {
+  replaceHandle: string;
+  reason: string;
 };
 
 export type SevenDayPlanProposal = {
@@ -764,6 +775,8 @@ export type SevenDayPlanProposal = {
   startDate: string;
   endDate: string;
   sessions: SevenDayPlanSession[];
+  /** ADR-033. Absent when the coach suggests cancelling nothing. */
+  cancels?: SevenDayPlanCancel[];
   assumptions?: string[];
   uncertainties?: CoachAIUncertainty[];
   /**

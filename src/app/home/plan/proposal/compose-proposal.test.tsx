@@ -115,7 +115,7 @@ describe("ComposeProposal", () => {
     expect(action).not.toHaveBeenCalled();
   });
 
-  it("lists what is planned on the chosen days, each staying unless ticked", () => {
+  it("lists what is planned on the chosen days, each open unless locked (ADR-033)", () => {
     render(
       <ComposeProposal
         hasGoals
@@ -128,6 +128,12 @@ describe("ComposeProposal", () => {
             expectedDurationMinutes: 75,
           },
           {
+            id: "9c000000-0000-4000-8000-0000000000b3",
+            localDate: "2026-10-11",
+            title: "Club run",
+            expectedDurationMinutes: 60,
+          },
+          {
             id: "9c000000-0000-4000-8000-0000000000b2",
             localDate: "2026-10-20",
             title: "Far strength",
@@ -136,28 +142,37 @@ describe("ComposeProposal", () => {
         ]}
       />,
     );
+    const form = () =>
+      screen.getByLabelText(COPY.dayCountLabel).closest("form")!;
+    const offered = () => new FormData(form()).getAll("replaceable");
 
-    // Seven days from today by default: the second session is outside them.
-    const tick = screen.getByRole("checkbox", {
-      name: COPY.replaceableLabelFor("Long run"),
-    });
-    expect(tick).not.toBeChecked();
-    expect(tick).toHaveAttribute("name", "replaceable");
-    expect(tick).toHaveAttribute(
-      "value",
-      "9c000000-0000-4000-8000-0000000000b1",
-    );
+    // Seven days from today by default: the third session is outside them.
+    // Both listed sessions are open, and both are sent as offered.
     expect(screen.queryByText("Far strength")).toBeNull();
+    expect(offered()).toEqual([
+      "9c000000-0000-4000-8000-0000000000b1",
+      "9c000000-0000-4000-8000-0000000000b3",
+    ]);
+
+    const lock = screen.getByRole("button", {
+      name: COPY.lockLabelFor("Long run"),
+    });
+    expect(lock).toHaveAttribute("aria-pressed", "false");
+    fireEvent.click(lock);
+    expect(lock).toHaveAttribute("aria-pressed", "true");
+    expect(lock).toHaveTextContent(COPY.lockedLabel);
+    // A locked session is not offered.
+    expect(offered()).toEqual(["9c000000-0000-4000-8000-0000000000b3"]);
 
     // One day only, and nothing is planned today.
-    fireEvent.click(tick);
     fireEvent.change(screen.getByLabelText(COPY.dayCountLabel), {
       target: { value: "1" },
     });
     expect(screen.queryByText("Long run")).toBeNull();
     expect(screen.getByText(COPY.plannedNone)).toBeVisible();
+    expect(offered()).toEqual([]);
 
-    // Retyping the days does not cost the tick: the field is emptied on the
+    // Retyping the days does not cost the lock: the field is emptied on the
     // way, and the session comes back as the owner left it.
     fireEvent.change(screen.getByLabelText(COPY.dayCountLabel), {
       target: { value: "" },
@@ -166,10 +181,9 @@ describe("ComposeProposal", () => {
       target: { value: "7" },
     });
     expect(
-      screen.getByRole("checkbox", {
-        name: COPY.replaceableLabelFor("Long run"),
-      }),
-    ).toBeChecked();
+      screen.getByRole("button", { name: COPY.lockLabelFor("Long run") }),
+    ).toHaveAttribute("aria-pressed", "true");
+    expect(offered()).toEqual(["9c000000-0000-4000-8000-0000000000b3"]);
   });
 
   it("opens the same question when the form is sent from the keyboard", () => {

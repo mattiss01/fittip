@@ -19,7 +19,8 @@ import type { RoadmapPlanStaleReason } from "@/lib/roadmap/roadmap-stale-reasons
  *
  * `staged_beside` exists only for an item that would replace a planned
  * session (ADR-024): add it and keep the session. On such an item `staged`
- * means replace; on any other it means add, as it always did.
+ * means replace; on a cancel item it means cancel (ADR-033); on any other it
+ * means add, as it always did.
  */
 export type PlanProposalItemDecision =
   | "proposed"
@@ -38,7 +39,7 @@ export function isStagedDecision(decision: PlanProposalItemDecision): boolean {
 /** How a review ended. Absent while it is still open. */
 export type PlanProposalDecision = "applied" | "discarded";
 
-export type PlanProposalItemKind = "session" | "recovery_day";
+export type PlanProposalItemKind = "session" | "recovery_day" | "cancel";
 
 /**
  * One decidable item.
@@ -47,13 +48,16 @@ export type PlanProposalItemKind = "session" | "recovery_day";
  * reasoning for it. A recovery-day item carries a date and nothing else,
  * because the coach authored nothing for it — the proposal offers it because
  * the coach left the date empty, and saying more would be inventing coaching.
+ * A cancel item (ADR-033) names a planned session the coach suggests calling
+ * off: its title as it was when the coach answered, and the coach's reason as
+ * its rationale.
  */
 export type PlanProposalItemView = {
   ordinal: number;
   kind: PlanProposalItemKind;
   localDate: string;
   decision: PlanProposalItemDecision;
-  /** Session items only. */
+  /** Session items, and a cancel item's session as it was. */
   title: string | null;
   sport: string | null;
   intent: string | null;
@@ -62,8 +66,9 @@ export type PlanProposalItemView = {
   /** The item's index into the proposal content, for the parts not copied here. */
   contentIndex: number | null;
   /**
-   * The planned session this one would stand in for, which the owner marked
-   * "can be replaced" when asking. Null for an item that only adds.
+   * The planned session this one would stand in for, or a cancel item would
+   * call off, which the owner left open when asking. Null for an item that
+   * only adds.
    */
   replacesSessionId: string | null;
 };

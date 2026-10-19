@@ -52,7 +52,7 @@ function formatDay(localDate: string): string {
  * returns the running claim instead of buying a second coach call, and on a
  * live binding a second call is a second payment.
  */
-/** A planned session the owner may offer for replacement. */
+/** A planned session the coach may change unless the owner locks it. */
 export type ComposablePlannedSession = {
   id: string;
   localDate: string;
@@ -100,12 +100,12 @@ export function ComposeProposal({
     setDayCount(clampDays(state.draft?.dayCount));
     if (state.attemptEnded) setIdempotencyKey(newRequestKey());
   }
-  // The ticks are held here, not in the checkboxes. A box exists only while
-  // its session is listed and the form is re-keyed on every reply, so an
-  // uncontrolled one lost its tick when the days were retyped or a request
-  // was refused, and the next request then offered nothing for replacement.
-  // A tick on a session outside the chosen days is kept but not sent.
-  const [ticked, setTicked] = useState<ReadonlySet<string>>(new Set());
+  // The locks are held here, not in the controls. A control exists only
+  // while its session is listed and the form is re-keyed on every reply, so
+  // locks kept there were lost when the days were retyped or a request was
+  // refused, and the next request then opened what the owner had locked. A
+  // lock on a session outside the chosen days is kept and changes nothing.
+  const [locked, setLocked] = useState<ReadonlySet<string>>(new Set());
   const endDate = shiftIsoDate(startDate, dayCount - 1);
   const onChosenDays = planned.filter(
     (session) => session.localDate >= startDate && session.localDate <= endDate,
@@ -171,9 +171,11 @@ export function ComposeProposal({
           />
         </div>
 
-        {/* What is already there (owner, 9 Oct 2026). Each session stays
-            unless it is ticked; only a ticked one may be replaced, and
-            nothing is replaced before the review is finished. */}
+        {/* What is already there. Every session is open to the coach unless
+            the owner locks it (owner, 19 Oct 2026; ADR-033), and only for
+            this request: each unlocked one is sent as offered, so the
+            database records what was open exactly as before. Nothing is
+            changed before the review is finished. */}
         <fieldset className={styles.plannedList}>
           <legend>{COPY.plannedHeading}</legend>
           {onChosenDays.length === 0 ? (
@@ -197,22 +199,30 @@ export function ComposeProposal({
                           .join(" · ")}
                       </span>
                     </span>
-                    <label className={styles.plannedChoice}>
+                    {locked.has(session.id) ? null : (
                       <input
-                        type="checkbox"
+                        type="hidden"
                         name="replaceable"
                         value={session.id}
-                        aria-label={COPY.replaceableLabelFor(session.title)}
-                        checked={ticked.has(session.id)}
-                        onChange={(event) => {
-                          const next = new Set(ticked);
-                          if (event.target.checked) next.add(session.id);
-                          else next.delete(session.id);
-                          setTicked(next);
-                        }}
                       />
-                      {COPY.replaceableLabel}
-                    </label>
+                    )}
+                    <button
+                      type="button"
+                      className={styles.lockToggle}
+                      aria-pressed={locked.has(session.id)}
+                      aria-label={COPY.lockLabelFor(session.title)}
+                      onClick={() => {
+                        const next = new Set(locked);
+                        if (next.has(session.id)) next.delete(session.id);
+                        else next.add(session.id);
+                        setLocked(next);
+                      }}
+                    >
+                      <LockMark closed={locked.has(session.id)} />
+                      {locked.has(session.id)
+                        ? COPY.lockedLabel
+                        : COPY.lockLabel}
+                    </button>
                   </li>
                 ))}
               </ul>
@@ -287,6 +297,31 @@ export function ComposeProposal({
         </SheetLayer>
       ) : null}
     </section>
+  );
+}
+
+/** A padlock, open or shut. Decorative: the button's text says which. */
+function LockMark({ closed }: { closed: boolean }) {
+  return (
+    <svg
+      aria-hidden="true"
+      width="16"
+      height="16"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+    >
+      <rect x="3" y="7" width="10" height="7" rx="1.5" />
+      <path
+        d={
+          closed
+            ? "M5.5 7V5a2.5 2.5 0 0 1 5 0v2"
+            : "M5.5 7V5a2.5 2.5 0 0 1 4.9-.7"
+        }
+      />
+    </svg>
   );
 }
 

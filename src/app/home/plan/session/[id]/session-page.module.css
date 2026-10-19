@@ -133,6 +133,30 @@
   line-height: 1.45;
 }
 
+/* "Bring it back" inside a sentence (ADR-033): a text-weight control with a
+   full touch target, not a second main action. */
+.inlineAction {
+  min-height: 2.75rem;
+  margin: 0;
+  padding: 0 0.25rem;
+  border: 0;
+  background: none;
+  color: var(--pine);
+  font: 600 0.86rem var(--font-sans);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  cursor: pointer;
+}
+
+.inlineAction:disabled {
+  opacity: 0.5;
+}
+
+.inlineAction:focus-visible {
+  outline: 2px solid var(--pine);
+  outline-offset: 2px;
+}
+
 .reason {
   margin: 0;
   padding: 0.7rem 0.9rem;

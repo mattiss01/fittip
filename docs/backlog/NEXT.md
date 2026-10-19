@@ -48,6 +48,17 @@ Ordered by dependency. A lane is named where it is not the build lane.
 
 **Coach and records.**
 
+- [~] **The coach may change any session not locked, and suggest cancelling one.**
+      Owner, 19 Oct 2026. Turns "Can be replaced" around: every unlogged session on the
+      chosen days is open to the coach unless the owner taps **Lock** ("Locked" once set).
+      The lock belongs to that request and its ask-again only, never to the session.
+      The coach may replace an open session or suggest cancelling it, a new kind of item;
+      each is its own Accept/Reject, and nothing changes before Finish. An accepted
+      replacement **cancels** the old session (today it is deleted), hidden on its day and
+      brought back from the replacement's page. Locked means locked, even under a safety
+      signal: the coach says so in its safety note. Careful lane: schema, AI contract and
+      prompt, what Finish does; ADR-033 supersedes ADR-024 in part.
+
 - [ ] **A fill's sources are recorded and never checked.** A suggestion names the
       logs, library entries and saved sessions it was built from, and since ADR-023
       the logs whose flags it was sent. Nothing compares them, so a flag corrected

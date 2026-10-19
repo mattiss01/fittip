@@ -10,8 +10,10 @@ const {
   createLibraryMock,
   createSavedSessionsMock,
   createCancellationsMock,
+  createCoachCancellationsMock,
 } = vi.hoisted(() => ({
   createCancellationsMock: vi.fn(),
+  createCoachCancellationsMock: vi.fn(),
   createLibraryMock: vi.fn(),
   createSavedSessionsMock: vi.fn(),
   createProfileMock: vi.fn(),
@@ -84,6 +86,19 @@ vi.mock(
     return { ...actual, createSessionCancellations: createCancellationsMock };
   },
 );
+vi.mock(
+  "@/server/repositories/coach-cancellation-repository",
+  async (original) => {
+    const actual =
+      await original<
+        typeof import("@/server/repositories/coach-cancellation-repository")
+      >();
+    return {
+      ...actual,
+      createCoachCancellations: createCoachCancellationsMock,
+    };
+  },
+);
 
 import {
   buildCoachAIContext,
@@ -117,6 +132,7 @@ const listSeries = vi.fn();
 const listLibrary = vi.fn();
 const listSavedSessions = vi.fn();
 const listReasons = vi.fn();
+const listCoachCancellations = vi.fn();
 
 const COMPOSE = {
   horizonStartDate: TODAY,
@@ -146,7 +162,11 @@ describe("the production coaching context source", () => {
     materializeSeries.mockResolvedValue({ createdCount: 0, skipped: [] });
     listSeries.mockResolvedValue([]);
     listReasons.mockResolvedValue(new Map());
+    listCoachCancellations.mockResolvedValue(new Set());
     createCancellationsMock.mockResolvedValue({ listReasons });
+    createCoachCancellationsMock.mockResolvedValue({
+      listHiddenByReplacement: listCoachCancellations,
+    });
     createGoalMock.mockResolvedValue({ list: listGoals });
     createMemoryMock.mockResolvedValue({ list: listMemory });
     createCompletionLogMock.mockResolvedValue({ list: listCompletions });
@@ -767,6 +787,41 @@ describe("the production coaching context source", () => {
         localDate: shift(TODAY, 5),
         ruleSeriesId: null,
         cancelled: { reason: "Away for work." },
+      }),
+    ]);
+  });
+
+  it("leaves out a session the coach's replacement stands in for, and keeps one it suggested cancelling", async () => {
+    // ADR-033: the replacement is on the plan, so its day is not called off.
+    getPlanSlice.mockResolvedValue({
+      planId: "44000000-0000-4000-8000-000000000001",
+      revision: 12,
+      sessions: [
+        planSession({
+          id: "66000000-0000-4000-8000-0000000000d1",
+          localDate: shift(TODAY, 2),
+          status: "cancelled",
+          cancelledAt: "2026-08-01T09:00:00.000Z",
+        }),
+        planSession({
+          id: "66000000-0000-4000-8000-0000000000d2",
+          localDate: shift(TODAY, 3),
+          status: "cancelled",
+          cancelledAt: "2026-08-01T09:00:00.000Z",
+        }),
+      ],
+      recoveryDates: [],
+    });
+    listCoachCancellations.mockResolvedValue(
+      new Set(["66000000-0000-4000-8000-0000000000d1"]),
+    );
+
+    const records = await source("create_seven_day_plan").load(OWNER);
+
+    expect(records.training.plannedSessions).toEqual([
+      expect.objectContaining({
+        localDate: shift(TODAY, 3),
+        cancelled: { reason: null },
       }),
     ]);
   });

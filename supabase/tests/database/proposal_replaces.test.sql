@@ -9,9 +9,11 @@
 --   3. The coach names a handle the request issued, once, or the answer is
 --      refused whole.
 --   4. "Add beside" exists only for an item that replaces something.
---   5. Finish deletes the old session in the change set that adds the new one,
+--   5. Finish cancels the old session in the change set that adds the new one,
 --      for Replace alone, and never a session that has since been logged.
---   6. Replacing an occurrence of a series removes that day only.
+--      (It deleted it until ADR-033; `plan_open_unless_locked.test.sql` proves
+--      what is recorded about the cancellation.)
+--   6. Replacing an occurrence of a series cancels that day only.
 --   7. None of it reaches across owners.
 
 begin;
@@ -404,17 +406,17 @@ select is(
   'two sessions were added'
 );
 select is(
-  (select count(*)::integer from public.rolling_plan_sessions
+  (select status from public.rolling_plan_sessions
    where id = '8a000000-0000-4000-8000-0000000000b1'),
-  0,
-  'the Long run is gone: Replace deleted it'
+  'cancelled',
+  'the Long run is cancelled, not deleted, so it can be brought back (ADR-033)'
 );
 select is(
   (select array_agg(title order by title) from public.rolling_plan_sessions
    where user_id = '8a000000-0000-4000-8000-000000000001'
-     and local_date = pg_temp.day(1)),
+     and local_date = pg_temp.day(1) and status = 'active'),
   array['Tempo run'],
-  'and the session standing in for it is the only one on that day'
+  'and the session standing in for it is the only active one on that day'
 );
 select is(
   (select array_agg(title order by title) from public.rolling_plan_sessions
@@ -548,10 +550,10 @@ select ok(
   (select count(*) > 0 from public.rolling_plan_sessions
    where series_id = '8a000000-0000-4000-8000-0000000000a1'
      and local_date = pg_temp.day(4) and status = 'active')
-  and (select pg_temp.day(3) = any (skipped_occurrence_dates)
-       from public.rolling_plan_series
-       where id = '8a000000-0000-4000-8000-0000000000a1'),
-  'the next day''s is untouched, and the series will not write the replaced one back'
+  and (select status = 'cancelled' from public.rolling_plan_sessions
+       where series_id = '8a000000-0000-4000-8000-0000000000a1'
+         and local_date = pg_temp.day(3)),
+  'the next day''s is untouched, and the replaced occurrence stays as a cancelled row'
 );
 
 -- A session moved off the days asked about ------------------------------------------

@@ -111,7 +111,7 @@ If present, "roadmap" is the direction the athlete accepted. "coveringPhases" ar
 
 "isStale" means it may not describe this week ("out_of_window" or "goal_missing"). Where it and the goals disagree, follow the goals and say so in "assumptions". A "Withheld" count means part of it was left out to fit: unknown, not absent.
 
-"planCommitments" are sessions already on the athlete's plan, the days after the range included. Plan around them: count their load, and never propose the same session again. One with a "replaceHandle" is one the athlete has said may be replaced. If a session of yours should stand in for it, put that handle in "replaces"; use each handle at most once, and leave "replaces" null otherwise. A session with no handle stays, whatever else you propose. One with "cancelledBecause" was called off: keep that day free unless "planningNote" asks. Asked to replace one, put yours beside it and say in "weekDescription" that the athlete can cancel theirs. "previousProposal" is your declined last answer. Its days at the "kept" positions were accepted: count them, never propose them again.
+"planCommitments" are sessions already on the athlete's plan, the days after the range included. Plan around them: count their load, and never propose the same session again. One with a "replaceHandle" is open. If a session of yours should stand in for it, put that handle in "replaces". If it should go with nothing in its place, list it in "cancels" with why. Change an open session only where that serves the athlete. Name each handle at most once across both, and leave "replaces" null otherwise. A session with no handle is locked and stays, even under a safety signal: say in "safetyConsiderations" if it should be skipped. One with "cancelledBecause" was called off: keep that day free unless "planningNote" asks. Asked to replace a locked one, put yours beside it and say in "weekDescription" that the athlete can cancel theirs. "previousProposal" is your declined last answer. Its days at the "kept" positions were accepted: count them, never propose them again.
 
 This is a session-level plan. Say what a session is, what it is for, and how long it takes. Do not break it into exercises, sets, reps, loads, distances, paces, or any other target: that is a separate step, per session.
 
@@ -335,6 +335,7 @@ const PLAN_SCHEMA = {
         "startDate",
         "endDate",
         "sessions",
+        "cancels",
         "assumptions",
         "uncertainties",
         "safetyConsiderations",
@@ -441,6 +442,27 @@ const PLAN_SCHEMA = {
                 type: ["string", "null"],
                 description:
                   "A replaceHandle copied exactly from planCommitments, or null.",
+              },
+            },
+          },
+        },
+        cancels: {
+          type: ["array", "null"],
+          description:
+            "Open planned sessions to call off with nothing in their place. Null or empty for none.",
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["replaceHandle", "reason"],
+            properties: {
+              replaceHandle: {
+                type: "string",
+                description:
+                  "A replaceHandle copied exactly from planCommitments.",
+              },
+              reason: {
+                type: "string",
+                description: "Why, to the athlete. At most 160 characters.",
               },
             },
           },

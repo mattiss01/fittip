@@ -18,8 +18,10 @@ import {
 import type { PlanSessionView } from "../../session-view";
 import {
   SessionPage,
+  type CoachCancellationView,
   type SessionCancellationView,
   type SessionPageOrigin,
+  type StandsInForView,
 } from "./session-page";
 import sessionStyles from "./session-page.module.css";
 
@@ -37,6 +39,7 @@ import {
   createSessionCancellations,
   SessionCancellationAuthenticationError,
 } from "@/server/repositories/session-cancellation-repository";
+import { createCoachCancellations } from "@/server/repositories/coach-cancellation-repository";
 import type { RollingPlanSeries } from "@/server/rolling-plan/rolling-plan";
 import { readOpenSessionActivityProposals } from "@/server/session-detail/open-session-activity-proposals";
 
@@ -128,6 +131,8 @@ async function SessionRead({
   let library: LibraryActivityOption[] = [];
   let modes: ModeBySport = {};
   let cancellation: SessionCancellationView | null = null;
+  let coachCancellation: CoachCancellationView | null = null;
+  let standsInFor: StandsInForView | null = null;
   try {
     const plan = await createRollingPlan();
     const [slice, allSeries, options, history] = await Promise.all([
@@ -173,9 +178,35 @@ async function SessionRead({
         ...(fill === undefined ? {} : { openFill: toFillProposal(fill) }),
       };
       // Why it was cancelled is read here and nowhere else, and only for a
-      // session that is cancelled (owner, 29 Sep 2026).
+      // session that is cancelled (owner, 29 Sep 2026). Since ADR-033 the
+      // coach's proposal can be what cancelled it, which is said too.
+      const coachCancellations = await createCoachCancellations();
       if (found.status === "cancelled") {
-        cancellation = await (await createSessionCancellations()).get(found.id);
+        const [reason, coach] = await Promise.all([
+          (await createSessionCancellations()).get(found.id),
+          coachCancellations.list([found]),
+        ]);
+        cancellation = reason;
+        const made = coach.get(found.id);
+        if (made !== undefined) {
+          coachCancellation =
+            made.replacedBySessionId === null
+              ? { kind: "suggested" }
+              : {
+                  kind: "replaced",
+                  replacementTitle:
+                    slice.sessions.find(
+                      (candidate) => candidate.id === made.replacedBySessionId,
+                    )?.title ?? null,
+                };
+        }
+      } else {
+        // A replacement offers to bring back the session it stands in for,
+        // while that one is still cancelled by it and still ahead.
+        standsInFor = await coachCancellations.findStandingInFor(
+          found.id,
+          slice.sessions,
+        );
       }
     }
   } catch (error) {
@@ -209,6 +240,8 @@ async function SessionRead({
         origin={origin}
         originDate={requestedDate}
         cancellation={cancellation}
+        coachCancellation={coachCancellation}
+        standsInFor={standsInFor}
       />
     </ActivityLibraryProvider>
   );

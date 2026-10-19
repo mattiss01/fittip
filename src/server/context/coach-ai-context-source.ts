@@ -29,6 +29,7 @@ import { createPersonalActivityLibrary } from "@/server/repositories/personal-ac
 import { createProfileRepository } from "@/server/repositories/profile-repository";
 import { createRoadmapRepository } from "@/server/repositories/roadmap-repository";
 import { createRollingPlan } from "@/server/repositories/rolling-plan-repository";
+import { createCoachCancellations } from "@/server/repositories/coach-cancellation-repository";
 import { createSessionCancellations } from "@/server/repositories/session-cancellation-repository";
 import { createSavedSessionLibrary } from "@/server/repositories/saved-session-repository";
 import type {
@@ -250,20 +251,27 @@ export class OwnedRecordsCoachAIContextSource implements CoachAIContextSource {
     // a fill sends no commitments, and the roadmap's prompt counts every
     // commitment as planned load, which a called-off day is not.
     const plansDays = this.#operation === "create_seven_day_plan";
-    const cancelledAhead = !plansDays
+    const cancelledSessionsAhead = !plansDays
       ? []
-      : planWindow.slice.sessions
-          .filter(
-            (session) =>
-              session.status === "cancelled" && session.localDate >= today,
-          )
-          .map((session) => session.id);
-    const cancellationReasons =
-      cancelledAhead.length === 0
-        ? new Map<string, string>()
-        : await (
-            await createSessionCancellations()
-          ).listReasons(cancelledAhead);
+      : planWindow.slice.sessions.filter(
+          (session) =>
+            session.status === "cancelled" && session.localDate >= today,
+        );
+    // A session the coach's replacement stands beside is not called off: its
+    // replacement is on the plan, and the day is not to be kept free (ADR-033).
+    const [cancellationReasons, replacedByCoach] =
+      cancelledSessionsAhead.length === 0
+        ? [new Map<string, string>(), new Set<string>()]
+        : await Promise.all([
+            createSessionCancellations().then((reasons) =>
+              reasons.listReasons(
+                cancelledSessionsAhead.map((session) => session.id),
+              ),
+            ),
+            createCoachCancellations().then((coach) =>
+              coach.listHiddenByReplacement(planWindow.slice.sessions),
+            ),
+          ]);
 
     const completedPlanSessionIds = new Set(
       completions
@@ -296,7 +304,9 @@ export class OwnedRecordsCoachAIContextSource implements CoachAIContextSource {
         .filter(
           (session) =>
             session.status === "active" ||
-            (plansDays && session.localDate >= today),
+            (plansDays &&
+              session.localDate >= today &&
+              !replacedByCoach.has(session.id)),
         )
         .map((session) =>
           toTrainingHistoryPlannedSession(

@@ -56,11 +56,16 @@ const STATIC_PREFIX_BUDGET = 7_800;
  *
  *   9,000 + 64 + 52,100 = 61,164   ceil(61,164 / 4) = 15,291  vs  18,000
  *
+ * On 19 October 2026 the coach may suggest cancelling a session the owner
+ * left open (ADR-033), and the prefix grew to 9,169:
+ *
+ *   9,400 + 64 + 52,100 = 61,564   ceil(61,564 / 4) = 15,391  vs  18,000
+ *
  * The assertions below read `bytes.total` rather than a literal, so they bind
  * whatever the allocation becomes; this comment is the one thing that has to
  * be kept honest by hand.
  */
-const PLAN_STATIC_PREFIX_BUDGET = 9_000;
+const PLAN_STATIC_PREFIX_BUDGET = 9_400;
 
 describe("what every prompt says about the athlete's data (ADR-023)", () => {
   it.each([
@@ -98,9 +103,10 @@ describe("what every prompt says about the athlete's data (ADR-023)", () => {
     // 14,179 until ADR-028: a request to change the roadmap sends it whole.
     expect(tokens("create_roadmap", STATIC_PREFIX_BUDGET)).toBe(17_891);
     // 14,991 until the plan's logs took 10,200 bytes (16 Oct 2026); 15,216
-    // until the prompt said an empty week is an answer (17 Oct 2026).
+    // until the prompt said an empty week is an answer (17 Oct 2026); 15,291
+    // until the coach could suggest a cancel (ADR-033, 19 Oct 2026).
     expect(tokens("create_seven_day_plan", PLAN_STATIC_PREFIX_BUDGET)).toBe(
-      15_291,
+      15_391,
     );
     expect(
       tokens(

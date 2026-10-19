@@ -275,6 +275,68 @@ describe("the synthetic plan body", () => {
     ]);
   });
 
+  describe("open sessions, touched only when the note asks (ADR-033)", () => {
+    const withOpen = (planningNote: string | null): CoachAIContext => ({
+      ...horizonOf(3),
+      planningNote,
+      planCommitments: [
+        {
+          localDate: COACH_AI_FIXTURE_PLAN_HORIZON_START,
+          title: "Long run",
+          sport: "Running",
+          durationMinutes: 75,
+          replaceHandle: "r1",
+        },
+        {
+          localDate: COACH_AI_FIXTURE_PLAN_HORIZON_START,
+          title: "Club run",
+          sport: "Running",
+          durationMinutes: 60,
+          replaceHandle: null,
+        },
+        {
+          localDate: horizonOf(2).horizonEndDate,
+          title: "Intervals",
+          sport: "Running",
+          durationMinutes: 50,
+          replaceHandle: "r2",
+        },
+      ],
+    });
+    const planFor = (planningNote: string | null) => {
+      const context = withOpen(planningNote);
+      const result = validatePlanCandidate({
+        body: synthesizePlanBody(context),
+        context,
+      });
+      if (result.outcome !== "accepted") {
+        throw new Error(`expected acceptance, got ${result.reason}`);
+      }
+      return result.response.plan;
+    };
+
+    it("leaves every open session alone without a note asking", () => {
+      const plan = planFor(null);
+      expect(plan.sessions.every((session) => !session.replaces)).toBe(true);
+      expect(plan.cancels).toBeUndefined();
+    });
+
+    it("replaces an open session when the note says replace", () => {
+      const plan = planFor("Please replace the long run.");
+      expect(
+        plan.sessions.map((session) => session.replaces ?? null),
+      ).toContain("r1");
+      expect(plan.cancels).toBeUndefined();
+    });
+
+    it("suggests cancelling an open one, never the locked one, when asked", () => {
+      const plan = planFor("Skip something, my shin hurts.");
+      expect(plan.cancels?.map((cancel) => cancel.replaceHandle)).toEqual([
+        "r1",
+      ]);
+    });
+  });
+
   it("proposes memory from the planning note, as its first sentence", () => {
     const result = validatePlanCandidate({
       body: synthesizePlanBody(COACH_AI_FIXTURE_PLAN_CONTEXT),

@@ -11,8 +11,9 @@ Background when you need it: `CONTEXT.md` for the domain, `docs/decisions/` for 
 
 - Plans, proposals, and actual completions are separate records. A log is removed only
   when the owner deletes it (ADR-031), never as a side effect of anything else.
-- Replanning never changes completed history or past sessions, and replaces a future session
-  only where the owner allowed it for that proposal.
+- Replanning never changes completed history or past sessions, and replaces or cancels a
+  future session only where the owner left it open for that proposal, and only once the
+  owner accepts that change.
 - Every owned record has a `user_id`; authorization is enforced server-side and in database
   Row Level Security.
 - At most three active goals may be `core`; supporting goals remain distinct.
