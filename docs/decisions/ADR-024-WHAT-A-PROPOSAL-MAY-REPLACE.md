@@ -1,6 +1,8 @@
 # ADR-024: A plan proposal may replace a session the owner offered, and only that
 
-**Status:** accepted — the product owner decided it on 9 October 2026.
+**Status:** accepted — the product owner decided it on 9 October 2026. Superseded in part
+by [ADR-033](ADR-033-OPEN-UNLESS-LOCKED.md) (19 October 2026): sessions are open unless
+locked, the coach may suggest cancelling one, and replacing cancels instead of deleting.
 
 **Date:** 9 October 2026
 
