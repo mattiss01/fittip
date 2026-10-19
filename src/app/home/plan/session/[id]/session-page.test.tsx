@@ -329,7 +329,12 @@ describe("SessionPage", () => {
     expect(
       document.querySelector("[data-cancellation-reason]")?.textContent,
     ).toBe("Why “work ran late”");
-    expect(screen.getByText(/clears the reason/)).toBeVisible();
+    // Said plainly as the card's first line (owner, 19 Oct 2026); the old
+    // "kept on the record" aside is gone.
+    expect(document.querySelector("[data-cancelled-banner]")?.textContent).toBe(
+      "Cancelled",
+    );
+    expect(screen.queryByText(/kept on the record/)).toBeNull();
 
     choose("Edit reason");
     expect(screen.getByLabelText("Why? (optional)")).toHaveValue(

@@ -27,11 +27,11 @@ import { SheetLayer } from "../plan-sheet";
 import { SessionFields } from "../session-fields";
 
 import { CoachSpark } from "@/components/home/coach-spark";
-import { PLAN_PROPOSAL_COPY } from "@/lib/plan/plan-proposal-copy";
-import type {
-  PlanProposalItemDecision,
-  ProposalRoadmapView,
-} from "@/lib/plan/plan-proposal-view";
+import {
+  PLAN_PROPOSAL_COPY,
+  PLAN_PROPOSAL_FEEDBACK_MAX_LENGTH,
+} from "@/lib/plan/plan-proposal-copy";
+import type { PlanProposalItemDecision } from "@/lib/plan/plan-proposal-view";
 
 const COPY = PLAN_PROPOSAL_COPY;
 
@@ -59,7 +59,6 @@ export function ProposalReview({
   expectedPlanRevision,
   finishKey,
   days,
-  roadmap,
   planChangedSinceComposed,
   unresolved,
   staged,
@@ -84,7 +83,6 @@ export function ProposalReview({
   /** Stable per render of the open proposal, so a retried finish replays. */
   finishKey: string;
   days: ProposalTimelineDay[];
-  roadmap: ProposalRoadmapView | null;
   planChangedSinceComposed: boolean;
   unresolved: number;
   staged: number;
@@ -105,6 +103,8 @@ export function ProposalReview({
   // Closed until asked for. The box is the third ending of a review, not a
   // field the owner has to scroll past on the way to the other two.
   const [askingAgain, setAskingAgain] = useState(false);
+  // What the owner has typed so far, for the count under the field.
+  const [feedbackLength, setFeedbackLength] = useState(0);
   // One key per attempt. A failed one gets a new key, so pressing again asks
   // the coach rather than replaying the failure; past the deadline the call
   // may still be running, and the same key keeps it one charge.
@@ -223,32 +223,6 @@ export function ProposalReview({
         </p>
       ) : null}
 
-      {roadmap === null ? null : (
-        <section className={styles.roadmapNotice} data-state="roadmap">
-          <h2>{COPY.roadmapHeading}</h2>
-          <p className={styles.support}>
-            {roadmap.isSuperseded
-              ? COPY.roadmapSuperseded(roadmap.versionNumber)
-              : COPY.roadmapPlannedUnder(
-                  roadmap.title ?? "",
-                  roadmap.versionNumber,
-                )}
-          </p>
-          {roadmap.staleReasons.length > 0 ? (
-            <ul className={styles.staleReasons}>
-              {roadmap.staleReasons.map((reason) => (
-                <li key={reason}>
-                  <strong>{COPY.roadmapStaleLead}</strong>{" "}
-                  {reason === "out_of_window"
-                    ? COPY.roadmapStaleOutOfWindow
-                    : COPY.roadmapStaleGoalMissing}
-                </li>
-              ))}
-            </ul>
-          ) : null}
-        </section>
-      )}
-
       <ol className={styles.days}>
         {days.map((day) => (
           <li
@@ -296,11 +270,14 @@ export function ProposalReview({
       </ol>
 
       <div className={`${styles.dock} save-dock`} ref={dock}>
-        <p className={styles.dockSupport}>
-          {unresolved > 0
-            ? COPY.unresolvedSupport(unresolved)
-            : COPY.finishSupport(staged)}
-        </p>
+        {/* About finishing, so not while asking again (owner, 19 Oct 2026). */}
+        {askingAgain ? null : (
+          <p className={styles.dockSupport}>
+            {unresolved > 0
+              ? COPY.unresolvedSupport(unresolved)
+              : COPY.finishSupport(staged)}
+          </p>
+        )}
         {askingAgain ? null : (
           <div className={styles.dockActions}>
             <form action={action} key={`finish-${state.submission}`}>
@@ -390,18 +367,28 @@ export function ProposalReview({
           // here (owner, 17 Oct 2026), and so is what the owner typed.
           <form className={styles.regenerate} action={regenerateAction}>
             <h3>{COPY.regenerateHeading}</h3>
-            <p className={styles.support}>{COPY.regenerateSupport}</p>
             <input type="hidden" name="proposalId" value={proposalId} />
             <input type="hidden" name="idempotencyKey" value={askKey} />
             <label htmlFor="regenerationFeedback">{COPY.regenerateLabel}</label>
             <textarea
               id="regenerationFeedback"
               name="regenerationFeedback"
-              maxLength={500}
+              maxLength={PLAN_PROPOSAL_FEEDBACK_MAX_LENGTH}
               rows={3}
               required
+              aria-describedby="regenerationFeedbackCount"
+              onChange={(event) => setFeedbackLength(event.target.value.length)}
             />
-            <p className={styles.helper}>{COPY.regenerateHelper}</p>
+            <p
+              className={styles.helper}
+              id="regenerationFeedbackCount"
+              data-count
+            >
+              {COPY.regenerateCount(
+                feedbackLength,
+                PLAN_PROPOSAL_FEEDBACK_MAX_LENGTH,
+              )}
+            </p>
             <div className={styles.dockActions}>
               <button className={styles.primary} type="submit" disabled={busy}>
                 <CoachSpark size={16} />

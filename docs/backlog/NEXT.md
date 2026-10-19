@@ -123,6 +123,11 @@ Not worth their own slot; do them when work lands nearby.
 
 ## Later
 
+- **The coach proposes a goal — idea.** Owner, 19 Oct 2026: a coach could suggest a goal for
+  the profile, the way it suggests memory from a planning note. It would be a proposal
+  the owner accepts or rejects, never a goal written by itself (AI writes no user data),
+  and the three-core limit and goal ranks decide where an accepted one lands. Careful
+  lane: the AI contract, and a new kind of proposal on goals.
 - **Waiting for the coach, animated.** Owner, 17 Oct 2026: a coach request takes 15 to 60
   seconds on `gpt-6-luna`, and the wait should be "really cool and changing" animations,
   to be built with Claude's motion feature when it is used here. Constraints from the

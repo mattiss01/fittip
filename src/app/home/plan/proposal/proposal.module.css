@@ -587,8 +587,7 @@
  * error colouring the notice states use — a warning the owner cannot act on and
  * does not need to act on should not look like one.
  */
-.staleNotice,
-.roadmapNotice {
+.staleNotice {
   margin: 0 0 0.9rem;
   padding: 0.85rem 1rem;
   border-radius: var(--radius-control);
@@ -596,20 +595,6 @@
   box-shadow: var(--shadow-card);
   font-size: 0.85rem;
   line-height: 1.5;
-}
-
-.roadmapNotice > h2 {
-  margin: 0 0 0.3rem;
-  font-size: 0.95rem;
-  font-weight: 800;
-}
-
-.staleReasons {
-  margin: 0.5rem 0 0;
-  font-size: 0.85rem;
-  padding-left: 1.1rem;
-  display: grid;
-  gap: 0.35rem;
 }
 
 /* The memory candidates panel.
