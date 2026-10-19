@@ -88,7 +88,7 @@ describe("the model is bound to the card that prices it", () => {
     expect(binding.rateCard.version).toBe("openai-gpt-6-luna-2026-10-17");
     expect(binding.rateCard.inputMicroUsdPerMillionTokens).toBe(125_000);
     expect(binding.rateCard.outputMicroUsdPerMillionTokens).toBe(500_000);
-    expect(binding.limits.maxInputTokens).toBe(18_000);
+    expect(binding.limits.maxInputTokens).toBe(20_000);
   });
 
   it("refuses a model no approved card prices", () => {

@@ -367,9 +367,10 @@ select throws_ok(
   'a negative charge is refused'
 );
 
--- Input validation on the reserve path.
+-- Input validation on the reserve path. The per-request ceiling is 9,000
+-- since 19 Oct 2026 (ADR-034); 9,001 is the first amount above it.
 select throws_ok(
-  $$select public.reserve_ai_spend('create_roadmap', 9000, 'luna-v1', 'USD')$$,
+  $$select public.reserve_ai_spend('create_roadmap', 9001, 'luna-v1', 'USD')$$,
   'PT402',
   'Coaching spend ceiling reached.',
   'a reservation above the per-request ceiling is refused'

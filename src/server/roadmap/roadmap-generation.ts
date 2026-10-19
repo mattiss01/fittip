@@ -10,6 +10,7 @@ import {
 } from "@/server/ai/contracts";
 import { CoachAIError } from "@/server/ai/errors";
 import type { CoachAIOwner } from "@/server/ai/owner";
+import { recordGoalSuggestion } from "@/server/goals/goal-suggestion-recording";
 import { logMemoryCandidateFailure } from "@/server/proposal-logging/memory-candidate-batch";
 import { createAISpendRepository } from "@/server/repositories/ai-spend-repository";
 import { createMemoryRepository } from "@/server/repositories/memory-repository";
@@ -240,19 +241,23 @@ export async function generateRoadmapProposal(
     sources: outcome.sources,
   });
 
-  return {
-    status: "proposal",
-    proposalId,
-    memoryCandidateCount: await recordMemoryCandidates(
-      roadmaps,
-      claim.completionToken,
-      input.startDate,
-      // ADR-028. A change request's note says what to do to a roadmap ("make
-      // phase two easier"), which is not something to remember about the
-      // athlete, so none of it is proposed as memory whatever came back.
-      changeRoadmap ? [] : outcome.memoryCandidates,
-    ),
-  };
+  const memoryCandidateCount = await recordMemoryCandidates(
+    roadmaps,
+    claim.completionToken,
+    input.startDate,
+    // ADR-028. A change request's note says what to do to a roadmap ("make
+    // phase two easier"), which is not something to remember about the
+    // athlete, so none of it is proposed as memory whatever came back.
+    changeRoadmap ? [] : outcome.memoryCandidates,
+  );
+  // ADR-034. A change request may still state a new objective ("a half
+  // marathon in spring"), which is exactly a goal, so it is not excluded.
+  await recordGoalSuggestion(
+    "roadmap",
+    claim.completionToken,
+    outcome.goalSuggestion,
+  );
+  return { status: "proposal", proposalId, memoryCandidateCount };
 }
 
 /**

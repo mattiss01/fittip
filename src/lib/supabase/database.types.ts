@@ -318,6 +318,63 @@ export type Database = {
           },
         ];
       };
+      goal_suggestions: {
+        Row: {
+          created_at: string;
+          decided_at: string | null;
+          desired_outcome: string;
+          goal_id: string | null;
+          id: string;
+          source_reference: string;
+          sports: string[];
+          status: string;
+          target_date: string | null;
+          title: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          decided_at?: string | null;
+          desired_outcome: string;
+          goal_id?: string | null;
+          id?: string;
+          source_reference: string;
+          sports: string[];
+          status?: string;
+          target_date?: string | null;
+          title: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          decided_at?: string | null;
+          desired_outcome?: string;
+          goal_id?: string | null;
+          id?: string;
+          source_reference?: string;
+          sports?: string[];
+          status?: string;
+          target_date?: string | null;
+          title?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "goal_suggestions_goal_fkey";
+            columns: ["goal_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "goals";
+            referencedColumns: ["id", "user_id"];
+          },
+          {
+            foreignKeyName: "goal_suggestions_owner_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+        ];
+      };
       goals: {
         Row: {
           achieved_at: string | null;
@@ -2569,6 +2626,21 @@ export type Database = {
         Args: { p_operation: string; p_value: Json };
         Returns: boolean;
       };
+      decide_goal_suggestion: {
+        Args: {
+          p_decision: string;
+          p_expected_goal_revision?: number;
+          p_priority_tier?: string;
+          p_suggestion_id: string;
+        };
+        Returns: Database["public"]["CompositeTypes"]["goal_suggestion_receipt"];
+        SetofOptions: {
+          from: "*";
+          to: "goal_suggestion_receipt";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       decide_plan_proposal_item: {
         Args: { p_decision: string; p_ordinal: number; p_proposal_id: string };
         Returns: undefined;
@@ -2692,6 +2764,10 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      goal_suggestion_fields_are_valid: {
+        Args: { p_suggestion: Json; p_today: string };
+        Returns: boolean;
+      };
       is_iana_timezone_name: { Args: { p_value: string }; Returns: boolean };
       is_valid_training_measurement: {
         Args: { p_mode: string; p_value: Json };
@@ -2711,6 +2787,14 @@ export type Database = {
       plan_content_is_valid: {
         Args: { p_content: Json; p_end_date: string; p_start_date: string };
         Returns: boolean;
+      };
+      record_goal_suggestion: {
+        Args: {
+          p_completion_token: string;
+          p_source: string;
+          p_suggestion: Json;
+        };
+        Returns: string;
       };
       record_plan_memory_candidates: {
         Args: {
@@ -2914,6 +2998,12 @@ export type Database = {
         goal_id: string | null;
         collection_revision: number | null;
         result: string | null;
+      };
+      goal_suggestion_receipt: {
+        suggestion_id: string | null;
+        status: string | null;
+        goal_id: string | null;
+        goal_collection_revision: number | null;
       };
       memory_change_receipt: {
         item_id: string | null;

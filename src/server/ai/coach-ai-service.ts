@@ -11,6 +11,7 @@ import {
   type CoachAIProposal,
   type CoachAIRequest,
   type CoachAISourceReference,
+  type CoachAIGoalSuggestion,
   type CoachAIMemoryCandidate,
 } from "@/server/ai/contracts";
 import {
@@ -88,6 +89,11 @@ export type CoachAIProposalOutcome = {
   memoryCandidates: CoachAIMemoryCandidate[];
   /** Set when a valid proposal arrived with an unusable memory section. */
   memoryRejectionReason: CoachAIRejectionReason | null;
+  /**
+   * ADR-034. A goal suggestion drawn from the planning note, validated, or
+   * null: none, or an unusable section, which never invalidates the proposal.
+   */
+  goalSuggestion: CoachAIGoalSuggestion | null;
 };
 
 export type CoachAIServiceDependencies = {
@@ -492,6 +498,7 @@ export class CoachAIService {
     // *proposal* section creates nothing and writes no user data.
     let proposal: CoachAIProposal;
     let memoryCandidates: CoachAIMemoryCandidate[] = [];
+    let goalSuggestion: CoachAIGoalSuggestion | null = null;
     let memoryRejectionReason: CoachAIRejectionReason | null = null;
 
     switch (operation) {
@@ -507,6 +514,7 @@ export class CoachAIService {
         }
         proposal = validation.response.roadmap;
         memoryCandidates = validation.response.memoryCandidates;
+        goalSuggestion = validation.response.goalSuggestion ?? null;
         memoryRejectionReason = validation.memoryRejectionReason;
         break;
       }
@@ -522,6 +530,7 @@ export class CoachAIService {
         }
         proposal = validation.response.plan;
         memoryCandidates = validation.response.memoryCandidates;
+        goalSuggestion = validation.response.goalSuggestion ?? null;
         memoryRejectionReason = validation.memoryRejectionReason;
         break;
       }
@@ -558,6 +567,7 @@ export class CoachAIService {
       spendReservationId: durable?.reservationId ?? null,
       memoryCandidates,
       memoryRejectionReason,
+      goalSuggestion,
     };
   }
 

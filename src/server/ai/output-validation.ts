@@ -16,6 +16,7 @@ import {
   type RoadmapResponse,
   type ProposedSessionActivity,
   type SessionActivitiesProposal,
+  type CoachAIGoalSuggestion,
   type SevenDayPlanAlternative,
   type SevenDayPlanCancel,
   type SevenDayPlanProposal,
@@ -148,6 +149,11 @@ const MAX_ALTERNATIVES_PER_SESSION = 2;
 const MAX_PLAN_ASSUMPTIONS = 4;
 const MAX_PLAN_UNCERTAINTIES = 3;
 const MAX_PLAN_SAFETY_CONSIDERATIONS = 3;
+/** ADR-034: the bounds `goals` and `goal_suggestions` hold. */
+const GOAL_TITLE_MAX_LENGTH = 120;
+const GOAL_OUTCOME_MAX_LENGTH = 1000;
+const GOAL_MAX_SPORTS = 10;
+const GOAL_SPORT_MAX_LENGTH = 60;
 /** ADR-033; the database holds a cancel's reason to the same bound. */
 const PLAN_CANCEL_REASON_MAX_LENGTH = 160;
 const DAY_MS = 86_400_000;
@@ -526,7 +532,9 @@ export function validatePlanCandidate(input: {
     return rejected("unparsable");
   }
   if (!isRecord(parsed)) return rejected("schema");
-  if (findUnknownField(parsed, ["plan", "memoryCandidates"])) {
+  if (
+    findUnknownField(parsed, ["plan", "memoryCandidates", "goalSuggestion"])
+  ) {
     return rejected("unknown_field");
   }
   if (!isRecord(parsed.plan)) return rejected("schema");
@@ -556,6 +564,11 @@ export function validatePlanCandidate(input: {
     response: {
       plan,
       memoryCandidates: memory.outcome === "accepted" ? memory.candidates : [],
+      goalSuggestion: validateGoalSuggestion(
+        parsed.goalSuggestion,
+        input.context.planningNote,
+        input.context.horizonStartDate,
+      ),
     },
     memoryRejectionReason: memory.outcome === "rejected" ? memory.reason : null,
   };
@@ -584,7 +597,9 @@ export function validateRoadmapCandidate(input: {
     return rejected("unparsable");
   }
   if (!isRecord(parsed)) return rejected("schema");
-  if (findUnknownField(parsed, ["roadmap", "memoryCandidates"])) {
+  if (
+    findUnknownField(parsed, ["roadmap", "memoryCandidates", "goalSuggestion"])
+  ) {
     return rejected("unknown_field");
   }
 
@@ -613,9 +628,63 @@ export function validateRoadmapCandidate(input: {
     response: {
       roadmap,
       memoryCandidates: memory.outcome === "accepted" ? memory.candidates : [],
+      goalSuggestion: validateGoalSuggestion(
+        parsed.goalSuggestion,
+        input.context.planningNote,
+        input.context.horizonStartDate,
+      ),
     },
     memoryRejectionReason: memory.outcome === "rejected" ? memory.reason : null,
   };
+}
+
+/**
+ * ADR-034. A section of its own, like the memory candidates: anything wrong
+ * with it drops the suggestion, never the proposal. Without a planning note
+ * there is nothing to draw one from, so there is none. The coach's words are
+ * cut to fit; the bounds are a goal's, so an accepted one always fits; a
+ * target date before the request's first day is no target.
+ */
+export function validateGoalSuggestion(
+  value: unknown,
+  planningNote: string | null,
+  earliestTargetDate: string,
+): CoachAIGoalSuggestion | null {
+  if (planningNote === null || !isRecord(value)) return null;
+  if (
+    findUnknownField(value, ["title", "desiredOutcome", "sports", "targetDate"])
+  ) {
+    return null;
+  }
+  const title = readText(value.title, GOAL_TITLE_MAX_LENGTH)?.trim();
+  const desiredOutcome = readText(
+    value.desiredOutcome,
+    GOAL_OUTCOME_MAX_LENGTH,
+  )?.trim();
+  if (!title || !desiredOutcome || !Array.isArray(value.sports)) return null;
+
+  const sports: string[] = [];
+  const seen = new Set<string>();
+  for (const entry of value.sports.slice(0, GOAL_MAX_SPORTS)) {
+    if (typeof entry !== "string") return null;
+    const sport = entry.trim();
+    if (sport.length === 0 || sport.length > GOAL_SPORT_MAX_LENGTH) return null;
+    if (seen.has(sport.toLowerCase())) continue;
+    seen.add(sport.toLowerCase());
+    sports.push(sport);
+  }
+  if (sports.length === 0) return null;
+
+  let targetDate: string | null = null;
+  if (value.targetDate !== undefined && value.targetDate !== null) {
+    const ms = parseIsoDate(value.targetDate);
+    if (ms === null || (value.targetDate as string) < earliestTargetDate) {
+      return null;
+    }
+    targetDate = value.targetDate as string;
+  }
+
+  return { title, desiredOutcome, sports, targetDate };
 }
 
 type RoadmapSectionResult =

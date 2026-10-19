@@ -110,10 +110,11 @@ export const COACH_AI_FIXTURE_LIMITS: CoachAILimits = {
  * The output ceiling went from 3,000 to 11,500 on 19 October 2026 (owner):
  * `gpt-6-luna` reasons inside `max_completion_tokens`, and Sarah's roadmap
  * came back empty twice, each charged for exactly 3,000 output tokens. 11,500
- * is the most the database's 8,000 micro-USD per-request ceiling admits: a
- * reservation is exactly 8,000 (18,000 x 0.125 + 11,500 x 0.5), the daily
- * ceiling admits 250 generations, and a call that times out is charged that
- * whole 8,000. Room is not a guarantee; whether the model ever needs more,
+ * was the most the database's 8,000 micro-USD per-request ceiling admitted
+ * (18,000 x 0.125 + 11,500 x 0.5). The same day the input ceiling went to
+ * 20,000 (ADR-034) and that ceiling to 9,000: a reservation is 8,250, the
+ * daily ceiling admits 242 generations, and a call that times out is
+ * charged that whole 8,250. Room is not a guarantee; whether the model ever needs more,
  * or more than the 180 s deadline (90 s until the same day) to write it, is
  * still unmeasured.
  *
@@ -128,7 +129,10 @@ export const COACH_AI_LIVE_LIMITS: CoachAILimits = {
   maxRequestsPerOwnerWindow: 6,
   maxRequestsPerOperationWindow: 3,
   maxConcurrentRequests: 1,
-  maxInputTokens: 18_000,
+  // 20,000 since 19 Oct 2026 (owner, ADR-034): the goal suggestion's prompt
+  // sentence had no room left in the roadmap call. The database's
+  // per-request ceiling went to 9,000 with it; a reservation is 8,250.
+  maxInputTokens: 20_000,
   maxOutputTokens: 11_500,
   // 90 s since 17 Oct 2026 (owner). 30 s was sized against 5.6 Luna; on 6
   // Luna a plan took 17 s and an "ask again" over 30 s, which timed out and
@@ -141,7 +145,8 @@ export const COACH_AI_LIVE_LIMITS: CoachAILimits = {
   // Decision 5: zero automatic retries. A call that fails after the provider
   // generated a response has already been charged.
   maxAttempts: 1,
-  perRequestCostCeilingMicroUsd: 8_000,
+  // The database's own, 9,000 since 19 Oct 2026 (ADR-034); this is the fast path.
+  perRequestCostCeilingMicroUsd: 9_000,
   dailyCostCeilingMicroUsd: 2_000_000,
   totalCostCeilingMicroUsd: 20_000_000,
 };
