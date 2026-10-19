@@ -364,6 +364,10 @@ describe("SessionPage", () => {
     expect(
       document.querySelector("[data-coach-cancellation]")?.textContent,
     ).toBe("Cancelled on the coach's suggestion, which you accepted.");
+    // Already says why, so the menu offers to edit it (owner, 19 Oct 2026).
+    openMenu();
+    expect(screen.getByRole("button", { name: "Edit reason" })).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Add reason" })).toBeNull();
   });
 
   it("brings back the session a coach's replacement stands in for", () => {
