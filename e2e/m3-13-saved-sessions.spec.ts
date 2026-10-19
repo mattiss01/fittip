@@ -95,6 +95,8 @@ test.describe("M3-13 private saved-session library", () => {
         fullPage: true,
         path: path.join(evidenceDirectory, "M3-13-save-to-library-390x844.png"),
       });
+      // The pop-up stays to say it was saved; it is closed to go on.
+      await save.getByRole("button", { name: "Close" }).click();
       await page.locator("[data-back-link]").click();
       await expect(
         await sessionCard(page, today, "Threshold intervals"),
