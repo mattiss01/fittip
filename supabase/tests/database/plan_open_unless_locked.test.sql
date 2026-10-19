@@ -141,7 +141,7 @@ as $$
   )
 $$;
 
-select plan(26);
+select plan(30);
 
 -- 1. The boundary ------------------------------------------------------------
 
@@ -430,6 +430,83 @@ select is(
    where cancelled.session_id = '8b000000-0000-4000-8000-0000000000c1'),
   'active:false',
   'a replaced session brought back is active and no longer matches its record'
+);
+
+-- 7. A cancel only, and one whose session moved away ------------------------------
+
+insert into pg_temp_receipt
+select 'more', * from public.apply_rolling_plan_change_set(
+  pg_temp.rev('8b000000-0000-4000-8000-000000000001'),
+  '8b000000-0000-4000-8000-00000000e004', 'owner_manual',
+  pg_temp.plan_session('8b000000-0000-4000-8000-0000000000c5', pg_temp.day(1), 5, 'Hill reps')
+  || pg_temp.plan_session('8b000000-0000-4000-8000-0000000000c6', pg_temp.day(2), 5, 'Tempo'));
+
+-- Hill reps is r1, Tempo r2.
+insert into pg_temp_claim
+select 'third', * from public.begin_plan_generation(
+  'open-key-0000000000000003', 'open-fingerprint-00000003', pg_temp.day(0), 3,
+  pg_temp.rev('8b000000-0000-4000-8000-000000000001'),
+  null, null, null, array[
+    '8b000000-0000-4000-8000-0000000000c5',
+    '8b000000-0000-4000-8000-0000000000c6']::uuid[]);
+
+-- While the coach answers, the owner moves Tempo off the days asked about.
+insert into pg_temp_receipt
+select 'moved', * from public.apply_rolling_plan_change_set(
+  pg_temp.rev('8b000000-0000-4000-8000-000000000001'),
+  '8b000000-0000-4000-8000-00000000e005', 'owner_manual',
+  jsonb_build_array(jsonb_build_object(
+    'operation', 'move', 'sessionId', '8b000000-0000-4000-8000-0000000000c6',
+    'localDate', pg_temp.day(5)::text, 'position', 0)));
+
+select isnt(
+  (select pg_temp.finish_generation('third',
+    pg_temp.plan_body(pg_temp.day(0), pg_temp.day(2), '[]'::jsonb,
+      jsonb_build_array(
+        pg_temp.cancel('r1', 'Hills can wait a week.'),
+        pg_temp.cancel('r2', 'Tempo can wait too.'))))),
+  null,
+  'an answer cancelling a session moved off the days is still recorded'
+);
+select is(
+  (select array_agg(item.title order by item.ordinal)
+   from public.plan_proposal_items item
+   join pg_temp_claim claim on claim.label = 'third'
+   join public.plan_generation_requests request on request.id = claim.generation_id
+   where item.proposal_id = request.proposal_id),
+  array['Hill reps'],
+  'but only the cancel still on those days becomes an item, so none is left undecidable'
+);
+
+select lives_ok(
+  $$select public.decide_plan_proposal_item(item.proposal_id, item.ordinal, 'staged')
+    from public.plan_proposal_items item
+    join pg_temp_claim claim on claim.label = 'third'
+    join public.plan_generation_requests request on request.id = claim.generation_id
+    where item.proposal_id = request.proposal_id$$,
+  'the owner accepts the cancel'
+);
+
+insert into pg_temp_review
+select 'third', * from public.finish_plan_proposal_review(
+  (select request.proposal_id
+   from pg_temp_claim claim
+   join public.plan_generation_requests request on request.id = claim.generation_id
+   where claim.label = 'third'),
+  pg_temp.rev('8b000000-0000-4000-8000-000000000001'),
+  '8b000000-0000-4000-8000-00000000f003');
+
+select is(
+  (select (select applied_count::integer from pg_temp_review where label = 'third')
+          || ':' || session.status || ':'
+          || coalesce(cancelled.replaced_by_session_id::text, 'none')
+   from public.rolling_plan_sessions session
+   join public.plan_proposal_cancellations cancelled
+     on cancelled.session_id = session.id
+     and cancelled.cancelled_at = session.cancelled_at
+   where session.id = '8b000000-0000-4000-8000-0000000000c5'),
+  '1:cancelled:none',
+  'a proposal that only cancels applies it, recorded with no replacement'
 );
 
 select * from finish();

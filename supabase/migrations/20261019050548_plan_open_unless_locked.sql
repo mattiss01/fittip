@@ -618,7 +618,8 @@ begin
   -- before the sessions, then proposed sessions in the order the coach listed
   -- them. A cancel item carries the title of the session it names, as it was
   -- when the answer arrived, and the coach's reason as its rationale; one
-  -- whose session is gone since the request began is not offered. Only sessions: a free day is
+  -- whose session is gone, cancelled or moved off those days since the
+  -- request began is not offered. Only sessions: a free day is
   -- not offered as a recovery day (owner, 17 October 2026). `ordinal` is the
   -- owner's stable handle on a choice; `content_index` is the way back to the
   -- rest of what the coach said.
@@ -684,6 +685,12 @@ begin
     join public.rolling_plan_sessions target
       on target.id = marked.session_id
       and target.user_id = v_user_id
+    -- Only a session still active and still on the days asked about: the
+    -- review shows those days alone, so an item dated elsewhere could never
+    -- be decided and would hold the finish shut.
+    where target.status = 'active'
+      and target.local_date between v_request.requested_start_date
+        and v_request.requested_end_date
   ) as item;
 
   -- Minimized provenance. Ids and revisions only; no copied source content.

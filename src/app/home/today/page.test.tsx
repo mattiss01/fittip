@@ -44,7 +44,7 @@ vi.mock(
     return {
       ...actual,
       createCoachCancellations: async () => ({
-        list: listCoachCancellationsMock,
+        listHiddenByReplacement: listCoachCancellationsMock,
       }),
     };
   },
@@ -68,7 +68,7 @@ const findByPlanSessions = vi.fn();
 describe("Today", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    listCoachCancellationsMock.mockResolvedValue(new Map());
+    listCoachCancellationsMock.mockResolvedValue(new Set());
     createProfileMock.mockResolvedValue({
       getCurrentProfile: vi.fn().mockResolvedValue({
         userId: "owner",
@@ -400,14 +400,7 @@ describe("Today", () => {
       cancelledAt: "2026-08-17T06:00:00.000Z",
     };
     readPlanWindowToppedUpMock.mockResolvedValue(planWindow([replaced]));
-    listCoachCancellationsMock.mockResolvedValue(
-      new Map([
-        [
-          SESSION_ID,
-          { replacedBySessionId: "7e150000-0000-4000-8000-0000000000aa" },
-        ],
-      ]),
-    );
+    listCoachCancellationsMock.mockResolvedValue(new Set([SESSION_ID]));
 
     render(await TodayPage({ searchParams: Promise.resolve({}) }));
 

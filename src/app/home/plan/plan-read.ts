@@ -57,24 +57,19 @@ export function toSeriesView(series: RollingPlanSeries): PlanSeriesView {
 }
 
 /**
- * The ids of cancelled sessions a coach's replacement stands in for (owner,
+ * The ids of cancelled sessions a coach's replacement stands beside (owner,
  * 19 Oct 2026; ADR-033). The Plan and Today leave them out, so a day shows
  * the replacement and not both; the replacement's own page brings one back.
- * Reads nothing when nothing in the slice is cancelled.
+ * `sessions` must hold the replacement too, which a day's read does when
+ * they share the day. Reads nothing when nothing in it is cancelled.
  */
 export async function readReplacedByCoach(
   sessions: readonly RollingPlanSession[],
 ): Promise<Set<string>> {
-  const cancelled = sessions.filter(
-    (session) => session.status === "cancelled",
-  );
-  if (cancelled.length === 0) return new Set();
-  const coach = await (await createCoachCancellations()).list(cancelled);
-  return new Set(
-    [...coach]
-      .filter(([, cancellation]) => cancellation.replacedBySessionId !== null)
-      .map(([sessionId]) => sessionId),
-  );
+  if (!sessions.some((session) => session.status === "cancelled")) {
+    return new Set();
+  }
+  return (await createCoachCancellations()).listHiddenByReplacement(sessions);
 }
 
 export function redirectOnAuthError(error: unknown): void {

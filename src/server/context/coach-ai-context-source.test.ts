@@ -162,10 +162,10 @@ describe("the production coaching context source", () => {
     materializeSeries.mockResolvedValue({ createdCount: 0, skipped: [] });
     listSeries.mockResolvedValue([]);
     listReasons.mockResolvedValue(new Map());
-    listCoachCancellations.mockResolvedValue(new Map());
+    listCoachCancellations.mockResolvedValue(new Set());
     createCancellationsMock.mockResolvedValue({ listReasons });
     createCoachCancellationsMock.mockResolvedValue({
-      list: listCoachCancellations,
+      listHiddenByReplacement: listCoachCancellations,
     });
     createGoalMock.mockResolvedValue({ list: listGoals });
     createMemoryMock.mockResolvedValue({ list: listMemory });
@@ -813,13 +813,7 @@ describe("the production coaching context source", () => {
       recoveryDates: [],
     });
     listCoachCancellations.mockResolvedValue(
-      new Map([
-        [
-          "66000000-0000-4000-8000-0000000000d1",
-          { replacedBySessionId: "66000000-0000-4000-8000-0000000000e1" },
-        ],
-        ["66000000-0000-4000-8000-0000000000d2", { replacedBySessionId: null }],
-      ]),
+      new Set(["66000000-0000-4000-8000-0000000000d1"]),
     );
 
     const records = await source("create_seven_day_plan").load(OWNER);

@@ -12,6 +12,15 @@ import {
 /** A cancellation the coach's proposal made, once the owner accepted it. */
 export type CoachCancellation = { replacedBySessionId: string | null };
 
+/** What these reads need of a plan session, as the plan read returns it. */
+export type CoachCancellationSession = {
+  id: string;
+  localDate: string;
+  title: string;
+  status: "active" | "cancelled";
+  cancelledAt: string | null;
+};
+
 export class CoachCancellationAuthenticationError extends Error {
   constructor(readonly accessError?: VerifiedUserAccessError) {
     super("An authenticated FitTip user is required.");
@@ -80,13 +89,43 @@ export class CoachCancellations {
   }
 
   /**
-   * The session a coach's replacement stands in for, with the cancellation
-   * that record is about, or null. The caller compares it with the session
-   * as it is now: one brought back since no longer matches.
+   * The ids of these sessions to leave off their day: cancelled by a coach's
+   * replacement that is, among `sessions`, still active and on the same day.
+   * A replacement cancelled or moved since no longer stands beside it, so the
+   * old session shows again, with its own Reactivate (ADR-033).
    */
-  async findReplacedBy(
+  async listHiddenByReplacement(
+    sessions: readonly CoachCancellationSession[],
+  ): Promise<Set<string>> {
+    const coach = await this.list(sessions);
+    const byId = new Map(sessions.map((session) => [session.id, session]));
+    return new Set(
+      [...coach]
+        .filter(([sessionId, cancellation]) => {
+          const replacement =
+            cancellation.replacedBySessionId === null
+              ? undefined
+              : byId.get(cancellation.replacedBySessionId);
+          return (
+            replacement !== undefined &&
+            replacement.status === "active" &&
+            replacement.localDate === byId.get(sessionId)?.localDate
+          );
+        })
+        .map(([sessionId]) => sessionId),
+    );
+  }
+
+  /**
+   * The session a coach's replacement stands in for, found among
+   * `sessions`, while it is still cancelled by that replacement; null
+   * otherwise. One brought back since, or cancelled again by hand, no longer
+   * matches the record.
+   */
+  async findStandingInFor(
     replacementId: string,
-  ): Promise<{ sessionId: string; cancelledAt: string } | null> {
+    sessions: readonly CoachCancellationSession[],
+  ): Promise<{ sessionId: string; title: string } | null> {
     const userId = await this.getVerifiedUserId();
     const { data, error } = await this.client
       .from("plan_proposal_cancellations")
@@ -97,9 +136,14 @@ export class CoachCancellations {
       .limit(1)
       .maybeSingle();
     if (error) throw new CoachCancellationPersistenceError();
-    return data === null
-      ? null
-      : { sessionId: data.session_id, cancelledAt: data.cancelled_at };
+    if (data === null) return null;
+    const old = sessions.find((session) => session.id === data.session_id);
+    return old !== undefined &&
+      old.status === "cancelled" &&
+      old.cancelledAt !== null &&
+      Date.parse(old.cancelledAt) === Date.parse(data.cancelled_at)
+      ? { sessionId: old.id, title: old.title }
+      : null;
   }
 
   private async getVerifiedUserId() {

@@ -203,22 +203,10 @@ async function SessionRead({
       } else {
         // A replacement offers to bring back the session it stands in for,
         // while that one is still cancelled by it and still ahead.
-        const replaced = await coachCancellations.findReplacedBy(found.id);
-        const old =
-          replaced === null
-            ? undefined
-            : slice.sessions.find(
-                (candidate) => candidate.id === replaced.sessionId,
-              );
-        if (
-          replaced !== null &&
-          old !== undefined &&
-          old.status === "cancelled" &&
-          old.cancelledAt !== null &&
-          Date.parse(old.cancelledAt) === Date.parse(replaced.cancelledAt)
-        ) {
-          standsInFor = { sessionId: old.id, title: old.title };
-        }
+        standsInFor = await coachCancellations.findStandingInFor(
+          found.id,
+          slice.sessions,
+        );
       }
     }
   } catch (error) {

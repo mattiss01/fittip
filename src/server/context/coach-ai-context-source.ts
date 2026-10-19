@@ -29,10 +29,7 @@ import { createPersonalActivityLibrary } from "@/server/repositories/personal-ac
 import { createProfileRepository } from "@/server/repositories/profile-repository";
 import { createRoadmapRepository } from "@/server/repositories/roadmap-repository";
 import { createRollingPlan } from "@/server/repositories/rolling-plan-repository";
-import {
-  type CoachCancellation,
-  createCoachCancellations,
-} from "@/server/repositories/coach-cancellation-repository";
+import { createCoachCancellations } from "@/server/repositories/coach-cancellation-repository";
 import { createSessionCancellations } from "@/server/repositories/session-cancellation-repository";
 import { createSavedSessionLibrary } from "@/server/repositories/saved-session-repository";
 import type {
@@ -260,9 +257,11 @@ export class OwnedRecordsCoachAIContextSource implements CoachAIContextSource {
           (session) =>
             session.status === "cancelled" && session.localDate >= today,
         );
-    const [cancellationReasons, coachCancellations] =
+    // A session the coach's replacement stands beside is not called off: its
+    // replacement is on the plan, and the day is not to be kept free (ADR-033).
+    const [cancellationReasons, replacedByCoach] =
       cancelledSessionsAhead.length === 0
-        ? [new Map<string, string>(), new Map<string, CoachCancellation>()]
+        ? [new Map<string, string>(), new Set<string>()]
         : await Promise.all([
             createSessionCancellations().then((reasons) =>
               reasons.listReasons(
@@ -270,16 +269,9 @@ export class OwnedRecordsCoachAIContextSource implements CoachAIContextSource {
               ),
             ),
             createCoachCancellations().then((coach) =>
-              coach.list(cancelledSessionsAhead),
+              coach.listHiddenByReplacement(planWindow.slice.sessions),
             ),
           ]);
-    // A session the coach's replacement stands in for is not called off: its
-    // replacement is on the plan, and the day is not to be kept free (ADR-033).
-    const replacedByCoach = new Set(
-      [...coachCancellations]
-        .filter(([, cancellation]) => cancellation.replacedBySessionId !== null)
-        .map(([sessionId]) => sessionId),
-    );
 
     const completedPlanSessionIds = new Set(
       completions
