@@ -30,6 +30,23 @@ vi.mock("@/server/repositories/goal-repository", async (original) => {
     await original<typeof import("@/server/repositories/goal-repository")>();
   return { ...actual, createGoalRepository: createGoalMock };
 });
+// ADR-035: the context source reads the coach's goal suggestions.
+vi.mock(
+  "@/server/repositories/goal-suggestion-repository",
+  async (original) => {
+    const actual =
+      await original<
+        typeof import("@/server/repositories/goal-suggestion-repository")
+      >();
+    return {
+      ...actual,
+      createGoalSuggestions: async () => ({
+        listForCoach: async () => [],
+        record: async () => "goal-suggestion-id",
+      }),
+    };
+  },
+);
 vi.mock("@/server/repositories/memory-repository", async (original) => {
   const actual =
     await original<typeof import("@/server/repositories/memory-repository")>();
@@ -316,6 +333,30 @@ describe("generateRoadmapProposal", () => {
     const claim = roadmaps.beginGeneration.mock.calls[0][0];
     expect(claim.changeRoadmap).toBe(true);
     expect(claim.requestFingerprint.endsWith(":change")).toBe(true);
+  });
+
+  it("asks again with the declined proposal's planning note, not the form's", async () => {
+    // Owner, 19 Oct 2026: the note went missing on "ask again", so the coach
+    // answered the feedback without the question.
+    roadmaps.getProposal.mockResolvedValue({
+      content: { title: "Before", summary: "Declined.", phases: [] },
+      changesRoadmap: false,
+      planningNote: "Run 5 km twice a week by January.",
+    });
+
+    await generateRoadmapProposal(
+      {
+        ...input(),
+        planningNote: null,
+        previousProposalId: PROPOSAL_ID,
+        regenerationFeedback: "Less volume.",
+      },
+      { roadmaps: roadmaps as unknown as RoadmapRepository },
+    ).catch(() => undefined);
+
+    const claim = roadmaps.beginGeneration.mock.calls[0][0];
+    expect(claim.planningNote).toBe("Run 5 km twice a week by January.");
+    expect(claim.requestFingerprint).toContain(`:${PROPOSAL_ID}:33:`);
   });
 
   it("does not make asking again a change because the form said so", async () => {

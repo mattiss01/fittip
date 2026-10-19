@@ -101,7 +101,8 @@ Where "goalsOutsideHorizon" is non-empty, it lists goal ids whose target dates f
 
 Finally, "memoryCandidates": zero to four durable facts, constraints, preferences or observed patterns worth remembering beyond this request, each one short sentence in your own words about the athlete, at most 160 characters. Draw only on "planningNote". Anything from "regenerationFeedback" is a comment on one rejected proposal and must never appear here. Return an empty list when the note holds nothing durable, which is the common case.
 
-"goalSuggestion": an objective "planningNote" states that no target goal covers, as a title, a desired outcome, its sports and a target date only if the note names one; otherwise null. What the athlete wants to achieve is a goal, never a memory.`,
+"goalSuggestion": an objective "planningNote" states that no target goal covers, as a title, a desired outcome, its sports and a target date only if the note names one; otherwise null. What the athlete wants to achieve is a goal, never a memory.
+"alreadySuggested": memory and goals already suggested to the athlete, still waiting or turned down. They are not facts about the athlete and nothing is planned from them; suggest none of them again, in any wording.`,
 
   create_seven_day_plan: `Produce a training plan for exactly the dates you were given, plus any durable constraints worth remembering.
 
@@ -134,7 +135,8 @@ Where "hasSafetySignal" is true, you must return at least one "safetyConsiderati
 
 Finally, "memoryCandidates": zero to four durable facts, constraints, preferences or observed patterns worth remembering beyond this request, each one short sentence in your own words, drawn only from "planningNote", never "regenerationFeedback". Usually the list is empty.
 
-"goalSuggestion": an objective "planningNote" states that no target goal covers, as a title, a desired outcome, its sports and a target date only if the note names one; otherwise null. What the athlete wants to achieve is a goal, never a memory.`,
+"goalSuggestion": an objective "planningNote" states that no target goal covers, as a title, a desired outcome, its sports and a target date only if the note names one; otherwise null. What the athlete wants to achieve is a goal, never a memory.
+"alreadySuggested": memory and goals already suggested to the athlete, still waiting or turned down. They are not facts about the athlete and nothing is planned from them; suggest none of them again, in any wording.`,
 
   fill_session_activities: `Fill in the activities for one planned session: "sessionDetail.session", on "horizonStartDate". The session's title, sport, length and intent are the athlete's; do not change them. Your job is what happens inside it.
 

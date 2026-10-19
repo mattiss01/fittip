@@ -24,6 +24,7 @@ import {
 } from "@/server/ai/budget";
 import {
   buildCoachAIContext,
+  dropAlreadySuggested,
   type CoachAIComposeInput,
 } from "@/server/ai/context";
 import type { CoachAIContextSource } from "@/server/ai/context-source";
@@ -554,6 +555,13 @@ export class CoachAIService {
         throw new CoachAIError(unreachable);
       }
     }
+
+    // ADR-035: an exact repeat of the "don't repeat" list is dropped.
+    ({ memoryCandidates, goalSuggestion } = dropAlreadySuggested(
+      assembled.context.alreadySuggested,
+      memoryCandidates,
+      goalSuggestion,
+    ));
 
     draft.outcome = "accepted";
     return {

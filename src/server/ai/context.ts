@@ -1,6 +1,6 @@
 import "server-only";
 
-import { isoDateInTimezone } from "@/lib/date/local-date";
+import { isoDateInTimezone, shiftIsoDate } from "@/lib/date/local-date";
 import {
   GOAL_SPORT_MAX_LENGTH,
   GOAL_SPORTS_MAX,
@@ -13,6 +13,7 @@ import {
   type MemoryItemView,
 } from "@/server/memory/memory-records";
 import type {
+  CoachAIAlreadySuggested,
   CoachAIContext,
   CoachAISafetyFlagReference,
   StoredRoadmap,
@@ -192,6 +193,12 @@ export type CoachAIContextLimits = {
     regenerationFeedback: number;
     previousProposal: number;
     /**
+     * ADR-035. The "don't repeat" list. It trims to this, newest kept, and
+     * never refuses: the owner did not write it, and what is left out can
+     * only be suggested again. Zero where nothing is suggested.
+     */
+    alreadySuggested: number;
+    /**
      * M3-16B. Like training history and unlike goals, this trims rather than
      * denies: `buildRoadmapPlanContext` reduces to this ceiling with the
      * reduction disclosed, so the check here can only fire if that ladder and
@@ -344,6 +351,9 @@ export const COACH_AI_CONTEXT_LIMITS = {
       planningNote: 1_200,
       regenerationFeedback: 600,
       previousProposal: 2_200,
+      // ADR-035: twenty memory suggestions of 160 characters and ten goal
+      // titles of 120 are about 4,500 bytes in ASCII; a longer script trims.
+      alreadySuggested: 5_200,
       // A roadmap is not planned against itself.
       roadmap: 0,
       // Six phases of 80-character titles with their dates are about 1,020.
@@ -360,7 +370,12 @@ export const COACH_AI_CONTEXT_LIMITS = {
       // 48,850 until ADR-028: a change request swaps the outline's 1,200 for
       // the whole roadmap's 16,000 and a longer key, and the input ceiling
       // went to 18,000 tokens for it.
-      total: 63_700,
+      //
+      // 68,900 since ADR-035 added the "don't repeat" list's 5,200:
+      //
+      //   prefix 8,400 + wrapper 64 + context 68,900 = 77,364 characters
+      //   ceil(77,364 / 4) = 19,341  against maxInputTokens 20,000.
+      total: 68_900,
     },
   },
   // M3-03 kept every number M3-02 provisionally set here, and this comment
@@ -458,6 +473,8 @@ export const COACH_AI_CONTEXT_LIMITS = {
       // every handle a replacement or every handle a cancel, measure under
       // 10,500 (`context.test.ts`).
       previousProposal: 11_000,
+      // ADR-035, as on the roadmap.
+      alreadySuggested: 5_200,
       roadmap: 4_000,
       currentRoadmap: 0,
       roadmapToChange: 0,
@@ -480,7 +497,12 @@ export const COACH_AI_CONTEXT_LIMITS = {
       //
       //   prefix 9,400 + wrapper 64 + context 57,200 = 66,664 characters
       //   ceil(66,664 / 4) = 16,666  against maxInputTokens 18,000.
-      total: 57_200,
+      //
+      // 62,400 since ADR-035 added the "don't repeat" list's 5,200:
+      //
+      //   prefix 10,100 + wrapper 64 + context 62,400 = 72,564 characters
+      //   ceil(72,564 / 4) = 18,141  against maxInputTokens 20,000.
+      total: 62_400,
     },
   },
   // A7-2, within ADR-020. One session rather than a horizon, so the plan's
@@ -518,6 +540,7 @@ export const COACH_AI_CONTEXT_LIMITS = {
       planningNote: 1_600,
       regenerationFeedback: 0,
       previousProposal: 0,
+      alreadySuggested: 0,
       roadmap: 0,
       currentRoadmap: 0,
       roadmapToChange: 0,
@@ -616,6 +639,11 @@ export type CoachAIOwnedRecords = {
   memory: MemoryItemView[];
   training: TrainingHistoryRecords;
   /**
+   * ADR-035. The coach's goal suggestions still open or rejected lately, read
+   * for the plan and the roadmap. Absent is none.
+   */
+  goalSuggestions?: CoachAIGoalSuggestionRecord[];
+  /**
    * ADR-023. The profile fields the coach may read, already owner-scoped.
    * Assembly reduces them with `selectCoachProfileContext`; absent means an
    * owner with nothing entered, not a missing requirement.
@@ -656,6 +684,14 @@ export type CoachAIOwnedRecords = {
    * assembly sizes it with `buildSessionDetailContext`.
    */
   sessionDetail?: SessionDetailRecords | null;
+};
+
+/** ADR-035. A goal suggestion as the "don't repeat" list needs it. */
+export type CoachAIGoalSuggestionRecord = {
+  title: string;
+  status: "proposed" | "rejected";
+  createdAt: string;
+  decidedAt: string | null;
 };
 
 /** An accepted roadmap version, as the repository returns it. */
@@ -975,6 +1011,17 @@ export function buildCoachAIContext(
     // four weeks counts too (decision 15).
     hasSafetySignal:
       training.hasSafetySignal || (fillExtras?.flags.length ?? 0) > 0,
+    // Keyed off the allocation, as the rules are: a fill gains no key.
+    ...(limits.bytes.alreadySuggested > 0
+      ? {
+          alreadySuggested: selectAlreadySuggested(
+            records.memory,
+            records.goalSuggestions ?? [],
+            records.today,
+            limits.bytes.alreadySuggested,
+          ),
+        }
+      : {}),
     planningNote: assertBounded(
       compose.planningNote,
       PLANNING_NOTE_MAX_LENGTH,
@@ -1237,6 +1284,110 @@ function requireSessionDetail(
     throw new CoachAIError("context_invalid");
   }
   return detail;
+}
+
+/** ADR-035: a rejected suggestion stays on the list this many days. */
+export const ALREADY_SUGGESTED_REJECTED_DAYS = 60;
+const ALREADY_SUGGESTED_MAX_MEMORY = 20;
+const ALREADY_SUGGESTED_MAX_GOALS = 10;
+const ALREADY_SUGGESTED_TEXT_LENGTH = 160;
+
+/**
+ * ADR-035. What the coach suggested and the owner has not accepted: open, or
+ * rejected within the last 60 days. Accepted ones are not here because they
+ * are active memory and goals, which the coach already reads as such; a
+ * memory item the owner wrote was never a suggestion.
+ *
+ * Never part of `memory`, so nothing on it is treated as a fact. Newest
+ * first, and trimmed from the oldest to fit `maxBytes` rather than refusing:
+ * the owner did not write this list, and what falls off can at worst be
+ * suggested once more.
+ */
+export function selectAlreadySuggested(
+  memory: readonly MemoryItemView[],
+  goalSuggestions: readonly CoachAIGoalSuggestionRecord[],
+  today: string,
+  maxBytes: number,
+): CoachAIAlreadySuggested {
+  const cutoff = shiftIsoDate(today, -ALREADY_SUGGESTED_REJECTED_DAYS);
+  const isOpenOrRecentlyRejected = (
+    status: string,
+    decidedOn: string | null,
+  ): boolean =>
+    status === "proposed" ||
+    (status === "rejected" &&
+      decidedOn !== null &&
+      decidedOn.slice(0, 10) >= cutoff);
+
+  const listed: CoachAIAlreadySuggested = {
+    memory: memory
+      .filter(
+        (item) =>
+          item.provenance === "inferred_proposed" &&
+          isOpenOrRecentlyRejected(item.status, item.updatedAt),
+      )
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+      .slice(0, ALREADY_SUGGESTED_MAX_MEMORY)
+      .map((item) => cutText(item.content)),
+    goals: goalSuggestions
+      .filter((suggestion) =>
+        isOpenOrRecentlyRejected(suggestion.status, suggestion.decidedAt),
+      )
+      .sort((a, b) =>
+        (b.decidedAt ?? b.createdAt).localeCompare(a.decidedAt ?? a.createdAt),
+      )
+      .slice(0, ALREADY_SUGGESTED_MAX_GOALS)
+      .map((suggestion) => cutText(suggestion.title)),
+  };
+  // Oldest memory first, then oldest goal, until it fits.
+  while (jsonBytes(listed) > maxBytes) {
+    if (listed.memory.length > 0) listed.memory.pop();
+    else if (listed.goals.length > 0) listed.goals.pop();
+    else break;
+  }
+  return listed;
+}
+
+/**
+ * ADR-035's belt. The prompt asks the coach not to repeat the list; this
+ * drops what repeats it word for word anyway (case, spacing and a closing
+ * full stop aside), so an exact repeat never reaches the owner. A reworded
+ * one is the prompt's to prevent.
+ */
+export function dropAlreadySuggested<
+  Memory extends { content: string },
+  Goal extends { title: string },
+>(
+  alreadySuggested: CoachAIAlreadySuggested | undefined,
+  memoryCandidates: readonly Memory[],
+  goalSuggestion: Goal | null,
+): { memoryCandidates: Memory[]; goalSuggestion: Goal | null } {
+  if (alreadySuggested === undefined) {
+    return { memoryCandidates: [...memoryCandidates], goalSuggestion };
+  }
+  const memory = new Set(alreadySuggested.memory.map(sameWording));
+  const goals = new Set(alreadySuggested.goals.map(sameWording));
+  return {
+    memoryCandidates: memoryCandidates.filter(
+      (candidate) => !memory.has(sameWording(cutText(candidate.content))),
+    ),
+    goalSuggestion:
+      goalSuggestion !== null &&
+      goals.has(sameWording(cutText(goalSuggestion.title)))
+        ? null
+        : goalSuggestion,
+  };
+}
+
+function sameWording(value: string): string {
+  return value.toLowerCase().replace(/\s+/g, " ").trim().replace(/\.$/, "");
+}
+
+function cutText(value: string): string {
+  return Array.from(value.trim())
+    .slice(0, ALREADY_SUGGESTED_TEXT_LENGTH)
+    .join("")
+    .trim();
 }
 
 export function byteLength(value: string): number {

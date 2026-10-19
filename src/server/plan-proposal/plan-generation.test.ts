@@ -30,6 +30,23 @@ vi.mock("@/server/repositories/goal-repository", async (original) => {
     await original<typeof import("@/server/repositories/goal-repository")>();
   return { ...actual, createGoalRepository: createGoalMock };
 });
+// ADR-035: the context source reads the coach's goal suggestions.
+vi.mock(
+  "@/server/repositories/goal-suggestion-repository",
+  async (original) => {
+    const actual =
+      await original<
+        typeof import("@/server/repositories/goal-suggestion-repository")
+      >();
+    return {
+      ...actual,
+      createGoalSuggestions: async () => ({
+        listForCoach: async () => [],
+        record: async () => "goal-suggestion-id",
+      }),
+    };
+  },
+);
 vi.mock("@/server/repositories/memory-repository", async (original) => {
   const actual =
     await original<typeof import("@/server/repositories/memory-repository")>();
@@ -551,7 +568,7 @@ describe("generatePlanProposal", () => {
     );
   });
 
-  it("records the note's goal suggestion on a first answer, never on ask again (ADR-034)", async () => {
+  it("records the note's goal suggestion on a first answer and on ask again (ADR-034, ADR-035)", async () => {
     // The example coach suggests a goal when the note says "goal".
     const note = "New goal: run 5 km twice a week.";
     await generatePlanProposal(
@@ -586,9 +603,45 @@ describe("generatePlanProposal", () => {
       },
       { proposals: proposals as unknown as PlanProposalRepository },
     );
-    // The same note answered again: suggesting it twice would offer the
-    // owner the same goal twice.
-    expect(recordGoalSuggestionMock).not.toHaveBeenCalled();
+    // Asking again may suggest too (owner, 19 Oct 2026); the coach's
+    // "don't repeat" list is what keeps the first one from coming back.
+    expect(recordGoalSuggestionMock).toHaveBeenCalledWith(
+      "plan",
+      "t1",
+      expect.objectContaining({ title: "New goal: run 5 km twice a week." }),
+    );
+  });
+
+  it("proposes memory from the planning note on ask again too (ADR-035)", async () => {
+    proposals.recordMemoryCandidates.mockResolvedValue({
+      collectionRevision: 8,
+      itemIds: ["item-1"],
+    });
+    proposals.getProposal.mockResolvedValue({
+      id: PREVIOUS_ID,
+      items: [],
+      content: {
+        schemaVersion: "fittip.seven-day-plan.v2",
+        weekDescription: "Rest.",
+        startDate: TODAY,
+        endDate: END_DATE,
+        sessions: [],
+      },
+    });
+
+    const result = await generatePlanProposal(
+      {
+        ...input(),
+        planningNote: "I only have 45 minutes on weekdays.",
+        previousProposalId: PREVIOUS_ID,
+        regenerationFeedback: "Less running.",
+        idempotencyKey: "plan-generation-key-regen-memory",
+      },
+      { proposals: proposals as unknown as PlanProposalRepository },
+    );
+
+    expect(proposals.recordMemoryCandidates).toHaveBeenCalledOnce();
+    expect(result).toMatchObject({ memoryCandidateCount: 1 });
   });
 
   it("claims nothing when the proposal being replaced cannot be read", async () => {

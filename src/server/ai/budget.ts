@@ -42,9 +42,10 @@ export const COACH_AI_FIXTURE_LIMITS: CoachAILimits = {
   maxRequestsPerOwnerWindow: 6,
   maxRequestsPerOperationWindow: 3,
   maxConcurrentRequests: 1,
-  // Tracks the live ceiling so a fixture run cannot accept a context the live
-  // path refuses, or refuse one it accepts. The fixture rate card is zero, so
-  // this number buys nothing and costs nothing here.
+  // Nothing enforces this: only the live adapter refuses on input tokens. It
+  // is a fixture reservation's size, which the spend tests are written
+  // against, and has stayed at 18,000 while the live ceiling rose to 20,000
+  // (ADR-034). The fixture rate card is zero, so it costs nothing either way.
   maxInputTokens: 18_000,
   maxOutputTokens: 2_000,
   deadlineMs: 30_000,

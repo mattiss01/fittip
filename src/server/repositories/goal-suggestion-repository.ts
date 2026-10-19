@@ -8,6 +8,7 @@ import {
   createServerUserClient,
   type ServerUserClient,
 } from "@/lib/supabase/server-user-client";
+import type { CoachAIGoalSuggestionRecord } from "@/server/ai/context";
 import type { CoachAIGoalSuggestion } from "@/server/ai/contracts";
 import { MemoryCandidateBatchError } from "@/server/proposal-logging/memory-candidate-batch";
 
@@ -114,6 +115,40 @@ export class GoalSuggestions {
         targetDate: row.target_date,
       })),
     };
+  }
+
+  /**
+   * ADR-035. The coach's "don't repeat" list: the open ones, and those
+   * rejected on or after `since`. Titles and dates only; assembly applies the
+   * window again and keeps the newest ten.
+   */
+  async listForCoach(since: string): Promise<CoachAIGoalSuggestionRecord[]> {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(since)) {
+      throw new GoalSuggestionPersistenceError();
+    }
+    const userId = await this.getVerifiedUserId();
+    const { data, error } = await this.client
+      .from("goal_suggestions")
+      .select("title, status, created_at, decided_at")
+      .eq("user_id", userId)
+      .or(`status.eq.proposed,and(status.eq.rejected,decided_at.gte.${since})`)
+      // Newest decision first, open ones before any, as assembly orders.
+      .order("decided_at", { ascending: false, nullsFirst: true })
+      .order("created_at", { ascending: false })
+      .limit(40);
+    if (error) throw new GoalSuggestionPersistenceError();
+    return data.flatMap((row) =>
+      row.status === "proposed" || row.status === "rejected"
+        ? [
+            {
+              title: row.title,
+              status: row.status,
+              createdAt: row.created_at,
+              decidedAt: row.decided_at,
+            },
+          ]
+        : [],
+    );
   }
 
   /** Accept as Core or Supporting, or Reject. */

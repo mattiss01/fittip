@@ -15,7 +15,7 @@ import {
 
 // 8,100 since 19 Oct 2026 (ADR-034): the goal suggestion's sentence. The
 // worst case is 17,966 tokens against the 20,000 ceiling.
-const STATIC_PREFIX_BUDGET = 8_100;
+const STATIC_PREFIX_BUDGET = 8_400;
 
 /**
  * The plan prompt gets a larger allowance than the roadmap's, and that is a
@@ -74,7 +74,7 @@ const STATIC_PREFIX_BUDGET = 8_100;
  */
 // 9,800 since 19 Oct 2026 (ADR-034): the goal suggestion's sentence, and
 // the decisions on a previous proposal. 16,766 tokens of 20,000.
-const PLAN_STATIC_PREFIX_BUDGET = 9_800;
+const PLAN_STATIC_PREFIX_BUDGET = 10_100;
 
 describe("what every prompt says about the athlete's data (ADR-023)", () => {
   it.each([
@@ -110,13 +110,15 @@ describe("what every prompt says about the athlete's data (ADR-023)", () => {
       );
 
     // 14,179 until ADR-028: a request to change the roadmap sends it whole.
-    expect(tokens("create_roadmap", STATIC_PREFIX_BUDGET)).toBe(17_966);
+    // 17,966 until ADR-035 sent the "don't repeat" list.
+    expect(tokens("create_roadmap", STATIC_PREFIX_BUDGET)).toBe(19_341);
     // 14,991 until the plan's logs took 10,200 bytes (16 Oct 2026); 15,216
     // until the prompt said an empty week is an answer (17 Oct 2026); 15,291
     // until the coach could suggest a cancel (ADR-033, 19 Oct 2026); 15,391
-    // until every decision went back with the previous proposal (same day).
+    // until every decision went back with the previous proposal (same day);
+    // 16,766 until ADR-035 sent the "don't repeat" list.
     expect(tokens("create_seven_day_plan", PLAN_STATIC_PREFIX_BUDGET)).toBe(
-      16_766,
+      18_141,
     );
     expect(
       tokens(
