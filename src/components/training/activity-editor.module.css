@@ -260,6 +260,18 @@
 }
 
 /* The library opens in place, under its button, never over the form. */
+/* The library and the field that narrows it. */
+.pickerWrap {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.pickerSearch {
+  width: 100%;
+  min-height: 2.75rem;
+}
+
+/* A long library scrolls inside itself rather than pushing the form away. */
 .picker {
   display: grid;
   margin: 0;
@@ -269,6 +281,8 @@
   border-radius: var(--radius-control);
   background: var(--ledger-paper);
   list-style: none;
+  max-height: 18rem;
+  overflow-y: auto;
 }
 
 .picker li + li {

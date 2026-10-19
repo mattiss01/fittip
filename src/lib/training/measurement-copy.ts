@@ -89,6 +89,9 @@ export const ACTIVITY_COPY = {
   add: "Add activity",
   addFromLibrary: "Add activity from library",
   libraryLabel: "Your activities",
+  /* Narrows the library as it is typed (owner, 19 Oct 2026). */
+  librarySearchLabel: "Search your activities",
+  libraryNoMatch: "No activity matches.",
   saveToLibrary: "Save activity to library",
   /** For a row that came from the library and was changed since. */
   saveAsNewToLibrary: "Save as new library activity",
