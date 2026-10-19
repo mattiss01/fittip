@@ -5,6 +5,7 @@ import {
   useCallback,
   useEffect,
   useId,
+  useLayoutEffect,
   useRef,
   useState,
   type ReactNode,
@@ -27,6 +28,11 @@ export function MoreMenu({
   children: (close: () => void) => ReactNode;
 }) {
   const [open, setOpen] = useState(false);
+  // Opens upward when the list would run under the bottom navigation, which
+  // the page cannot scroll it out from under (owner, 19 Oct 2026: Delete was
+  // out of reach below a long session).
+  const [upward, setUpward] = useState(false);
+  const list = useRef<HTMLUListElement>(null);
   const root = useRef<HTMLDivElement>(null);
   const button = useRef<HTMLButtonElement>(null);
   const listId = useId();
@@ -38,6 +44,14 @@ export function MoreMenu({
     setOpen(false);
     document.getElementById(buttonId)?.focus();
   }, [buttonId]);
+
+  useLayoutEffect(() => {
+    if (!open || button.current === null || list.current === null) return;
+    const below =
+      window.innerHeight - button.current.getBoundingClientRect().bottom;
+    // The navigation's height and a margin.
+    setUpward(below < list.current.offsetHeight + 96);
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -84,7 +98,12 @@ export function MoreMenu({
         </svg>
       </button>
       {open ? (
-        <ul className={styles.menuList} id={listId}>
+        <ul
+          className={styles.menuList}
+          id={listId}
+          ref={list}
+          data-upward={upward || undefined}
+        >
           {children(close)}
         </ul>
       ) : null}

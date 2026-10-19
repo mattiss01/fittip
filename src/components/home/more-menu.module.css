@@ -43,6 +43,11 @@
   list-style: none;
 }
 
+.menuList[data-upward] {
+  top: auto;
+  bottom: calc(100% + 0.4rem);
+}
+
 .menuItem {
   width: 100%;
   min-height: 3rem;

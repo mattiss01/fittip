@@ -250,7 +250,7 @@ describe("SessionPage", () => {
     choose("Duplicate");
 
     const form = screen
-      .getByRole("button", { name: "Duplicate session" })
+      .getByRole("button", { name: "Duplicate" })
       .closest("form")!;
     expect(form.querySelector("input[name='operation']")).toHaveValue(
       "duplicate",
@@ -268,9 +268,7 @@ describe("SessionPage", () => {
     render(page(session()));
 
     choose("Cancel session");
-    expect(
-      screen.getByText(/keeps the session on the record as cancelled/i),
-    ).toBeVisible();
+    expect(screen.getByText(/stays on the record as cancelled/i)).toBeVisible();
     expect(
       screen
         .getByRole("button", { name: "Cancel session" })
@@ -279,12 +277,10 @@ describe("SessionPage", () => {
     ).toHaveValue("cancel");
 
     choose("Delete");
-    const warning = screen.getByText(/does not keep it on the record/i);
-    // A one-off delete really is permanent, so it says so and says nothing
-    // about a series it does not belong to.
-    expect(warning.textContent).toMatch(/^Permanent\./);
+    const warning = screen.getByText(/gone for good/i);
+    // A one-off delete really is permanent, so it says so, briefly (owner,
+    // 19 Oct 2026), and says nothing about a series it does not belong to.
     expect(warning.textContent).toMatch(/no undo/i);
-    expect(warning.textContent).toMatch(/logged training against/i);
     expect(warning.textContent).not.toMatch(/repeats/i);
     const form = screen
       .getByRole("button", { name: "Delete session" })
@@ -342,7 +338,7 @@ describe("SessionPage", () => {
     );
     expect(screen.getByRole("button", { name: "Save reason" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Clear reason" })).toBeVisible();
-    expect(screen.getByText(/not sent to a coach/)).toBeVisible();
+    expect(screen.getByText("Only you see this.")).toBeVisible();
   });
 
   it("says the coach's accepted proposal cancelled it (ADR-033)", () => {
@@ -742,8 +738,10 @@ describe("SessionPage", () => {
     };
     rerender(page(occurrence(), series()));
 
-    expect(status).toHaveTextContent("Your plan changed somewhere else.");
-    expect(status).not.toHaveTextContent(/unchanged removed/);
+    // Said in the pop-up that is still open, where the owner is looking.
+    const refusal = screen.getByRole("status");
+    expect(refusal).toHaveTextContent("Your plan changed somewhere else.");
+    expect(refusal).not.toHaveTextContent(/unchanged removed/);
     expect(
       screen.getByRole("link", { name: "Reload this session" }),
     ).toBeVisible();

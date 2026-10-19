@@ -71,17 +71,19 @@ test.describe("M3-13 private saved-session library", () => {
         .locator("[data-session-actions] li")
         .getByText("Save to library", { exact: true })
         .click();
+      // Choosing it is the save, in a pop-up (owner, 19 Oct 2026); there is
+      // nothing to name: the entry is called what the session is called.
       const save = page.locator('[data-session-panel="Save to library"]');
-      await expect(
-        save.getByText(/This session stays on your plan/i),
-      ).toBeVisible();
-      // Nothing to name: the entry is called what the session is called.
-      await expect(save.locator("input[name='name']")).toHaveCount(0);
-      await save.getByRole("button", { name: "Save to library" }).click();
       await expect(save.getByText("Saved to your library.")).toBeVisible();
+      await expect(save.locator("input[name='name']")).toHaveCount(0);
       // One entry per title (owner, 15 Oct 2026): saving it again asks, and
       // keeping both opens on the next free title.
-      await save.getByRole("button", { name: "Save to library" }).click();
+      await save.getByRole("button", { name: "Close" }).click();
+      await page.getByRole("button", { name: "More actions" }).click();
+      await page
+        .locator("[data-session-actions] li")
+        .getByText("Save to library", { exact: true })
+        .click();
       await expect(save.getByText("Already in your library.")).toBeVisible();
       await save.getByRole("button", { name: "Keep both" }).click();
       await expect(save.getByLabel("Title for the new entry")).toHaveValue(

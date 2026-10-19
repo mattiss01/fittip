@@ -195,7 +195,7 @@ test.describe("M3-12 manual continuous planning", () => {
       const duplicate = sessionPanel(page, "Duplicate");
       await fillDate(duplicate, "Copy to", tomorrow);
       await duplicate
-        .getByRole("button", { name: "Duplicate session" })
+        .getByRole("button", { name: "Duplicate", exact: true })
         .click();
       await expect(page.locator("[role='status']").first()).toContainText(
         "Session duplicated.",
@@ -243,7 +243,7 @@ test.describe("M3-12 manual continuous planning", () => {
       await chooseMore(page, "Cancel session");
       const cancel = sessionPanel(page, "Cancel session");
       await expect(
-        cancel.getByText(/keeps the session on the record/i),
+        cancel.getByText(/stays on the record as cancelled/i),
       ).toBeVisible();
       await cancel.getByRole("button", { name: "Cancel session" }).click();
       await expect(
