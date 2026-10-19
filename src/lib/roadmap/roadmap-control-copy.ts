@@ -41,14 +41,14 @@ const WRITE_REJECTIONS = {
 export const ROADMAP_CONTROL_COPY = {
   /* ---- Compose ---------------------------------------------------------- */
   /**
-   * In the page's corner while a roadmap is in force (ADR-028). It opens a
-   * choice of three: two ways to a new proposal, and writing one by hand
-   * (ADR-029).
+   * ⋯ beside the title of the roadmap in force (owner, 19 Oct 2026): edit it
+   * by hand (ADR-030), edit it with the coach (ADR-028), or create a new one,
+   * which asks who writes it: the coach, or the owner (ADR-029).
    */
-  changeRoadmapAction: "Change roadmap",
-  changeWithCoachAction: "Change with Coach",
-  changeWithCoachDetail: "Say what should be different",
-  newWithCoachAction: "New roadmap with Coach",
+  actionsLabel: "Roadmap actions",
+  createRoadmapAction: "Create a new roadmap",
+  changeWithCoachAction: "Edit with Coach",
+  newWithCoachAction: "With Coach",
   newWithCoachDetail: "Start over from your goals",
   /* Writing one by hand (ADR-029): in force on save, nothing to review. */
   writeAction: "Write it yourself",
@@ -112,7 +112,7 @@ export const ROADMAP_CONTROL_COPY = {
   },
   /* The change form. What is sent is said, because it is more than a new
      roadmap sends: the whole roadmap, where that sends an outline. */
-  changeTitle: "Change with Coach",
+  changeTitle: "Edit with Coach",
   changeNoteLabel: "What should change?",
   changeSupport:
     "The coach is sent your whole roadmap and what you write here. Nothing changes until you accept a proposal.",
@@ -193,12 +193,14 @@ export const ROADMAP_CONTROL_COPY = {
     "A good moment to look at your roadmap again. Does what comes next still fit?",
   reviewDueRoadmap: "Your roadmap has ended",
   reviewDueRoadmapBody:
-    "Nothing is planned beyond it. Ask for a new roadmap when you are ready.",
+    "Nothing is planned beyond it. Create a new roadmap when you are ready.",
   reviewedAction: "Reviewed",
   /** On the Plan's Roadmap chip, for a screen reader: the dot has no words. */
   reviewDueNote: "A roadmap review is due.",
   /** The same, when there is no roadmap yet. */
   missingNote: "No roadmap yet. Create one to plan toward your goals.",
+  /** The same, once the roadmap in force has ended (owner, 19 Oct 2026). */
+  endedNote: "Your roadmap has ended. Create a new one to keep planning.",
 
   /* ---- Edit ------------------------------------------------------------- */
   editTitle: "Edit proposal",
@@ -376,3 +378,10 @@ export const ROADMAP_CONTROL_COPY = {
     other: "There is too much to send in one request. Try a shorter horizon.",
   },
 } as const;
+
+/** What the dot on Plan and on its Roadmap chip says to a screen reader. */
+export const ROADMAP_ATTENTION_NOTES = {
+  review_due: ROADMAP_CONTROL_COPY.reviewDueNote,
+  ended: ROADMAP_CONTROL_COPY.endedNote,
+  missing: ROADMAP_CONTROL_COPY.missingNote,
+};

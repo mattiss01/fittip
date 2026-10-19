@@ -108,6 +108,19 @@ describe("readRoadmapAttention", () => {
     );
   });
 
+  // Owner, 19 Oct 2026: from the day after its last, until a new one is made,
+  // and a review marked done does not take it away.
+  it("says the roadmap has ended from the day after its last day", async () => {
+    getCurrentVersionMock.mockResolvedValue({
+      ...version,
+      content: { ...version.content, endDate: "2026-12-31" },
+    });
+    getReviewedThroughMock.mockResolvedValue(1);
+
+    await expect(readRoadmapAttention("2026-12-31")).resolves.toBe(null);
+    await expect(readRoadmapAttention("2027-01-01")).resolves.toBe("ended");
+  });
+
   it("says a roadmap is missing when there is none, and asks for no mark", async () => {
     getCurrentVersionMock.mockResolvedValue(null);
 

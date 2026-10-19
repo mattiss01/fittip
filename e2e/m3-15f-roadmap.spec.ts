@@ -236,19 +236,27 @@ test.describe("M3-15F roadmap generation", () => {
       await expect(tick).toHaveAttribute("data-milestone-reached", "true");
 
       // ---- A second roadmap. With one in force the page starts with it, and
-      // ---- changing it is behind "Change roadmap": a sheet that asks which
-      // ---- way (ADR-028). ----
+      // ---- what can be done with it is ⋯ beside its title (owner, 19 Oct
+      // ---- 2026); a new one asks who writes it. ----
       await expect(page.locator("[data-roadmap-compose]")).toHaveCount(0);
-      await page.getByRole("button", { name: "Change roadmap" }).click();
-      const menu = page.getByRole("dialog", { name: "Change roadmap" });
-      await expect(menu.locator("[data-roadmap-choice]")).toHaveCount(3);
+      const actions = page.getByRole("button", { name: "Roadmap actions" });
+      const createNew = async (choice: "fresh" | "write") => {
+        await actions.click();
+        await page
+          .getByRole("button", { name: "Create a new roadmap" })
+          .click();
+        const menu = page.getByRole("dialog", { name: "Create a new roadmap" });
+        await expect(menu.locator("[data-roadmap-choice]")).toHaveCount(2);
+        await menu.locator(`[data-roadmap-choice="${choice}"]`).click();
+      };
+      await actions.click();
       await expectNoHorizontalOverflow(page);
-      await menu.locator('[data-roadmap-choice="change"]').click();
+      await page.getByRole("button", { name: "Edit with Coach" }).click();
 
-      // Change with Coach: what should be different, and the dates it opens
+      // Edit with Coach: what should be different, and the dates it opens
       // on are today and the day the roadmap ends.
       const change = page
-        .getByRole("dialog", { name: "Change with Coach" })
+        .getByRole("dialog", { name: "Edit with Coach" })
         .locator('[data-roadmap-compose="change"]');
       await expect(change).toBeVisible();
       await expect(change.getByLabel("Ends")).not.toHaveValue("");
@@ -263,22 +271,15 @@ test.describe("M3-15F roadmap generation", () => {
       await expectOutcome(page, "A proposal is ready below.");
       await expect(page.getByRole("dialog")).toHaveCount(0);
       // Decide, then ask again: no way to change it while one is waiting.
-      await expect(
-        page.getByRole("button", { name: "Change roadmap" }),
-      ).toHaveCount(0);
-      // Declined: the proposal is gone, so the sheet's second choice is a
-      // new roadmap, asked afresh (owner, 14 Oct 2026).
+      await expect(actions).toHaveCount(0);
+      // Declined: the proposal is gone, so what follows is a new roadmap,
+      // asked afresh (owner, 14 Oct 2026).
       await page
         .locator("[data-roadmap-open-proposal]")
         .getByRole("button", { name: "Decline proposal" })
         .click();
       await expect(page.locator("[data-roadmap-open-proposal]")).toHaveCount(0);
-      await page.getByRole("button", { name: "Change roadmap" }).click();
-      const again = page
-        .getByRole("dialog", { name: "Change roadmap" })
-        .locator('[data-roadmap-choice="fresh"]');
-      await expect(again).toContainText("New roadmap with Coach");
-      await again.click();
+      await createNew("fresh");
       const afresh = page
         .getByRole("dialog", { name: "Shape your roadmap" })
         .locator('[data-roadmap-compose="initial"]');
@@ -292,12 +293,8 @@ test.describe("M3-15F roadmap generation", () => {
         .click();
       await expect(page.locator('[data-roadmap-version="2"]')).toBeVisible();
 
-      // And a new one, the other choice.
-      await page.getByRole("button", { name: "Change roadmap" }).click();
-      await page
-        .getByRole("dialog", { name: "Change roadmap" })
-        .locator('[data-roadmap-choice="fresh"]')
-        .click();
+      // And another new one.
+      await createNew("fresh");
       const second = page
         .getByRole("dialog", { name: "Shape your roadmap" })
         .locator('[data-roadmap-compose="initial"]');
@@ -329,13 +326,9 @@ test.describe("M3-15F roadmap generation", () => {
       await expect(page.locator("[data-roadmap-superseded]")).toHaveCount(0);
       await expectNoHorizontalOverflow(page);
 
-      // ---- Written by hand (ADR-029): the third choice, in force on save,
-      // ---- with nothing to review and no example label. ----
-      await page.getByRole("button", { name: "Change roadmap" }).click();
-      await page
-        .getByRole("dialog", { name: "Change roadmap" })
-        .locator('[data-roadmap-choice="write"]')
-        .click();
+      // ---- Written by hand (ADR-029): the other way to a new one, in force
+      // ---- on save, with nothing to review and no example label. ----
+      await createNew("write");
       const writer = page
         .getByRole("dialog", { name: "Write your roadmap" })
         .locator("[data-roadmap-write]");
@@ -377,6 +370,7 @@ test.describe("M3-15F roadmap generation", () => {
       // ---- Edited by hand (ADR-030): in force on save. A tick stays on a
       // ---- milestone kept as it was, and goes from one renamed. ----
       const rewrite = async () => {
+        await actions.click();
         await page.getByRole("button", { name: "Edit roadmap" }).click();
         const form = page
           .getByRole("dialog", { name: "Edit your roadmap" })

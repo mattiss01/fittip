@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import { RoadmapBody } from "./roadmap-body";
 import type { SpineReview } from "./roadmap-spine";
 
@@ -22,7 +24,10 @@ export function RoadmapDetail({
   reached,
   review,
   goalTitles,
+  titleAction,
 }: {
+  /** The roadmap's controls, beside its title. */
+  titleAction?: ReactNode;
   /** Which review is due and how far the owner has marked reviewed. */
   review: SpineReview;
   version: RoadmapVersionView;
@@ -42,6 +47,7 @@ export function RoadmapDetail({
         goalTitles={goalTitles}
         marks={{ versionId: version.id, reached }}
         review={review}
+        titleAction={titleAction}
       />
     </article>
   );

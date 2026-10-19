@@ -241,78 +241,6 @@
   opacity: 0.5;
 }
 
-.menu {
-  position: relative;
-}
-
-.more {
-  width: 3.4rem;
-  height: 3.4rem;
-  min-height: 0;
-  display: grid;
-  place-items: center;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  border-radius: var(--radius-control);
-  background: var(--ledger-wash);
-  color: var(--ledger-ink);
-}
-
-.more:hover {
-  background: var(--line);
-}
-
-.more[aria-expanded="true"] {
-  background: var(--ledger-ink);
-  color: var(--ledger-paper);
-}
-
-.menuList {
-  position: absolute;
-  z-index: 30;
-  top: calc(100% + 0.4rem);
-  right: 0;
-  width: min(16rem, calc(100vw - 2rem));
-  margin: 0;
-  padding: 0.35rem;
-  border-radius: var(--radius-card);
-  background: var(--ledger-paper);
-  box-shadow:
-    0 0 0 1px var(--line),
-    var(--shadow-raised);
-  list-style: none;
-}
-
-.menuItem {
-  width: 100%;
-  min-height: 3rem;
-  display: flex;
-  align-items: center;
-  margin: 0;
-  padding: 0 0.85rem;
-  border: 0;
-  border-radius: var(--radius-control);
-  background: transparent;
-  color: var(--ledger-ink);
-  font: 600 0.98rem var(--font-sans);
-  text-align: left;
-  text-decoration: none;
-}
-
-.menuItem:hover,
-.menuItem:active {
-  background: var(--ledger-wash);
-}
-
-.menuItem[data-danger] {
-  color: var(--danger);
-}
-
-.menuItem:disabled {
-  opacity: 0.45;
-}
-
 /* ---- What a verb opens ---- */
 
 .panel {
@@ -396,8 +324,7 @@
 .panel input:focus-visible,
 .panel textarea:focus-visible,
 .panel select:focus-visible,
-.panel summary:focus-visible,
-.menuItem:focus-visible {
+.panel summary:focus-visible {
   outline: 3px solid var(--ledger-ink);
   outline-offset: 2px;
 }

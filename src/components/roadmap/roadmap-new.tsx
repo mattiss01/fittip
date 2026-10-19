@@ -12,26 +12,29 @@ import { SheetCloseButton, SheetLayer } from "@/app/home/plan/plan-sheet";
 import w from "@/app/home/plan/plan-week.module.css";
 import styles from "@/app/home/plan/roadmap/roadmap.module.css";
 import { CoachSpark } from "@/components/home/coach-spark";
+import { MenuItem, MoreMenu } from "@/components/home/more-menu";
 import { ROADMAP_CONTROL_COPY } from "@/lib/roadmap/roadmap-control-copy";
 
 /**
- * The two ways to a new proposal while a roadmap is in force (ADR-028), and
- * writing one by hand (ADR-029).
+ * What the sheet shows: the choice of who writes a new roadmap, the two ways
+ * to a coach's proposal (ADR-028), and writing or editing one by hand
+ * (ADR-029, ADR-030).
  */
-type View = "menu" | "change" | "fresh" | "write" | "rewrite";
+type View = "create" | "change" | "fresh" | "write" | "rewrite";
 
 /**
- * Changing the roadmap in force (owner, 13 Oct 2026): a button, and a sheet
- * that asks which way. "Change with Coach" sends the coach the whole roadmap
- * and what should be different; "New roadmap with Coach" starts over from the
- * owner's goals; "Write it yourself" is a roadmap of the owner's own, in force
- * on save (ADR-029). The page itself starts with the roadmap.
+ * The roadmap's controls and the one sheet they open (owner, 13 and 19 Oct
+ * 2026).
  *
- * It is drawn in three places. In the page's corner it opens on the choice;
- * on a due review it is "Change with Coach" and opens that form directly; and
- * while there is no roadmap, beside the coach's form, it is "Write it
- * yourself" and opens the writer. Under the roadmap in force it is "Edit
- * roadmap" and opens the writer on it (ADR-030).
+ * It is drawn in four places. Beside the title of the roadmap in force it is
+ * ⋯, a list of what can be done with it: edit it by hand (ADR-030), edit it
+ * with the coach, or create a new one. Once the roadmap has ended it is
+ * "Create a new roadmap", above the roadmap and again below it. On a due
+ * review it is "Edit with Coach" and opens that form directly; and while there
+ * is no roadmap, beside the coach's form, it is "Write it yourself".
+ *
+ * Creating a new roadmap first asks who writes it: the coach, starting over
+ * from the owner's goals, or the owner, in force on save (ADR-029).
  *
  * Whether the sheet is open, and on what, is held here and nowhere else. The
  * page renders this only while nothing awaits a decision, so a generation
@@ -42,30 +45,32 @@ type View = "menu" | "change" | "fresh" | "write" | "rewrite";
  * one request is never sent with the other: see `roadmap-compose-session.ts`.
  */
 export function RoadmapNew({
-  opensOn = "menu",
+  opensOn,
   titleIds,
-  change,
-  fresh,
+  change = null,
+  fresh = null,
   write = null,
   rewrite = null,
 }: {
   /**
-   * The corner opens on the choice; a due review opens the change form; with
-   * no roadmap yet, the writer; under the roadmap in force, its edit.
+   * ⋯ beside the roadmap's title; "Create a new roadmap" once it has ended;
+   * a due review opens the change form; with no roadmap yet, the writer.
    */
-  opensOn?: "menu" | "change" | "write" | "rewrite";
+  opensOn: "actions" | "create" | "change" | "write";
   /** The ids of the headings that name the sheet, one for each view. */
   titleIds: Record<View, string>;
   /** The form that asks for the roadmap in force to be changed. */
-  change: ReactNode;
-  /** The form that asks for a new roadmap, or another after a decline. */
-  fresh: ReactNode;
-  /** The form that writes one by hand; offered only where it is given. */
+  change?: ReactNode;
+  /** The form that asks the coach for a new roadmap. */
+  fresh?: ReactNode;
+  /** The form that writes one by hand. */
   write?: ReactNode;
   /** The form that edits the roadmap in force (ADR-030). */
   rewrite?: ReactNode;
 }) {
   const [view, setView] = useState<View | null>(null);
+  // Reached through the choice of who writes it, so "Back" returns there.
+  const [chosen, setChosen] = useState(false);
   // Unmounted with a form open is a request that landed: the page has
   // replaced this with what was made, so focus is sent there.
   const openView = useRef<View | null>(null);
@@ -74,7 +79,7 @@ export function RoadmapNew({
   }, [view]);
   useEffect(
     () => () => {
-      if (openView.current !== null && openView.current !== "menu") {
+      if (openView.current !== null && openView.current !== "create") {
         noteRoadmapLanding();
       }
     },
@@ -107,42 +112,80 @@ export function RoadmapNew({
     };
   }, []);
 
+  const open = (next: View) => {
+    setChosen(false);
+    setView(next);
+  };
+  const choose = (next: "fresh" | "write") => {
+    setChosen(true);
+    setView(next);
+  };
+  const canCreate = fresh !== null || write !== null;
+
   return (
     <>
-      {opensOn === "menu" ? (
+      {opensOn === "actions" ? (
+        <MoreMenu label={ROADMAP_CONTROL_COPY.actionsLabel}>
+          {(close) => (
+            <>
+              {rewrite === null ? null : (
+                <MenuItem
+                  onSelect={() => {
+                    close();
+                    open("rewrite");
+                  }}
+                >
+                  {ROADMAP_CONTROL_COPY.rewriteAction}
+                </MenuItem>
+              )}
+              {change === null ? null : (
+                <MenuItem
+                  onSelect={() => {
+                    close();
+                    open("change");
+                  }}
+                >
+                  {ROADMAP_CONTROL_COPY.changeWithCoachAction}
+                </MenuItem>
+              )}
+              {canCreate ? (
+                <MenuItem
+                  onSelect={() => {
+                    close();
+                    open("create");
+                  }}
+                >
+                  {ROADMAP_CONTROL_COPY.createRoadmapAction}
+                </MenuItem>
+              ) : null}
+            </>
+          )}
+        </MoreMenu>
+      ) : opensOn === "create" ? (
         <button
-          className={styles.newAction}
+          className={styles.primaryAction}
           type="button"
-          data-roadmap-new
-          onClick={() => setView("menu")}
+          data-roadmap-create
+          onClick={() => open("create")}
         >
-          {ROADMAP_CONTROL_COPY.changeRoadmapAction}
+          {ROADMAP_CONTROL_COPY.createRoadmapAction}
         </button>
       ) : opensOn === "change" ? (
         <button
           className={styles.primaryAction}
           type="button"
           data-roadmap-change
-          onClick={() => setView("change")}
+          onClick={() => open("change")}
         >
           <CoachSpark size={16} />
           {ROADMAP_CONTROL_COPY.changeWithCoachAction}
-        </button>
-      ) : opensOn === "rewrite" ? (
-        <button
-          className={styles.quietAction}
-          type="button"
-          data-roadmap-rewrite-open
-          onClick={() => setView("rewrite")}
-        >
-          {ROADMAP_CONTROL_COPY.rewriteAction}
         </button>
       ) : (
         <button
           className={styles.quietAction}
           type="button"
           data-roadmap-write-open
-          onClick={() => setView("write")}
+          onClick={() => open("write")}
         >
           {ROADMAP_CONTROL_COPY.writeAction}
         </button>
@@ -155,56 +198,47 @@ export function RoadmapNew({
           onClose={() => setView(null)}
         >
           <header className={w.sheetHead}>
-            {view === "menu" || opensOn !== "menu" ? (
-              <span />
-            ) : (
+            {chosen && view !== "create" ? (
               <button
                 type="button"
                 className={w.sheetBack}
                 disabled={pending}
-                onClick={() => setView("menu")}
+                onClick={() => open("create")}
               >
                 ‹ Back
               </button>
+            ) : (
+              <span />
             )}
             <SheetCloseButton className={w.sheetClose} disabled={pending}>
               Close
             </SheetCloseButton>
           </header>
-          {view === "menu" ? (
+          {view === "create" ? (
             <>
-              <h2 id={titleIds.menu}>
-                {ROADMAP_CONTROL_COPY.changeRoadmapAction}
+              <h2 id={titleIds.create}>
+                {ROADMAP_CONTROL_COPY.createRoadmapAction}
               </h2>
               <div className={w.sheetChoices}>
-                <button
-                  type="button"
-                  className={w.sheetChoice}
-                  data-roadmap-choice="change"
-                  onClick={() => setView("change")}
-                >
-                  <strong>{ROADMAP_CONTROL_COPY.changeWithCoachAction}</strong>
-                  <span className={w.sheetChoiceDetail}>
-                    {ROADMAP_CONTROL_COPY.changeWithCoachDetail}
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  className={w.sheetChoice}
-                  data-roadmap-choice="fresh"
-                  onClick={() => setView("fresh")}
-                >
-                  <strong>{ROADMAP_CONTROL_COPY.newWithCoachAction}</strong>
-                  <span className={w.sheetChoiceDetail}>
-                    {ROADMAP_CONTROL_COPY.newWithCoachDetail}
-                  </span>
-                </button>
+                {fresh === null ? null : (
+                  <button
+                    type="button"
+                    className={w.sheetChoice}
+                    data-roadmap-choice="fresh"
+                    onClick={() => choose("fresh")}
+                  >
+                    <strong>{ROADMAP_CONTROL_COPY.newWithCoachAction}</strong>
+                    <span className={w.sheetChoiceDetail}>
+                      {ROADMAP_CONTROL_COPY.newWithCoachDetail}
+                    </span>
+                  </button>
+                )}
                 {write === null ? null : (
                   <button
                     type="button"
                     className={w.sheetChoice}
                     data-roadmap-choice="write"
-                    onClick={() => setView("write")}
+                    onClick={() => choose("write")}
                   >
                     <strong>{ROADMAP_CONTROL_COPY.writeAction}</strong>
                     <span className={w.sheetChoiceDetail}>

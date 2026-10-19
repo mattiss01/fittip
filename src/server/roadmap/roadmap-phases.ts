@@ -13,12 +13,14 @@ export { RoadmapAuthenticationError };
 /**
  * What the Plan's Roadmap chip marks with a dot, if anything: a review of the
  * roadmap in force due on the owner's `today` (ADR-027), or no roadmap at all
- * (owner, 16 Oct 2026), since the coach plans weeks from one. At most two small
- * reads. A roadmap that cannot be read leaves the dot off, as it leaves the
- * phase band off, rather than claim there is none; a lost sign-in is not
- * swallowed.
+ * (owner, 16 Oct 2026), since the coach plans weeks from one, or a roadmap
+ * whose last day has passed (owner, 19 Oct 2026), which stays marked until a
+ * new one is made: a review marked done does not take this dot away. At most
+ * two small reads. A roadmap that cannot be read leaves the dot off, as it
+ * leaves the phase band off, rather than claim there is none; a lost sign-in
+ * is not swallowed.
  */
-export type RoadmapAttention = "review_due" | "missing" | null;
+export type RoadmapAttention = "review_due" | "ended" | "missing" | null;
 
 export async function readRoadmapAttention(
   today: string,
@@ -27,6 +29,7 @@ export async function readRoadmapAttention(
     const roadmaps = await createRoadmapRepository();
     const version = await roadmaps.getCurrentVersion();
     if (version === null) return "missing";
+    if (version.content.endDate < today) return "ended";
     return roadmapReviewDue(
       version.content.phases,
       today,
