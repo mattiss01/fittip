@@ -481,9 +481,8 @@ export type CoachAIContext = {
  * Why a roadmap may not describe the week it is informing.
  *
  * Declared in `@/lib/roadmap/roadmap-stale-reasons` and re-exported here, not
- * defined twice: the review surface is a Client Component and cannot import
- * this module, and two copies of a union that must agree is how they stop
- * agreeing.
+ * defined twice. The plan review showed it until 19 Oct 2026 (owner); the
+ * declaration stays where a Client Component could read it.
  */
 export type CoachAIRoadmapStaleReason = RoadmapPlanStaleReason;
 

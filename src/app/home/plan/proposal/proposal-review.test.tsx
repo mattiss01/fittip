@@ -29,6 +29,9 @@ vi.mock("react", async (importOriginal) => {
 });
 
 vi.mock("../actions", () => ({ changePlanAction: changePlanActionMock }));
+vi.mock("@/app/home/you/memory/actions", () => ({
+  changeMemoryAction: vi.fn(),
+}));
 vi.mock("./actions", () => ({
   decidePlanProposalItemAction: decideItemActionMock,
   discardPlanProposalAction: discardActionMock,
@@ -42,8 +45,12 @@ import type {
   ProposalTimelineDay,
 } from "./proposal-timeline";
 
-import { PLAN_PROPOSAL_COPY } from "@/lib/plan/plan-proposal-copy";
-import type { ProposalRoadmapView } from "@/lib/plan/plan-proposal-view";
+import {
+  PLAN_PROPOSAL_COPY,
+  PLAN_PROPOSAL_FEEDBACK_MAX_LENGTH,
+} from "@/lib/plan/plan-proposal-copy";
+import { REGENERATION_FEEDBACK_MAX_LENGTH } from "@/server/ai/owner-text";
+import type { MemorySuggestion } from "@/components/memory/memory-suggestions";
 
 /**
  * The review surface, as M3-16B changed it.
@@ -98,8 +105,8 @@ const WEEK_DESCRIPTION =
 function renderReview(
   overrides: {
     days?: ProposalTimelineDay[];
-    roadmap?: ProposalRoadmapView | null;
     planChangedSinceComposed?: boolean;
+    memory?: MemorySuggestion[];
     nothingAdded?: boolean;
     safetyConsiderations?: string[];
     assumptions?: string[];
@@ -122,11 +129,11 @@ function renderReview(
       expectedPlanRevision={12}
       finishKey="9c000000-0000-4000-8000-0000000000ff"
       days={overrides.days ?? [day()]}
-      roadmap={overrides.roadmap ?? null}
       planChangedSinceComposed={overrides.planChangedSinceComposed ?? false}
       unresolved={0}
       staged={0}
       isExample={false}
+      memory={{ revision: 0, suggestions: overrides.memory ?? [] }}
     />,
   );
 }
@@ -312,6 +319,99 @@ describe("a planned session the coach suggests cancelling (ADR-033)", () => {
       screen.getByRole("button", { name: COPY.keepItemActionFor("Easy run") }),
     ).toBeVisible();
     expect(screen.getByText(COPY.cancelUnavailable("Easy run"))).toBeVisible();
+  });
+});
+
+describe("asking for a different plan (owner, 19 Oct 2026)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    useActionStateMock.mockImplementation(
+      (_action: unknown, initial: unknown) => [initial, vi.fn(), false],
+    );
+  });
+
+  afterEach(cleanup);
+
+  it("counts what is typed against the limit, and says nothing about finishing", () => {
+    renderReview();
+    fireEvent.click(screen.getByRole("button", { name: COPY.regenerateOpen }));
+
+    expect(screen.queryByText(COPY.finishSupport(0))).toBeNull();
+    const field = screen.getByLabelText(COPY.regenerateLabel);
+    expect(screen.getByText("0/500")).toBeVisible();
+    fireEvent.change(field, { target: { value: "Less running." } });
+    expect(screen.getByText("13/500")).toBeVisible();
+    expect(field).toHaveAttribute("maxLength", "500");
+  });
+
+  it("holds the browser's limit to the server's", () => {
+    expect(PLAN_PROPOSAL_FEEDBACK_MAX_LENGTH).toBe(
+      REGENERATION_FEEDBACK_MAX_LENGTH,
+    );
+  });
+});
+
+describe("open memory suggestions before the review ends (owner, 19 Oct 2026)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    useActionStateMock.mockImplementation(
+      (_action: unknown, initial: unknown) => [initial, vi.fn(), false],
+    );
+  });
+
+  afterEach(cleanup);
+
+  const open = [
+    {
+      id: "m1",
+      proposalId: PROPOSAL_ID,
+      memoryType: "constraint" as const,
+      content: "Weekdays are short.",
+    },
+  ];
+
+  it("asks once before finishing, and lets the owner go on", () => {
+    renderReview({ memory: open });
+
+    fireEvent.click(screen.getByRole("button", { name: COPY.finishAction }));
+    const question = screen.getByRole("dialog", {
+      name: COPY.memoryBeforeEndTitle,
+    });
+    expect(within(question).getByText("Weekdays are short.")).toBeVisible();
+    expect(
+      within(question).getByRole("button", {
+        name: "Reject: Weekdays are short.",
+      }),
+    ).toBeVisible();
+
+    fireEvent.click(
+      within(question).getByRole("button", { name: COPY.discardCancel }),
+    );
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("lists them in the discard question too", () => {
+    renderReview({ memory: open });
+
+    fireEvent.click(screen.getByRole("button", { name: COPY.discardAction }));
+    const question = screen.getByRole("dialog", {
+      name: COPY.discardConfirmTitle,
+    });
+    expect(within(question).getByText("Weekdays are short.")).toBeVisible();
+  });
+
+  it("does not ask about one left open from an earlier proposal", () => {
+    renderReview({ memory: [{ ...open[0], proposalId: "earlier" }] });
+
+    fireEvent.click(screen.getByRole("button", { name: COPY.finishAction }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("asks nothing when none is open", () => {
+    renderReview();
+
+    fireEvent.click(screen.getByRole("button", { name: COPY.finishAction }));
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 });
 
@@ -513,14 +613,11 @@ describe("what the review says about staleness", () => {
 
   afterEach(cleanup);
 
-  it("says nothing when the plan has not moved and there is no roadmap", () => {
+  it("says nothing when the plan has not moved", () => {
     renderReview();
 
     expect(
       screen.queryByText(PLAN_PROPOSAL_COPY.planChangedNotice),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByText(PLAN_PROPOSAL_COPY.roadmapHeading),
     ).not.toBeInTheDocument();
   });
 
@@ -535,66 +632,6 @@ describe("what the review says about staleness", () => {
     const notice = screen.getByText(PLAN_PROPOSAL_COPY.planChangedNotice);
     expect(notice).toBeInTheDocument();
     expect(notice.textContent).not.toMatch(/reload/i);
-  });
-
-  it("names the roadmap a proposal was planned under", () => {
-    renderReview({
-      roadmap: {
-        title: "Autumn 10k build",
-        versionNumber: 3,
-        isSuperseded: false,
-        staleReasons: [],
-      },
-    });
-
-    expect(
-      screen.getByText(PLAN_PROPOSAL_COPY.roadmapHeading),
-    ).toBeInTheDocument();
-    expect(screen.getByText(/Autumn 10k build/)).toBeInTheDocument();
-    expect(screen.getByText(/version 3/)).toBeInTheDocument();
-  });
-
-  it("names both stale reasons separately when both hold", () => {
-    renderReview({
-      roadmap: {
-        title: "Autumn 10k build",
-        versionNumber: 3,
-        isSuperseded: false,
-        staleReasons: ["out_of_window", "goal_missing"],
-      },
-    });
-
-    // Two entries, each its own sentence. One combined string would read as a
-    // single fault and lose the distinction the owner acts on.
-    expect(
-      screen.getByText(PLAN_PROPOSAL_COPY.roadmapStaleOutOfWindow, {
-        exact: false,
-      }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(PLAN_PROPOSAL_COPY.roadmapStaleGoalMissing, {
-        exact: false,
-      }),
-    ).toBeInTheDocument();
-  });
-
-  /**
-   * A roadmap accepted since the proposal was made. Naming the current
-   * roadmap's title here would name the wrong one, so the surface says only
-   * which version it was and that it has been replaced.
-   */
-  it("does not name a roadmap that has been superseded", () => {
-    renderReview({
-      roadmap: {
-        title: null,
-        versionNumber: 2,
-        isSuperseded: true,
-        staleReasons: [],
-      },
-    });
-
-    expect(screen.getByText(/Version 2/)).toBeInTheDocument();
-    expect(screen.getByText(/since replaced/)).toBeInTheDocument();
   });
 });
 

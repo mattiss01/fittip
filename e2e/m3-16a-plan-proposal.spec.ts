@@ -303,6 +303,13 @@ test.describe("M3-16A plan proposal review", () => {
       const finish = page.getByRole("button", { name: "Finish review" });
       await expect(finish).toBeEnabled();
       await finish.click();
+      // The note left a memory suggestion, which is put in front of the
+      // owner once before the review ends (owner, 19 Oct 2026). Left for
+      // later here: the review goes on to finish.
+      await page
+        .getByRole("dialog", { name: "Still open from your planning note" })
+        .getByRole("button", { name: "Finish review" })
+        .click();
       await expect(page).toHaveURL(/\/home\/plan$/, { timeout: 30_000 });
 
       // The swap happened whole: the coach's session is there, and the

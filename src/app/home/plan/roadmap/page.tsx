@@ -133,21 +133,15 @@ async function loadRoadmapState(): Promise<RoadmapScreenState> {
     createProfileRepository(),
   ]);
 
-  const [
-    profile,
-    goalCollection,
-    head,
-    versions,
-    reviewProposals,
-    openMemoryCandidateCount,
-  ] = await Promise.all([
-    profiles.getCurrentProfile(),
-    goalRepository.list(),
-    roadmaps.getHead(),
-    roadmaps.listVersions(),
-    roadmaps.getReviewProposals(),
-    roadmaps.countOpenMemoryCandidates(),
-  ]);
+  const [profile, goalCollection, head, versions, reviewProposals, memory] =
+    await Promise.all([
+      profiles.getCurrentProfile(),
+      goalRepository.list(),
+      roadmaps.getHead(),
+      roadmaps.listVersions(),
+      roadmaps.getReviewProposals(),
+      roadmaps.listOpenMemorySuggestions(),
+    ]);
 
   // The owner's own calendar date where one is knowable. An unconfirmed zone
   // falls back to UTC rather than hiding the roadmap behind a zone prompt: a
@@ -207,7 +201,7 @@ async function loadRoadmapState(): Promise<RoadmapScreenState> {
         ? null
         : roadmapReviewDue(current.content.phases, today, reviewedThrough),
     openProposal,
-    openMemoryCandidateCount,
+    memory,
     goals,
     otherGoalTitles,
     defaultEndDate: defaultRoadmapEndDate(today, goals),

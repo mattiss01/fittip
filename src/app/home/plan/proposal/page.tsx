@@ -13,6 +13,7 @@ import {
 import homeStyles from "../../home.module.css";
 import { readMeasurementHistory } from "../activities/measurement-history";
 import { SubPageHeader } from "../sub-page-header";
+import { MemorySuggestions } from "@/components/memory/memory-suggestions";
 import { ActivityLibraryProvider } from "@/components/training/activity-editor";
 import {
   COACH_START_MAX_DAYS_AHEAD,
@@ -30,7 +31,6 @@ import {
   isStagedDecision,
   stagedItemCount,
   unresolvedItemCount,
-  type ProposalRoadmapView,
 } from "@/lib/plan/plan-proposal-view";
 import { uuidFromSeed } from "@/lib/plan/seeded-uuid";
 import type { PlanProposalView } from "@/server/plan-proposal/plan-proposal-records";
@@ -48,14 +48,9 @@ import {
   ProfileAuthenticationError,
 } from "@/server/repositories/profile-repository";
 import {
-  createRoadmapRepository,
-  RoadmapAuthenticationError,
-} from "@/server/repositories/roadmap-repository";
-import {
   createRollingPlan,
   RollingPlanAuthenticationError,
 } from "@/server/repositories/rolling-plan-repository";
-import { roadmapPlanStaleReasons } from "@/server/roadmap/roadmap-plan-context";
 
 export const dynamic = "force-dynamic";
 
@@ -97,9 +92,9 @@ export default async function PlanProposalPage() {
         </p>
       ) : (
         <>
-          {state.openMemoryCandidateCount > 0 ? (
+          {state.memory.suggestions.length > 0 ? (
             <p className={styles.memoryJump}>
-              {COPY.memoryCandidatesJump(state.openMemoryCandidateCount)}{" "}
+              {COPY.memoryCandidatesJump(state.memory.suggestions.length)}{" "}
               <a href="#memory-candidates">{COPY.memoryJumpLink}</a>
             </p>
           ) : null}
@@ -150,20 +145,21 @@ export default async function PlanProposalPage() {
                 expectedPlanRevision={state.planRevision}
                 finishKey={state.finishKey}
                 days={state.days}
-                roadmap={state.roadmap}
                 planChangedSinceComposed={state.planChangedSinceComposed}
                 unresolved={unresolvedItemCount(state.proposal.items)}
                 staged={stagedItemCount(state.proposal.items)}
                 isExample={isExampleProposal(state.proposal.providerCode)}
+                memory={state.memory}
               />
             </ActivityLibraryProvider>
           )}
-          {state.openMemoryCandidateCount > 0 ? (
+          {state.memory.suggestions.length > 0 ? (
             <section className={styles.memoryPanel} id="memory-candidates">
               <h2>{COPY.memoryPanelTitle}</h2>
-              <p className={styles.support}>
-                {COPY.memoryCandidatesWaiting(state.openMemoryCandidateCount)}
-              </p>
+              <MemorySuggestions
+                suggestions={state.memory.suggestions}
+                expectedRevision={state.memory.revision}
+              />
               <Link
                 className={homeStyles.secondaryAction}
                 href="/home/you/memory?from=plan-proposal"
@@ -197,12 +193,11 @@ async function loadProposalState() {
       composable: [],
       hasGoals: false,
       proposal: null,
-      roadmap: null,
       planChangedSinceComposed: false,
       planRevision: 0,
       finishKey: "",
       days: [],
-      openMemoryCandidateCount: 0,
+      memory: { revision: 0, suggestions: [] },
     };
   }
 
@@ -213,21 +208,16 @@ async function loadProposalState() {
     createGoalRepository(),
   ]);
 
-  // Counted beside the proposal because it is independent of it: a candidate
+  // Read beside the proposal because it is independent of it: a suggestion
   // from an earlier planning note is still waiting whether or not this
-  // proposal is open, and the memory surface is where it is decided.
-  const [proposal, goalCollection, openMemoryCandidateCount] =
-    await Promise.all([
-      proposals.getLatestProposal(),
-      goals.list(),
-      proposals.countOpenMemoryCandidates(),
-    ]);
+  // proposal is open. Decided here since 19 Oct 2026 (owner).
+  const [proposal, goalCollection, memory] = await Promise.all([
+    proposals.getLatestProposal(),
+    goals.list(),
+    proposals.listOpenMemorySuggestions(),
+  ]);
   const targetable = selectActiveGoalContext(goalCollection.goals).targetable;
   const hasGoals = targetable.length > 0;
-  // The goals a roadmap may still be pointed at. Same set the context source
-  // checked when the proposal was made, read again now — which is the point:
-  // a goal paused or deleted since is exactly what makes a roadmap stale.
-  const targetableGoalIds = new Set(targetable.map((goal) => goal.id));
 
   // No proposal open means the compose form is shown, and it lists what is
   // already planned on the days it may ask about: the furthest first day plus
@@ -257,22 +247,17 @@ async function loadProposalState() {
         })),
       hasGoals,
       proposal,
-      roadmap: null,
       planChangedSinceComposed: false,
       planRevision: 0,
       finishKey: "",
       days: [],
-      openMemoryCandidateCount,
+      memory,
     };
   }
 
   // The plan is read over the proposal's own horizon, not the plan window, so
-  // the review shows exactly the days it is asking about. The roadmap lineage
-  // is read beside it: the two are independent, and neither gates the other.
-  const [slice, roadmapSource] = await Promise.all([
-    plan.getPlanSlice(proposal.startDate, proposal.endDate),
-    proposals.getRoadmapSource(proposal.id),
-  ]);
+  // the review shows exactly the days it is asking about.
+  const slice = await plan.getPlanSlice(proposal.startDate, proposal.endDate);
   const loggedSessionIds = await readLoggedSessionIds(slice.sessions);
   const planned = slice.sessions.map((session) => ({
     id: session.id,
@@ -287,21 +272,12 @@ async function loadProposalState() {
     seriesId: session.seriesId ?? null,
   })) satisfies (PlannedSessionSummary & { localDate: string })[];
 
-  // The roadmap this proposal was planned under, re-read as it is now rather
-  // than as it was: the point of showing it is to say whether it still
-  // describes the week, which yesterday's answer cannot.
-  const roadmap =
-    roadmapSource === null
-      ? null
-      : await readRoadmapStaleness(roadmapSource, proposal, targetableGoalIds);
-
   return {
     timezoneName,
     today,
     composable: [],
     hasGoals,
     proposal,
-    roadmap,
     // The plan moved after the coach saw it. Not a conflict and not a blocker:
     // the timeline below is read fresh on this very render, and the finish
     // revalidates under the lock regardless.
@@ -319,49 +295,7 @@ async function loadProposalState() {
       recoveryDates: slice.recoveryDates,
       loggedSessionIds,
     }),
-    openMemoryCandidateCount,
-  };
-}
-
-/**
- * Whether the roadmap a proposal was planned under still describes the week.
- *
- * Recomputed from the current roadmap and the current goals rather than stored
- * with the proposal. Staleness is a relationship between a roadmap and today,
- * not a property the proposal has: a goal paused an hour ago makes a
- * proposal's roadmap stale without anything about the proposal changing.
- *
- * The version is matched by id. A roadmap accepted since the proposal was made
- * is a different version, and saying "planned under" about it would be false —
- * so that case reports the superseded fact rather than describing the new one.
- */
-async function readRoadmapStaleness(
-  source: { versionId: string; versionNumber: number },
-  proposal: PlanProposalView,
-  targetableGoalIds: ReadonlySet<string>,
-): Promise<ProposalRoadmapView | null> {
-  const current = await (await createRoadmapRepository()).getCurrentVersion();
-  if (current === null || current.id !== source.versionId) {
-    return {
-      title: null,
-      versionNumber: source.versionNumber,
-      isSuperseded: true,
-      staleReasons: [],
-    };
-  }
-
-  const staleReasons = roadmapPlanStaleReasons({
-    roadmap: current.content,
-    horizonStartDate: proposal.startDate,
-    horizonEndDate: proposal.endDate,
-    targetableGoalIds,
-  });
-
-  return {
-    title: current.content.title,
-    versionNumber: current.versionNumber,
-    isSuperseded: false,
-    staleReasons,
+    memory,
   };
 }
 
@@ -420,11 +354,7 @@ function redirectOnAuthError(error: unknown): void {
     error instanceof ProfileAuthenticationError ||
     error instanceof PlanProposalAuthenticationError ||
     error instanceof RollingPlanAuthenticationError ||
-    error instanceof GoalAuthenticationError ||
-    // M3-16B added the roadmap read to this page. Without it here, a signed-out
-    // owner would get a thrown error instead of the sign-in form, and only on
-    // the roadmap read — the least likely one to be noticed.
-    error instanceof RoadmapAuthenticationError
+    error instanceof GoalAuthenticationError
       ? error
       : null;
   if (authError === null) return;

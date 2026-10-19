@@ -17,7 +17,12 @@ import {
   declineRoadmapAction,
 } from "@/app/home/plan/roadmap/actions";
 import styles from "@/app/home/plan/roadmap/roadmap.module.css";
+import { SheetLayer } from "@/app/home/plan/plan-sheet";
 import { CoachSpark } from "@/components/home/coach-spark";
+import {
+  MemorySuggestions,
+  type MemorySuggestion,
+} from "@/components/memory/memory-suggestions";
 import { ROADMAP_CONTROL_COPY } from "@/lib/roadmap/roadmap-control-copy";
 
 /**
@@ -89,6 +94,7 @@ export function RoadmapDecisionDock({
   today,
   regenerationsRemaining,
   children,
+  memory,
 }: {
   proposalId: string;
   /** The proposal body, needed only so the editor can open on it. */
@@ -100,8 +106,25 @@ export function RoadmapDecisionDock({
   regenerationsRemaining: number;
   /** The proposal as the server rendered it, hidden while it is edited. */
   children: ReactNode;
+  /** The coach's memory suggestions still open, asked about before an ending. */
+  memory: { revision: number; suggestions: readonly MemorySuggestion[] };
 }) {
   const accept = useRoadmapWrite(acceptRoadmapAction);
+  // Open memory suggestions are put in front of the owner once before the
+  // proposal is accepted or declined (owner, 19 Oct 2026). A ref, not state:
+  // the second submit runs before a state update lands.
+  const [memoryBefore, setMemoryBefore] = useState<"accept" | "decline" | null>(
+    null,
+  );
+  const memoryShown = useRef(false);
+  const acceptForm = useRef<HTMLFormElement>(null);
+  const declineForm = useRef<HTMLFormElement>(null);
+  // Only this proposal's own; older ones wait in the panel and in Memory.
+  const ownMemory = memory.suggestions.filter(
+    (suggestion) => suggestion.proposalId === proposalId,
+  );
+  const openMemory = ownMemory.length > 0;
+  const memoryTitleId = useId();
   const decline = useRoadmapWrite(declineRoadmapAction);
   const askAgain = useRoadmapWrite(askAgainRoadmapAction);
   const [editorOpen, setEditorOpen] = useState(false);
@@ -243,7 +266,17 @@ export function RoadmapDecisionDock({
           </form>
         ) : (
           <div className={styles.actions}>
-            <form action={accept.submit}>
+            <form
+              action={accept.submit}
+              ref={acceptForm}
+              onSubmit={(event) => {
+                if (openMemory && !memoryShown.current) {
+                  event.preventDefault();
+                  memoryShown.current = true;
+                  setMemoryBefore("accept");
+                }
+              }}
+            >
               <input type="hidden" name="proposalId" value={proposalId} />
               <input
                 type="hidden"
@@ -288,7 +321,14 @@ export function RoadmapDecisionDock({
 
             <form
               action={decline.submit}
+              ref={declineForm}
               onSubmit={(event) => {
+                if (openMemory && !memoryShown.current) {
+                  event.preventDefault();
+                  memoryShown.current = true;
+                  setMemoryBefore("decline");
+                  return;
+                }
                 if (!globalThis.confirm(ROADMAP_CONTROL_COPY.declineConfirm)) {
                   event.preventDefault();
                 }
@@ -306,6 +346,52 @@ export function RoadmapDecisionDock({
           </div>
         )}
       </div>
+      {memoryBefore === null ? null : (
+        <SheetLayer
+          view="memory-before-decision"
+          placement="center"
+          labelledBy={memoryTitleId}
+          onClose={() => setMemoryBefore(null)}
+        >
+          <div className={styles.memoryBefore}>
+            <h2 id={memoryTitleId}>
+              {ROADMAP_CONTROL_COPY.memoryBeforeEndTitle}
+            </h2>
+            <p>{ROADMAP_CONTROL_COPY.memoryBeforeEndSupport}</p>
+            <MemorySuggestions
+              suggestions={ownMemory}
+              expectedRevision={memory.revision}
+            />
+            <button
+              className={
+                memoryBefore === "accept"
+                  ? styles.primaryAction
+                  : styles.quietAction
+              }
+              type="button"
+              onClick={() => {
+                const form =
+                  memoryBefore === "accept"
+                    ? acceptForm.current
+                    : declineForm.current;
+                setMemoryBefore(null);
+                form?.requestSubmit();
+              }}
+            >
+              {memoryBefore === "accept"
+                ? ROADMAP_CONTROL_COPY.acceptAction
+                : ROADMAP_CONTROL_COPY.declineAction}
+            </button>
+            <button
+              className={styles.secondaryAction}
+              type="button"
+              onClick={() => setMemoryBefore(null)}
+            >
+              {ROADMAP_CONTROL_COPY.memoryBeforeEndBack}
+            </button>
+          </div>
+        </SheetLayer>
+      )}
     </>
   );
 }

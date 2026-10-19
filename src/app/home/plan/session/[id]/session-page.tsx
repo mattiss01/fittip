@@ -364,6 +364,12 @@ export function SessionPage({
         data-cancelled={cancelled}
         aria-labelledby="session-title"
       >
+        {/* Plain at a glance, not a pill among others (owner, 19 Oct 2026). */}
+        {cancelled ? (
+          <p className={page.cancelledBanner} data-cancelled-banner>
+            Cancelled
+          </p>
+        ) : null}
         <h1 id="session-title" className={page.title}>
           {session.title}
         </h1>
@@ -386,7 +392,6 @@ export function SessionPage({
           {session.hasDiverged ? (
             <span data-mark="changed">Changed</span>
           ) : null}
-          {cancelled ? <span>Cancelled</span> : null}
           {session.log ? (
             <span data-mark="logged" data-outcome={session.log.outcome}>
               {COMPLETION_OUTCOME_LABELS[session.log.outcome]}
@@ -442,13 +447,6 @@ export function SessionPage({
           <p className={page.reason} data-cancellation-reason>
             <span className={page.reasonLabel}>Why</span> “{cancellation.reason}
             ”
-          </p>
-        ) : null}
-        {cancelled && !past ? (
-          <p className={page.aside}>
-            Cancelled, kept on the record. Reactivate puts it back after the
-            day&rsquo;s last session
-            {cancellation === null ? "." : " and clears the reason."}
           </p>
         ) : null}
         {past && !session.log ? (

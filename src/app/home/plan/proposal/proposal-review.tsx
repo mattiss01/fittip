@@ -27,11 +27,15 @@ import { SheetLayer } from "../plan-sheet";
 import { SessionFields } from "../session-fields";
 
 import { CoachSpark } from "@/components/home/coach-spark";
-import { PLAN_PROPOSAL_COPY } from "@/lib/plan/plan-proposal-copy";
-import type {
-  PlanProposalItemDecision,
-  ProposalRoadmapView,
-} from "@/lib/plan/plan-proposal-view";
+import {
+  PLAN_PROPOSAL_COPY,
+  PLAN_PROPOSAL_FEEDBACK_MAX_LENGTH,
+} from "@/lib/plan/plan-proposal-copy";
+import type { PlanProposalItemDecision } from "@/lib/plan/plan-proposal-view";
+import {
+  MemorySuggestions,
+  type MemorySuggestion,
+} from "@/components/memory/memory-suggestions";
 
 const COPY = PLAN_PROPOSAL_COPY;
 
@@ -59,11 +63,11 @@ export function ProposalReview({
   expectedPlanRevision,
   finishKey,
   days,
-  roadmap,
   planChangedSinceComposed,
   unresolved,
   staged,
   isExample,
+  memory,
 }: {
   proposalId: string;
   /** Present only on a proposal that replaced another one. */
@@ -84,11 +88,12 @@ export function ProposalReview({
   /** Stable per render of the open proposal, so a retried finish replays. */
   finishKey: string;
   days: ProposalTimelineDay[];
-  roadmap: ProposalRoadmapView | null;
   planChangedSinceComposed: boolean;
   unresolved: number;
   staged: number;
   isExample: boolean;
+  /** The coach's memory suggestions still open, asked about before an ending. */
+  memory: { revision: number; suggestions: readonly MemorySuggestion[] };
 }) {
   const [state, action, pending] = useActionState(
     finishPlanReviewAction,
@@ -105,6 +110,8 @@ export function ProposalReview({
   // Closed until asked for. The box is the third ending of a review, not a
   // field the owner has to scroll past on the way to the other two.
   const [askingAgain, setAskingAgain] = useState(false);
+  // What the owner has typed so far, for the count under the field.
+  const [feedbackLength, setFeedbackLength] = useState(0);
   // One key per attempt. A failed one gets a new key, so pressing again asks
   // the coach rather than replaying the failure; past the deadline the call
   // may still be running, and the same key keeps it one charge.
@@ -118,6 +125,18 @@ export function ProposalReview({
   }
 
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
+  // Open memory suggestions are put in front of the owner once before the
+  // review ends (owner, 19 Oct 2026), so they are not left behind unseen.
+  // A ref, not state: the second submit runs before a state update lands.
+  const [memoryBeforeFinish, setMemoryBeforeFinish] = useState(false);
+  const memoryShown = useRef(false);
+  const finishForm = useRef<HTMLFormElement>(null);
+  // Only this proposal's own: one left open from an earlier proposal waits in
+  // the panel below and in Memory, and is not asked about at every review.
+  const ownMemory = memory.suggestions.filter(
+    (suggestion) => suggestion.proposalId === proposalId,
+  );
+  const openMemory = ownMemory.length > 0;
   const dialogId = useId();
   const discardTitle = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
@@ -223,32 +242,6 @@ export function ProposalReview({
         </p>
       ) : null}
 
-      {roadmap === null ? null : (
-        <section className={styles.roadmapNotice} data-state="roadmap">
-          <h2>{COPY.roadmapHeading}</h2>
-          <p className={styles.support}>
-            {roadmap.isSuperseded
-              ? COPY.roadmapSuperseded(roadmap.versionNumber)
-              : COPY.roadmapPlannedUnder(
-                  roadmap.title ?? "",
-                  roadmap.versionNumber,
-                )}
-          </p>
-          {roadmap.staleReasons.length > 0 ? (
-            <ul className={styles.staleReasons}>
-              {roadmap.staleReasons.map((reason) => (
-                <li key={reason}>
-                  <strong>{COPY.roadmapStaleLead}</strong>{" "}
-                  {reason === "out_of_window"
-                    ? COPY.roadmapStaleOutOfWindow
-                    : COPY.roadmapStaleGoalMissing}
-                </li>
-              ))}
-            </ul>
-          ) : null}
-        </section>
-      )}
-
       <ol className={styles.days}>
         {days.map((day) => (
           <li
@@ -296,14 +289,28 @@ export function ProposalReview({
       </ol>
 
       <div className={`${styles.dock} save-dock`} ref={dock}>
-        <p className={styles.dockSupport}>
-          {unresolved > 0
-            ? COPY.unresolvedSupport(unresolved)
-            : COPY.finishSupport(staged)}
-        </p>
+        {/* About finishing, so not while asking again (owner, 19 Oct 2026). */}
+        {askingAgain ? null : (
+          <p className={styles.dockSupport}>
+            {unresolved > 0
+              ? COPY.unresolvedSupport(unresolved)
+              : COPY.finishSupport(staged)}
+          </p>
+        )}
         {askingAgain ? null : (
           <div className={styles.dockActions}>
-            <form action={action} key={`finish-${state.submission}`}>
+            <form
+              action={action}
+              key={`finish-${state.submission}`}
+              ref={finishForm}
+              onSubmit={(event) => {
+                if (openMemory && !memoryShown.current) {
+                  event.preventDefault();
+                  memoryShown.current = true;
+                  setMemoryBeforeFinish(true);
+                }
+              }}
+            >
               <input type="hidden" name="proposalId" value={proposalId} />
               <input
                 type="hidden"
@@ -343,6 +350,41 @@ export function ProposalReview({
           </div>
         )}
 
+        {memoryBeforeFinish ? (
+          <SheetLayer
+            view="memory-before-finish"
+            placement="center"
+            labelledBy={`${dialogId}-memory`}
+            onClose={() => setMemoryBeforeFinish(false)}
+          >
+            <div className={styles.goalPrompt}>
+              <h2 id={`${dialogId}-memory`}>{COPY.memoryBeforeEndTitle}</h2>
+              <p>{COPY.memoryBeforeEndSupport}</p>
+              <MemorySuggestions
+                suggestions={ownMemory}
+                expectedRevision={memory.revision}
+              />
+              <button
+                className={styles.primary}
+                type="button"
+                onClick={() => {
+                  setMemoryBeforeFinish(false);
+                  finishForm.current?.requestSubmit();
+                }}
+              >
+                {COPY.finishAction}
+              </button>
+              <button
+                className={styles.quietAction}
+                type="button"
+                onClick={() => setMemoryBeforeFinish(false)}
+              >
+                {COPY.discardCancel}
+              </button>
+            </div>
+          </SheetLayer>
+        ) : null}
+
         {confirmingDiscard ? (
           <SheetLayer
             view="discard-proposal"
@@ -355,6 +397,15 @@ export function ProposalReview({
                 {COPY.discardConfirmTitle}
               </h2>
               <p>{COPY.discardConfirm(staged)}</p>
+              {openMemory ? (
+                <>
+                  <p>{COPY.memoryBeforeEndSupport}</p>
+                  <MemorySuggestions
+                    suggestions={ownMemory}
+                    expectedRevision={memory.revision}
+                  />
+                </>
+              ) : null}
               <form
                 // The question closes as the answer is sent; what comes back
                 // is shown by the dock's own notice.
@@ -390,18 +441,28 @@ export function ProposalReview({
           // here (owner, 17 Oct 2026), and so is what the owner typed.
           <form className={styles.regenerate} action={regenerateAction}>
             <h3>{COPY.regenerateHeading}</h3>
-            <p className={styles.support}>{COPY.regenerateSupport}</p>
             <input type="hidden" name="proposalId" value={proposalId} />
             <input type="hidden" name="idempotencyKey" value={askKey} />
             <label htmlFor="regenerationFeedback">{COPY.regenerateLabel}</label>
             <textarea
               id="regenerationFeedback"
               name="regenerationFeedback"
-              maxLength={500}
+              maxLength={PLAN_PROPOSAL_FEEDBACK_MAX_LENGTH}
               rows={3}
               required
+              aria-describedby="regenerationFeedbackCount"
+              onChange={(event) => setFeedbackLength(event.target.value.length)}
             />
-            <p className={styles.helper}>{COPY.regenerateHelper}</p>
+            <p
+              className={styles.helper}
+              id="regenerationFeedbackCount"
+              data-count
+            >
+              {COPY.regenerateCount(
+                feedbackLength,
+                PLAN_PROPOSAL_FEEDBACK_MAX_LENGTH,
+              )}
+            </p>
             <div className={styles.dockActions}>
               <button className={styles.primary} type="submit" disabled={busy}>
                 <CoachSpark size={16} />

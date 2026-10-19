@@ -91,8 +91,11 @@ test.describe("M3-19 delete a planned session", () => {
 
       // M3-20: a cancelled session can come back in one tap, and be cancelled
       // again with the verbs it had all along. Reactivating clears the reason,
-      // so a second cancel that gives none shows none.
-      await expect(page.getByText(/clears the reason/)).toBeVisible();
+      // so a second cancel that gives none shows none. The page says it is
+      // cancelled as its first line (owner, 19 Oct 2026).
+      await expect(page.locator("[data-cancelled-banner]")).toHaveText(
+        "Cancelled",
+      );
       await page
         .getByRole("button", { name: "Reactivate", exact: true })
         .click();

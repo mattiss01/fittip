@@ -1,5 +1,9 @@
 import "server-only";
 
+import {
+  readOpenMemorySuggestions,
+  type OpenMemorySuggestions,
+} from "@/server/memory/open-memory-suggestions";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import {
@@ -160,40 +164,6 @@ export class PlanProposalRepository {
       .maybeSingle();
     if (error) throw new PlanProposalPersistenceError();
     return data ? parseProposal(data) : null;
-  }
-
-  /**
-   * The roadmap version a proposal was planned under, or `null`.
-   *
-   * The first read of `plan_proposal_sources` anywhere in the application.
-   * Lineage has been written since the table existed and never read back, so
-   * this is a new access path rather than a new column: RLS already confines it
-   * to the owner (`plan_proposal_sources_owner_select`) and the repeated
-   * `user_id` predicate is the usual second check.
-   *
-   * It reads only the roadmap kind. The goal, memory and completion sources are
-   * lineage for a record nobody is shown, and widening this to "all sources"
-   * would be reading owner records to display nothing.
-   */
-  async getRoadmapSource(
-    proposalId: string,
-  ): Promise<{ versionId: string; versionNumber: number } | null> {
-    const userId = await this.getVerifiedUserId();
-    const { data, error } = await this.client
-      .from("plan_proposal_sources")
-      .select("record_id, revision_number")
-      .eq("user_id", userId)
-      .eq("proposal_id", proposalId)
-      .eq("source_kind", "roadmap_version")
-      .maybeSingle();
-    if (error) throw new PlanProposalPersistenceError();
-    if (data === null) return null;
-    return {
-      versionId: data.record_id,
-      // Written by `finish_plan_generation` from the version number, so a null
-      // here would mean a row this application did not write.
-      versionNumber: Number(data.revision_number ?? 0),
-    };
   }
 
   async getProposal(proposalId: string): Promise<PlanProposalView | null> {
@@ -421,23 +391,20 @@ export class PlanProposalRepository {
   }
 
   /**
-   * How many candidates from a plan proposal are still waiting on the owner.
-   *
-   * Counted rather than listed, for the reason the roadmap's equivalent is:
-   * the proposal surface shows a link, and the candidates themselves are
-   * reviewed on the M2-02 memory surface, which owns their content. The
-   * `plan-proposal:` prefix is what keeps this from counting the roadmap's.
+   * The memory suggestions from plan proposals still waiting on the owner,
+   * with their words and the memory revision a decision must name. Decided in
+   * the review itself since 19 Oct 2026 (owner), through the memory page's
+   * own action. The `plan-proposal:` prefix keeps the roadmap's out.
    */
-  async countOpenMemoryCandidates(): Promise<number> {
+  async listOpenMemorySuggestions(): Promise<OpenMemorySuggestions> {
     const userId = await this.getVerifiedUserId();
-    const { count, error } = await this.client
-      .from("memory_items")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", userId)
-      .eq("status", "proposed")
-      .like("source_reference", "plan-proposal:%");
-    if (error) throw new PlanProposalPersistenceError();
-    return count ?? 0;
+    const open = await readOpenMemorySuggestions(
+      this.client,
+      userId,
+      "plan-proposal:",
+    );
+    if (open === null) throw new PlanProposalPersistenceError();
+    return open;
   }
 
   private async call<Name extends PlanProposalFunctionName>(
