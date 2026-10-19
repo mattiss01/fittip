@@ -119,7 +119,11 @@ export function RoadmapDecisionDock({
   const memoryShown = useRef(false);
   const acceptForm = useRef<HTMLFormElement>(null);
   const declineForm = useRef<HTMLFormElement>(null);
-  const openMemory = memory.suggestions.length > 0;
+  // Only this proposal's own; older ones wait in the panel and in Memory.
+  const ownMemory = memory.suggestions.filter(
+    (suggestion) => suggestion.proposalId === proposalId,
+  );
+  const openMemory = ownMemory.length > 0;
   const memoryTitleId = useId();
   const decline = useRoadmapWrite(declineRoadmapAction);
   const askAgain = useRoadmapWrite(askAgainRoadmapAction);
@@ -355,7 +359,7 @@ export function RoadmapDecisionDock({
             </h2>
             <p>{ROADMAP_CONTROL_COPY.memoryBeforeEndSupport}</p>
             <MemorySuggestions
-              suggestions={memory.suggestions}
+              suggestions={ownMemory}
               expectedRevision={memory.revision}
             />
             <button

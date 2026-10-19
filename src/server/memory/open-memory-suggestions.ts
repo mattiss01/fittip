@@ -5,6 +5,8 @@ import type { ServerUserClient } from "@/lib/supabase/server-user-client";
 /** A suggestion the coach made from a planning note, still undecided. */
 export type OpenMemorySuggestion = {
   id: string;
+  /** The proposal it came from, read from its source reference. */
+  proposalId: string | null;
   memoryType: "profile_fact" | "constraint" | "preference" | "observed_pattern";
   content: string;
 };
@@ -38,7 +40,7 @@ export async function readOpenMemorySuggestions(
         .maybeSingle(),
       client
         .from("memory_items")
-        .select("id, memory_type, current_revision_id")
+        .select("id, memory_type, current_revision_id, source_reference")
         .eq("user_id", userId)
         .eq("status", "proposed")
         .like("source_reference", `${sourcePrefix}%`)
@@ -75,6 +77,7 @@ export async function readOpenMemorySuggestions(
         : [
             {
               id: item.id,
+              proposalId: item.source_reference?.split(":")[1] ?? null,
               memoryType:
                 item.memory_type as OpenMemorySuggestion["memoryType"],
               content,

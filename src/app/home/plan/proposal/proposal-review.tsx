@@ -131,7 +131,12 @@ export function ProposalReview({
   const [memoryBeforeFinish, setMemoryBeforeFinish] = useState(false);
   const memoryShown = useRef(false);
   const finishForm = useRef<HTMLFormElement>(null);
-  const openMemory = memory.suggestions.length > 0;
+  // Only this proposal's own: one left open from an earlier proposal waits in
+  // the panel below and in Memory, and is not asked about at every review.
+  const ownMemory = memory.suggestions.filter(
+    (suggestion) => suggestion.proposalId === proposalId,
+  );
+  const openMemory = ownMemory.length > 0;
   const dialogId = useId();
   const discardTitle = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
@@ -356,7 +361,7 @@ export function ProposalReview({
               <h2 id={`${dialogId}-memory`}>{COPY.memoryBeforeEndTitle}</h2>
               <p>{COPY.memoryBeforeEndSupport}</p>
               <MemorySuggestions
-                suggestions={memory.suggestions}
+                suggestions={ownMemory}
                 expectedRevision={memory.revision}
               />
               <button
@@ -396,7 +401,7 @@ export function ProposalReview({
                 <>
                   <p>{COPY.memoryBeforeEndSupport}</p>
                   <MemorySuggestions
-                    suggestions={memory.suggestions}
+                    suggestions={ownMemory}
                     expectedRevision={memory.revision}
                   />
                 </>

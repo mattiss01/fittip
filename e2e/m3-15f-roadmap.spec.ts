@@ -183,6 +183,9 @@ test.describe("M3-15F roadmap generation", () => {
 
       // ---- Accept: it becomes the roadmap. ----
       await regenerated.getByRole("button", { name: "Accept roadmap" }).click();
+      // The first proposal's memory suggestions are still open, but they were
+      // that proposal's: accepting this one does not ask about them again
+      // (owner, 19 Oct 2026). They wait in the panel and in Memory.
       await expect(page.locator("[data-roadmap-open-proposal]")).toHaveCount(0);
       await expectOutcome(page, "Accepted. This is your roadmap now.");
       await expect(page.locator('[data-roadmap-version="1"]')).toBeVisible();

@@ -65,7 +65,12 @@ describe("RoadmapDecisionDock", () => {
   it("puts open memory suggestions in front of the owner once before Accept (owner, 19 Oct 2026)", async () => {
     render(
       review(FIRST, 3, 3, true, [
-        { id: "m1", memoryType: "constraint", content: "Weekdays are short." },
+        {
+          id: "m1",
+          proposalId: FIRST,
+          memoryType: "constraint",
+          content: "Weekdays are short.",
+        },
       ]),
     );
 

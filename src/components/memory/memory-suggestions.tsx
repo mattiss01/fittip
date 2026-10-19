@@ -10,6 +10,8 @@ import { changeMemoryAction } from "@/app/home/you/memory/actions";
 /** A memory item the coach proposed from a planning note, still undecided. */
 export type MemorySuggestion = {
   id: string;
+  /** The proposal it came from; the pop-up before an ending shows only its own. */
+  proposalId?: string | null;
   memoryType: "profile_fact" | "constraint" | "preference" | "observed_pattern";
   content: string;
 };

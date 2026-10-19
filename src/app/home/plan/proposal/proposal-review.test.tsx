@@ -364,6 +364,7 @@ describe("open memory suggestions before the review ends (owner, 19 Oct 2026)", 
   const open = [
     {
       id: "m1",
+      proposalId: PROPOSAL_ID,
       memoryType: "constraint" as const,
       content: "Weekdays are short.",
     },
@@ -397,6 +398,13 @@ describe("open memory suggestions before the review ends (owner, 19 Oct 2026)", 
       name: COPY.discardConfirmTitle,
     });
     expect(within(question).getByText("Weekdays are short.")).toBeVisible();
+  });
+
+  it("does not ask about one left open from an earlier proposal", () => {
+    renderReview({ memory: [{ ...open[0], proposalId: "earlier" }] });
+
+    fireEvent.click(screen.getByRole("button", { name: COPY.finishAction }));
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 
   it("asks nothing when none is open", () => {
