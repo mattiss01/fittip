@@ -44,14 +44,15 @@ export type PlannedSessionSummary = {
 };
 
 /**
- * The planned session a proposed item would stand in for (ADR-024), as it is
- * now rather than as it was when the owner marked it.
+ * The planned session a proposed item would stand in for (ADR-024), or a
+ * cancel item would call off (ADR-033), as it is now rather than as it was
+ * when the owner asked.
  *
  * `available` is false once the session is logged, cancelled, behind today,
  * or no longer on one of the proposal's days: deleted, or moved off them. The
- * finish applies the same four tests, adds the proposed session beside it and
- * deletes nothing, so the surface says that instead of offering a replace
- * that will not happen. The timeline is read over the proposal's days, which
+ * finish applies the same four tests and then cancels nothing (a replacing
+ * session is added beside it), so the surface says that instead of offering
+ * a replace or a cancel that will not happen. The timeline is read over the proposal's days, which
  * is what makes "not among these sessions" the same test the finish runs.
  */
 export type ProposalReplaceTarget = {
@@ -65,8 +66,16 @@ export type ProposalTimelineItem = PlanProposalItemView & {
   replaces: ProposalReplaceTarget | null;
 };
 
-/** What a planned session's card says about the item that would replace it. */
-export type ProposalReplacement = { title: string; isChosen: boolean };
+/**
+ * What a planned session's card says about the item that would replace it,
+ * or, for a cancel, call it off. `title` is the replacing session's; a
+ * cancel has none.
+ */
+export type ProposalReplacement = {
+  kind: "replace" | "cancel";
+  title: string;
+  isChosen: boolean;
+};
 
 export type ProposalTimelineDay = {
   localDate: string;
@@ -141,7 +150,8 @@ export function buildProposalTimeline(input: {
       // day of the session proposed in its place.
       const ofDay = replacementsByDate.get(target.localDate) ?? {};
       ofDay[target.id] = {
-        title: item.title ?? "",
+        kind: item.kind === "cancel" ? "cancel" : "replace",
+        title: item.kind === "cancel" ? "" : (item.title ?? ""),
         isChosen: item.decision === "staged",
       };
       replacementsByDate.set(target.localDate, ofDay);

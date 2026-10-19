@@ -12,7 +12,11 @@ import { readSavedSessionOptions } from "./saved/session-options";
 import { PlanManager, type PlanSessionLog } from "./plan-manager";
 import { planHistoryStart, type PlanPhase } from "./plan-weeks";
 import { planWindowFor } from "./plan-window";
-import { redirectOnAuthError, toSessionView } from "./plan-read";
+import {
+  readReplacedByCoach,
+  redirectOnAuthError,
+  toSessionView,
+} from "./plan-read";
 import styles from "./plan.module.css";
 import w from "./plan-week.module.css";
 import { findUncoveredSeriesDates } from "./series-recurrence";
@@ -144,6 +148,7 @@ async function PlanWindow({
   let phases: PlanPhase[];
   const logged = new Map<string, PlanSessionLog>();
   const openFills = new Map<string, FillProposal>();
+  let replacedByCoach = new Set<string>();
   try {
     const [plan, log] = await Promise.all([
       createRollingPlan(),
@@ -164,10 +169,12 @@ async function PlanWindow({
     // Thursday. A log's own date can be any day before its session's, so the
     // logs are found by session rather than by window, in one read.
     const sessionIds = slice.sessions.map((session) => session.id);
-    const [found, open] = await Promise.all([
+    const [found, open, replaced] = await Promise.all([
       log.findByPlanSessions(sessionIds),
       readOpenSessionActivityProposals(sessionIds),
+      readReplacedByCoach(slice.sessions),
     ]);
+    replacedByCoach = replaced;
     for (const proposal of open) {
       if (proposal.sessionId) {
         openFills.set(proposal.sessionId, toFillProposal(proposal));
@@ -210,15 +217,23 @@ async function PlanWindow({
           initialDate={initialDate}
           phases={phases}
           expectedRevision={slice.revision}
-          sessions={slice.sessions.map((session) => {
-            const log = logged.get(session.id);
-            const openFill = openFills.get(session.id);
-            return {
-              ...toSessionView(session),
-              ...(log === undefined ? {} : { log }),
-              ...(openFill === undefined ? {} : { openFill }),
-            };
-          })}
+          sessions={slice.sessions
+            // A session the coach's replacement stands in for is not shown
+            // beside it (owner, 19 Oct 2026; ADR-033); the replacement's page
+            // brings it back. Trained anyway, it shows as logged.
+            .filter(
+              (session) =>
+                !replacedByCoach.has(session.id) || logged.has(session.id),
+            )
+            .map((session) => {
+              const log = logged.get(session.id);
+              const openFill = openFills.get(session.id);
+              return {
+                ...toSessionView(session),
+                ...(log === undefined ? {} : { log }),
+                ...(openFill === undefined ? {} : { openFill }),
+              };
+            })}
           recoveryDates={slice.recoveryDates}
           savedSessions={savedSessions}
           uncoveredSeriesDates={findUncoveredSeriesDates(

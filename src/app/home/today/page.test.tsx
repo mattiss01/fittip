@@ -6,11 +6,13 @@ const {
   createProfileMock,
   createCompletionLogMock,
   readPlanWindowToppedUpMock,
+  listCoachCancellationsMock,
 } = vi.hoisted(() => ({
   createPlanMock: vi.fn(),
   createProfileMock: vi.fn(),
   createCompletionLogMock: vi.fn(),
   readPlanWindowToppedUpMock: vi.fn(),
+  listCoachCancellationsMock: vi.fn(),
 }));
 
 vi.mock("@/server/repositories/rolling-plan-repository", async (original) => {
@@ -32,6 +34,21 @@ vi.mock("@/server/repositories/completion-log-repository", async (original) => {
     >();
   return { ...actual, createCompletionLog: createCompletionLogMock };
 });
+vi.mock(
+  "@/server/repositories/coach-cancellation-repository",
+  async (original) => {
+    const actual =
+      await original<
+        typeof import("@/server/repositories/coach-cancellation-repository")
+      >();
+    return {
+      ...actual,
+      createCoachCancellations: async () => ({
+        list: listCoachCancellationsMock,
+      }),
+    };
+  },
+);
 vi.mock("@/server/completions/plan-window-top-up", () => ({
   readPlanWindowToppedUp: readPlanWindowToppedUpMock,
 }));
@@ -51,6 +68,7 @@ const findByPlanSessions = vi.fn();
 describe("Today", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    listCoachCancellationsMock.mockResolvedValue(new Map());
     createProfileMock.mockResolvedValue({
       getCurrentProfile: vi.fn().mockResolvedValue({
         userId: "owner",
@@ -373,6 +391,29 @@ describe("Today", () => {
     expect(
       within(unlogged).getByText("Cancelled, kept on the record"),
     ).toBeTruthy();
+  });
+
+  it("leaves out a session the coach's replacement stands in for (ADR-033)", async () => {
+    const replaced: RollingPlanSession = {
+      ...session(),
+      status: "cancelled",
+      cancelledAt: "2026-08-17T06:00:00.000Z",
+    };
+    readPlanWindowToppedUpMock.mockResolvedValue(planWindow([replaced]));
+    listCoachCancellationsMock.mockResolvedValue(
+      new Map([
+        [
+          SESSION_ID,
+          { replacedBySessionId: "7e150000-0000-4000-8000-0000000000aa" },
+        ],
+      ]),
+    );
+
+    render(await TodayPage({ searchParams: Promise.resolve({}) }));
+
+    expect(
+      document.querySelector(`[data-today-session="${SESSION_ID}"]`),
+    ).toBeNull();
   });
 
   it("offers the log link on a planned session that has none", async () => {

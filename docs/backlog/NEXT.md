@@ -57,7 +57,7 @@ Ordered by dependency. A lane is named where it is not the build lane.
       replacement **cancels** the old session (today it is deleted), hidden on its day and
       brought back from the replacement's page. Locked means locked, even under a safety
       signal: the coach says so in its safety note. Careful lane: schema, AI contract and
-      prompt, what Finish does; ADR-032 supersedes ADR-024 in part.
+      prompt, what Finish does; ADR-033 supersedes ADR-024 in part.
 
 - [ ] **A fill's sources are recorded and never checked.** A suggestion names the
       logs, library entries and saved sessions it was built from, and since ADR-023

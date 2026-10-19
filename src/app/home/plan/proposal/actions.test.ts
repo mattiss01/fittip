@@ -393,7 +393,7 @@ describe("generatePlanProposalAction", () => {
     });
   });
 
-  it("sends the sessions ticked as replaceable, and none by default", async () => {
+  it("sends the sessions the form offers as open, and none when it offers none", async () => {
     const formData = new FormData();
     formData.set("dayCount", "3");
     formData.set("planningNote", "");

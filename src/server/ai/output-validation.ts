@@ -17,6 +17,7 @@ import {
   type ProposedSessionActivity,
   type SessionActivitiesProposal,
   type SevenDayPlanAlternative,
+  type SevenDayPlanCancel,
   type SevenDayPlanProposal,
   type SevenDayPlanResponse,
   type SevenDayPlanSession,
@@ -147,6 +148,8 @@ const MAX_ALTERNATIVES_PER_SESSION = 2;
 const MAX_PLAN_ASSUMPTIONS = 4;
 const MAX_PLAN_UNCERTAINTIES = 3;
 const MAX_PLAN_SAFETY_CONSIDERATIONS = 3;
+/** ADR-033; the database holds a cancel's reason to the same bound. */
+const PLAN_CANCEL_REASON_MAX_LENGTH = 160;
 const DAY_MS = 86_400_000;
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -1022,6 +1025,7 @@ function validateSevenDayPlan(
       "startDate",
       "endDate",
       "sessions",
+      "cancels",
       "assumptions",
       "uncertainties",
       "safetyConsiderations",
@@ -1065,8 +1069,8 @@ function validateSevenDayPlan(
 
   const sessions: SevenDayPlanSession[] = [];
   const perDay = new Map<string, number>();
-  // ADR-024. The handles this request issued: one per session the owner
-  // marked "can be replaced". The database holds the answer to the same set.
+  // ADR-024, ADR-033. The handles this request issued: one per session the
+  // owner left open. The database holds the answer to the same set.
   const replaceHandles = new Set(
     context.planCommitments
       .map((commitment) => commitment.replaceHandle)
@@ -1100,7 +1104,7 @@ function validateSevenDayPlan(
     }
 
     // A handle the owner never issued is a session they did not offer, and
-    // one named twice would delete one session for two. Either refuses the
+    // one named twice would cancel one session for two. Either refuses the
     // whole answer, as an invented goal id does.
     const replaces = session.session.replaces;
     if (replaces !== undefined) {
@@ -1116,6 +1120,11 @@ function validateSevenDayPlan(
 
     sessions.push(session.session);
   }
+
+  // ADR-033. A suggested cancel names an open session by its handle, which
+  // no replacing session or other cancel may also name.
+  const cancels = validatePlanCancels(parsed.cancels, replaceHandles, replaced);
+  if (cancels === null) return rejected("business_rule");
 
   const assumptions = validateStringArray(
     parsed.assumptions,
@@ -1150,6 +1159,7 @@ function validateSevenDayPlan(
     startDate: context.horizonStartDate,
     endDate: context.horizonEndDate,
     sessions,
+    ...(cancels.length > 0 ? { cancels } : {}),
     ...(assumptions.length > 0 ? { assumptions } : {}),
     ...(uncertainties.length > 0 ? { uncertainties } : {}),
     ...(safetyConsiderations.length > 0 ? { safetyConsiderations } : {}),
@@ -1264,6 +1274,43 @@ function validatePlanSession(
         : {}),
     },
   };
+}
+
+/**
+ * ADR-033. Null is how the strict grammar says "cancels nothing". Every handle
+ * must be one this request issued and not yet named (`named` holds those the
+ * sessions replace, and is added to here); the reason is cut to fit, as all of
+ * the coach's text is (owner, 17 October 2026).
+ */
+function validatePlanCancels(
+  value: unknown,
+  issued: ReadonlySet<string>,
+  named: Set<string>,
+): SevenDayPlanCancel[] | null {
+  if (value === undefined || value === null) return [];
+  if (!Array.isArray(value) || value.length > issued.size) return null;
+
+  const cancels: SevenDayPlanCancel[] = [];
+  for (const entry of value) {
+    if (!isRecord(entry)) return null;
+    if (findUnknownField(entry, ["replaceHandle", "reason"])) return null;
+    const handle = entry.replaceHandle;
+    if (
+      typeof handle !== "string" ||
+      !issued.has(handle) ||
+      named.has(handle)
+    ) {
+      return null;
+    }
+    const reason = readText(
+      entry.reason,
+      PLAN_CANCEL_REASON_MAX_LENGTH,
+    )?.trim();
+    if (!reason) return null;
+    named.add(handle);
+    cancels.push({ replaceHandle: handle, reason });
+  }
+  return cancels;
 }
 
 /** Past six, the first six are kept. */

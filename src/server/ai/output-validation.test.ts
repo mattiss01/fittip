@@ -547,6 +547,82 @@ describe("the seven day plan validator", () => {
     ] as const)("refuses %s", (_label, replaces, reason) => {
       expect(answer([...replaces])).toEqual({ outcome: "rejected", reason });
     });
+
+    describe("a session the coach suggests cancelling (ADR-033)", () => {
+      const answerCancelling = (cancels: unknown, replaces: unknown[] = []) => {
+        const body = JSON.parse(
+          findCoachAIFixtureCase("valid_seven_day_plan").body,
+        );
+        body.plan.sessions.forEach(
+          (session: Record<string, unknown>, index: number) => {
+            if (index < replaces.length) session.replaces = replaces[index];
+          },
+        );
+        body.plan.cancels = cancels;
+        return validateCoachAICandidate({
+          operation: "create_seven_day_plan",
+          body: JSON.stringify(body),
+          context,
+        });
+      };
+
+      it("keeps a cancel of an open session, its reason cut to fit", () => {
+        const result = answerCancelling([
+          { replaceHandle: "r1", reason: `  ${"Rest the shin. ".repeat(20)}` },
+        ]);
+
+        if (result.outcome !== "accepted")
+          throw new Error("expected acceptance");
+        if (!("sessions" in result.proposal))
+          throw new Error("expected a plan");
+        expect(result.proposal.cancels).toHaveLength(1);
+        const [cancel] = result.proposal.cancels ?? [];
+        expect(cancel.replaceHandle).toBe("r1");
+        expect(cancel.reason.length).toBeLessThanOrEqual(160);
+        expect(cancel.reason).toBe(cancel.reason.trim());
+      });
+
+      it("leaves the key out when the coach cancels nothing", () => {
+        for (const cancels of [null, []]) {
+          const result = answerCancelling(cancels);
+          if (result.outcome !== "accepted")
+            throw new Error("expected acceptance");
+          expect(result.proposal).not.toHaveProperty("cancels");
+        }
+      });
+
+      it.each([
+        [
+          "a locked session, which has no handle",
+          [{ replaceHandle: "r2", reason: "Rest." }],
+          [],
+        ],
+        [
+          "a handle both replaced and cancelled",
+          [{ replaceHandle: "r1", reason: "Rest." }],
+          ["r1"],
+        ],
+        [
+          "one handle cancelled twice",
+          [
+            { replaceHandle: "r1", reason: "Rest." },
+            { replaceHandle: "r1", reason: "Again." },
+          ],
+          [],
+        ],
+        ["a blank reason", [{ replaceHandle: "r1", reason: "   " }], []],
+        [
+          "a session id instead of a handle",
+          [{ sessionId: "s-1", reason: "Rest." }],
+          [],
+        ],
+      ] as const)("refuses %s", (_label, cancels, replaces) => {
+        expect(answerCancelling(cancels, [...replaces])).toEqual({
+          outcome: "rejected",
+          reason: "business_rule",
+        });
+      });
+    });
   });
 
   it("takes the horizon from the server and never from the response", () => {

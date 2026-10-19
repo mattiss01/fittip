@@ -60,13 +60,19 @@ export function synthesizePlanBody(context: CoachAIContext): string {
   const sessionDates = eligibleDates.filter((_date, index) => index % 2 === 0);
   const sport = constrainedSport(primary, constraints, preferences);
 
-  // ADR-024. A session the owner marked "can be replaced" is replaced by the
-  // proposed session on its own day, and when none falls on one, the first
-  // mark goes to the first session, so the flow can be seen without a
-  // provider. A real coach decides this; the fixture only shows the shape.
-  const marks = context.planCommitments.filter(
+  // ADR-024, ADR-033. Every session the owner did not lock is open, so the
+  // fixture touches one only when the note asks, which keeps every other flow
+  // as it was. "replace" replaces an open session with the proposed session on
+  // its own day, and when none falls on one, the first open session goes to
+  // the first proposed one. "cancel" or "skip" suggests cancelling the first
+  // open session not replaced. A real coach decides this; the fixture only
+  // shows the shape.
+  const asks = (pattern: RegExp) =>
+    context.planningNote !== null && pattern.test(context.planningNote);
+  const open = context.planCommitments.filter(
     (commitment) => typeof commitment.replaceHandle === "string",
   );
+  const marks = asks(/\breplace/i) ? open : [];
   const handleFor = (date: string, index: number): string | null => {
     const sameDay = marks.find((mark) => mark.localDate === date);
     if (sameDay) return sameDay.replaceHandle ?? null;
@@ -131,6 +137,10 @@ export function synthesizePlanBody(context: CoachAIContext): string {
     ),
     replaces: handleFor(date, index),
   }));
+  const replaced = new Set(sessions.map((session) => session.replaces));
+  const toCancel = asks(/\b(?:cancel|skip)/i)
+    ? open.find((commitment) => !replaced.has(commitment.replaceHandle ?? null))
+    : undefined;
 
   const plan = {
     schemaVersion: COACH_AI_SCHEMA_VERSIONS.create_seven_day_plan,
@@ -138,6 +148,18 @@ export function synthesizePlanBody(context: CoachAIContext): string {
     startDate: context.horizonStartDate,
     endDate: context.horizonEndDate,
     sessions,
+    cancels:
+      toCancel?.replaceHandle == null
+        ? null
+        : [
+            {
+              replaceHandle: toCancel.replaceHandle,
+              reason: bound(
+                `Your note asks for a lighter week, so ${toCancel.title} is left out.`,
+                160,
+              ),
+            },
+          ],
     assumptions: [
       bound(
         "Your recent training is representative of what you can sustain.",

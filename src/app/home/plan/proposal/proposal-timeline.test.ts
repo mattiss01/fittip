@@ -129,6 +129,39 @@ describe("groupPlannedByDate", () => {
   });
 });
 
+describe("an item that suggests cancelling a planned session (ADR-033)", () => {
+  const longRun = planned({ id: "a", localDate: START, title: "Long run" });
+  const cancel = item({
+    ordinal: 0,
+    kind: "cancel",
+    localDate: START,
+    title: "Long run",
+    sport: null,
+    expectedDurationMinutes: null,
+    rationale: "Your shin needs the rest.",
+    contentIndex: null,
+    replacesSessionId: "a",
+  });
+
+  it("tells the session's card it may be cancelled, with no replacement", () => {
+    const [day] = build({ items: [cancel], planned: [longRun] });
+
+    expect(day.items[0].replaces).toMatchObject({ available: true });
+    expect(day.replacements).toEqual({
+      a: { kind: "cancel", title: "", isChosen: false },
+    });
+  });
+
+  it("leaves the card alone once the owner keeps the session", () => {
+    const [day] = build({
+      items: [{ ...cancel, decision: "rejected" }],
+      planned: [longRun],
+    });
+
+    expect(day.replacements).toEqual({});
+  });
+});
+
 describe("an item that would replace a planned session (ADR-024)", () => {
   const longRun = planned({ id: "a", localDate: START, title: "Long run" });
   const tempo = item({
@@ -147,7 +180,7 @@ describe("an item that would replace a planned session (ADR-024)", () => {
       available: true,
     });
     expect(day.replacements).toEqual({
-      a: { title: "Tempo run", isChosen: false },
+      a: { kind: "replace", title: "Tempo run", isChosen: false },
     });
   });
 
@@ -162,6 +195,7 @@ describe("an item that would replace a planned session (ADR-024)", () => {
     });
 
     expect(chosen[0].replacements.a).toEqual({
+      kind: "replace",
       title: "Tempo run",
       isChosen: true,
     });

@@ -226,6 +226,12 @@ const activityLibrarySurface = [
  * its domain module: the session's own page reads the reason and its action
  * edits it. The table is new, not a legacy one, and
  * `session-cancellation-boundary.test.ts` keeps its reach to those two files.
+ *
+ * ADR-033 added `coach-cancellation-repository`: the Plan, Today and the
+ * session's page leave a session the coach's replacement stands in for off
+ * its day, and the replacement offers to bring it back. Read-only, and it
+ * holds no text, only which session a finished review cancelled and what
+ * replaced it; `finish_plan_proposal_review` is the table's one writer.
  */
 const allowedServerModules = [
   "@/server/completions/completion-log",
@@ -235,6 +241,7 @@ const allowedServerModules = [
   // through. One narrow module that reads and writes `profiles.sports` and
   // nothing of the plan.
   "@/server/profile/keep-sports",
+  "@/server/repositories/coach-cancellation-repository",
   "@/server/repositories/completion-log-repository",
   "@/server/repositories/personal-activity-repository",
   "@/server/repositories/profile-repository",

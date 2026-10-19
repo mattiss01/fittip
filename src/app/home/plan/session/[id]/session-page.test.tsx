@@ -46,7 +46,12 @@ import {
   type SeriesActionState,
 } from "../../series-action-state";
 import type { PlanSessionView } from "../../session-view";
-import { SessionPage, type SessionCancellationView } from "./session-page";
+import {
+  SessionPage,
+  type CoachCancellationView,
+  type SessionCancellationView,
+  type StandsInForView,
+} from "./session-page";
 
 const TODAY = "2026-08-17";
 const DATES = Array.from({ length: 14 }, (_, offset) => {
@@ -55,6 +60,7 @@ const DATES = Array.from({ length: 14 }, (_, offset) => {
   return date.toISOString().slice(0, 10);
 });
 const SERIES_ID = "7f000000-0000-4000-8000-000000000099";
+const OLD_SESSION_ID = "7f000000-0000-4000-8000-000000000098";
 
 let planState: PlanActionState;
 let seriesState: SeriesActionState;
@@ -106,6 +112,10 @@ function page(
   segment?: PlanSeriesView,
   origin: "plan" | "today" = "plan",
   cancellation: SessionCancellationView | null = null,
+  coach: {
+    coachCancellation?: CoachCancellationView | null;
+    standsInFor?: StandsInForView | null;
+  } = {},
 ) {
   return (
     <SessionPage
@@ -117,6 +127,8 @@ function page(
       origin={origin}
       originDate={null}
       cancellation={cancellation}
+      coachCancellation={coach.coachCancellation ?? null}
+      standsInFor={coach.standsInFor ?? null}
     />
   );
 }
@@ -326,6 +338,47 @@ describe("SessionPage", () => {
     expect(screen.getByRole("button", { name: "Save reason" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Clear reason" })).toBeVisible();
     expect(screen.getByText(/not sent to a coach/)).toBeVisible();
+  });
+
+  it("says the coach's accepted proposal cancelled it (ADR-033)", () => {
+    render(
+      page(session({ status: "cancelled" }), undefined, "plan", null, {
+        coachCancellation: { kind: "replaced", replacementTitle: "Easy spin" },
+      }),
+    );
+    expect(
+      document.querySelector("[data-coach-cancellation]")?.textContent,
+    ).toBe("Replaced by Easy spin, which the coach proposed and you accepted.");
+
+    cleanup();
+    render(
+      page(session({ status: "cancelled" }), undefined, "plan", null, {
+        coachCancellation: { kind: "suggested" },
+      }),
+    );
+    expect(
+      document.querySelector("[data-coach-cancellation]")?.textContent,
+    ).toBe("Cancelled on the coach's suggestion, which you accepted.");
+  });
+
+  it("brings back the session a coach's replacement stands in for", () => {
+    render(
+      page(session({ title: "Easy spin" }), undefined, "plan", null, {
+        standsInFor: { sessionId: OLD_SESSION_ID, title: "Long run" },
+      }),
+    );
+
+    expect(
+      document.querySelector("[data-stands-in-for]")?.textContent,
+    ).toContain("Stands in for Long run, which the coach replaced.");
+    fireEvent.click(
+      screen.getByRole("button", { name: "Bring Long run back" }),
+    );
+
+    const sent = planDispatch.mock.calls.at(-1)?.[0] as FormData;
+    expect(sent.get("operation")).toBe("reactivate");
+    expect(sent.get("sessionId")).toBe(OLD_SESSION_ID);
+    expect(sent.get("expectedRevision")).toBe("3");
   });
 
   it("lets a reason be added to a cancelled session from a past day", () => {

@@ -143,7 +143,7 @@ test.describe("M3-16A plan proposal review", () => {
 
       await expect(finish).toBeEnabled();
       await expect(
-        page.getByText("One item will be added to your plan, in one change."),
+        page.getByText("One change will be made to your plan."),
       ).toBeVisible();
 
       // M3-16B: the already-planned session is editable here, and the choices
@@ -167,7 +167,7 @@ test.describe("M3-16A plan proposal review", () => {
       ).toBeVisible();
       await expect(finish).toBeEnabled();
       await expect(
-        page.getByText("One item will be added to your plan, in one change."),
+        page.getByText("One change will be made to your plan."),
       ).toBeVisible();
 
       // The editor is inside a disclosure and the dock is fixed, so the page
@@ -230,9 +230,11 @@ test.describe("M3-16A plan proposal review", () => {
     }
   });
 
-  // ADR-024. A session stays unless the owner ticks it, and a ticked one is
-  // swapped for the coach's only when the review is finished.
-  test("replaces a session the owner ticked at 390x844", async ({
+  // ADR-033. A session is open unless the owner locks it, and an open one is
+  // swapped for the coach's only when the review is finished. The replaced
+  // session stays on the plan as cancelled, and the Plan does not show it
+  // beside its replacement.
+  test("replaces a session the owner left open at 390x844", async ({
     page,
     request,
   }) => {
@@ -256,25 +258,25 @@ test.describe("M3-16A plan proposal review", () => {
 
       await page.goto("/home/plan/proposal");
       await page.getByLabel("Days to plan").fill("3");
-      // Listed because it is on the chosen days, and it stays by default.
-      const tick = page.getByRole("checkbox", {
-        name: "Club track night can be replaced",
-      });
-      await expect(tick).not.toBeChecked();
-      await tick.check();
+      // Listed because it is on the chosen days, and open by default.
+      await expect(
+        page.getByRole("button", { name: "Lock Club track night" }),
+      ).toHaveAttribute("aria-pressed", "false");
+      // The example coach replaces an open session only when the note asks.
+      await page
+        .getByLabel("Anything the coach should account for? (optional)")
+        .fill("Please replace the track night.");
       await page.getByRole("button", { name: "Ask the coach" }).click();
 
       await expect(
         page.getByRole("region", { name: "What the coach proposed" }),
       ).toBeVisible({ timeout: 30_000 });
 
-      // The example coach stands its first session in for the ticked one, and
+      // The example coach stands its first session in for the open one, and
       // both cards say so. Nothing has changed on the plan yet.
       await expect(page.getByText("Club track night, 75 min")).toBeVisible();
       await expect(
-        page.getByText(
-          "You said this can be replaced. Easy aerobic session would take its place.",
-        ),
+        page.getByText("The coach suggests Easy aerobic session in its place."),
       ).toBeVisible();
       await expect(
         page.getByRole("button", {
@@ -303,8 +305,8 @@ test.describe("M3-16A plan proposal review", () => {
       await finish.click();
       await expect(page).toHaveURL(/\/home\/plan$/, { timeout: 30_000 });
 
-      // The swap happened whole: the coach's session is there and the owner's
-      // is gone.
+      // The swap happened whole: the coach's session is there, and the
+      // owner's, cancelled, is not shown beside it.
       await expect(page.getByText("Easy aerobic session")).toHaveCount(1);
       await expect(page.getByText("Club track night")).toHaveCount(0);
 

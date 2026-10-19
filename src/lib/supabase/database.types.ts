@@ -729,6 +729,59 @@ export type Database = {
           },
         ];
       };
+      plan_proposal_cancellations: {
+        Row: {
+          cancelled_at: string;
+          proposal_id: string;
+          replaced_by_session_id: string | null;
+          session_id: string;
+          user_id: string;
+        };
+        Insert: {
+          cancelled_at: string;
+          proposal_id: string;
+          replaced_by_session_id?: string | null;
+          session_id: string;
+          user_id: string;
+        };
+        Update: {
+          cancelled_at?: string;
+          proposal_id?: string;
+          replaced_by_session_id?: string | null;
+          session_id?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "plan_proposal_cancellations_owner_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+          {
+            foreignKeyName: "plan_proposal_cancellations_proposal_fkey";
+            columns: ["proposal_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "plan_proposals";
+            referencedColumns: ["id", "user_id"];
+          },
+          {
+            foreignKeyName: "plan_proposal_cancellations_replacement_fkey";
+            columns: ["replaced_by_session_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "rolling_plan_sessions";
+            referencedColumns: ["id", "user_id"];
+          },
+          {
+            foreignKeyName: "plan_proposal_cancellations_session_fkey";
+            columns: ["session_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "rolling_plan_sessions";
+            referencedColumns: ["id", "user_id"];
+          },
+        ];
+      };
       plan_proposal_decisions: {
         Row: {
           applied_count: number;

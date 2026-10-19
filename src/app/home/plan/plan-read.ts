@@ -10,6 +10,10 @@ import { CompletionAuthenticationError } from "@/server/repositories/completion-
 import { PersonalActivityAuthenticationError } from "@/server/repositories/personal-activity-repository";
 import { ProfileAuthenticationError } from "@/server/repositories/profile-repository";
 import { RollingPlanAuthenticationError } from "@/server/repositories/rolling-plan-repository";
+import {
+  CoachCancellationAuthenticationError,
+  createCoachCancellations,
+} from "@/server/repositories/coach-cancellation-repository";
 import type {
   RollingPlanSeries,
   RollingPlanSession,
@@ -52,6 +56,27 @@ export function toSeriesView(series: RollingPlanSeries): PlanSeriesView {
   };
 }
 
+/**
+ * The ids of cancelled sessions a coach's replacement stands in for (owner,
+ * 19 Oct 2026; ADR-033). The Plan and Today leave them out, so a day shows
+ * the replacement and not both; the replacement's own page brings one back.
+ * Reads nothing when nothing in the slice is cancelled.
+ */
+export async function readReplacedByCoach(
+  sessions: readonly RollingPlanSession[],
+): Promise<Set<string>> {
+  const cancelled = sessions.filter(
+    (session) => session.status === "cancelled",
+  );
+  if (cancelled.length === 0) return new Set();
+  const coach = await (await createCoachCancellations()).list(cancelled);
+  return new Set(
+    [...coach]
+      .filter(([, cancellation]) => cancellation.replacedBySessionId !== null)
+      .map(([sessionId]) => sessionId),
+  );
+}
+
 export function redirectOnAuthError(error: unknown): void {
   const accessError =
     error instanceof ProfileAuthenticationError ||
@@ -59,7 +84,8 @@ export function redirectOnAuthError(error: unknown): void {
     error instanceof CompletionAuthenticationError ||
     error instanceof PersonalActivityAuthenticationError ||
     error instanceof SessionActivityAuthenticationError ||
-    error instanceof RoadmapAuthenticationError
+    error instanceof RoadmapAuthenticationError ||
+    error instanceof CoachCancellationAuthenticationError
       ? error.accessError
       : undefined;
   if (accessError?.reason === "not-owner") redirect("/auth/denied");
@@ -69,7 +95,8 @@ export function redirectOnAuthError(error: unknown): void {
     error instanceof CompletionAuthenticationError ||
     error instanceof PersonalActivityAuthenticationError ||
     error instanceof SessionActivityAuthenticationError ||
-    error instanceof RoadmapAuthenticationError
+    error instanceof RoadmapAuthenticationError ||
+    error instanceof CoachCancellationAuthenticationError
   ) {
     redirect("/");
   }

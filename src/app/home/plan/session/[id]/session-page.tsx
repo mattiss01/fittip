@@ -93,6 +93,8 @@ export function SessionPage({
   origin,
   originDate,
   cancellation = null,
+  coachCancellation = null,
+  standsInFor = null,
 }: {
   session: PlanSessionView | null;
   series?: PlanSeriesView;
@@ -104,6 +106,10 @@ export function SessionPage({
   originDate: string | null;
   /** Why it was cancelled, read only for a cancelled session. */
   cancellation?: SessionCancellationView | null;
+  /** When the coach's proposal cancelled it, accepted by the owner (ADR-033). */
+  coachCancellation?: CoachCancellationView | null;
+  /** On a coach's replacement: the session it stands in for, still cancelled. */
+  standsInFor?: StandsInForView | null;
 }) {
   const router = useRouter();
   const [state, action, pending] = useActionState(
@@ -404,6 +410,34 @@ export function SessionPage({
             detail: describeMeasurement(activity.target),
           }))}
         />
+        {cancelled && coachCancellation !== null ? (
+          <p className={page.aside} data-coach-cancellation>
+            {coachCancellation.kind === "suggested"
+              ? "Cancelled on the coach's suggestion, which you accepted."
+              : coachCancellation.replacementTitle === null
+                ? "Replaced by a session the coach proposed, which you accepted."
+                : `Replaced by ${coachCancellation.replacementTitle}, which the coach proposed and you accepted.`}
+          </p>
+        ) : null}
+        {standsInFor !== null && plannable ? (
+          <p className={page.aside} data-stands-in-for>
+            Stands in for {standsInFor.title}, which the coach replaced.{" "}
+            <button
+              className={page.inlineAction}
+              type="button"
+              disabled={busy}
+              onClick={() => {
+                const formData = new FormData();
+                formData.set("operation", "reactivate");
+                formData.set("sessionId", standsInFor.sessionId);
+                formData.set("expectedRevision", String(expectedRevision));
+                startTransition(() => planAction(formData));
+              }}
+            >
+              Bring {standsInFor.title} back
+            </button>
+          </p>
+        ) : null}
         {cancelled && cancellation !== null ? (
           <p className={page.reason} data-cancellation-reason>
             <span className={page.reasonLabel}>Why</span> “{cancellation.reason}
@@ -714,6 +748,14 @@ export function SessionPage({
 }
 
 export type SessionCancellationView = { reason: string };
+
+/** What cancelled a session, when it was the coach's accepted proposal. */
+export type CoachCancellationView =
+  | { kind: "suggested" }
+  | { kind: "replaced"; replacementTitle: string | null };
+
+/** The session a coach's replacement stands in for (ADR-033). */
+export type StandsInForView = { sessionId: string; title: string };
 
 /**
  * Adds, edits or clears why the session was cancelled. It has its own action

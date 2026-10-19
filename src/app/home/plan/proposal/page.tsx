@@ -142,8 +142,8 @@ export default async function PlanProposalPage() {
                 }
                 assumptions={state.proposal.content.assumptions ?? []}
                 uncertainties={state.proposal.content.uncertainties ?? []}
-                // No proposed session; such a proposal has no items at all,
-                // since proposals offer only sessions (17 Oct 2026).
+                // No proposed session (17 Oct 2026). It may still suggest
+                // cancelling one (ADR-033), and the line stays true then.
                 nothingAdded={state.proposal.items.every(
                   (item) => item.kind !== "session",
                 )}

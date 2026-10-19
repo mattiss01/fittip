@@ -9,6 +9,7 @@ import {
 import styles from "./today.module.css";
 
 import homeStyles from "../home.module.css";
+import { readReplacedByCoach } from "../plan/plan-read";
 import { planWindowFor } from "../plan/plan-window";
 import { LogDeletedNote } from "@/components/home/log-deleted-note";
 import { describeMeasurement } from "@/lib/training/describe-measurement";
@@ -30,6 +31,7 @@ import {
   createRollingPlan,
   RollingPlanAuthenticationError,
 } from "@/server/repositories/rolling-plan-repository";
+import { CoachCancellationAuthenticationError } from "@/server/repositories/coach-cancellation-repository";
 import type { RollingPlanSession } from "@/server/rolling-plan/rolling-plan";
 
 export const dynamic = "force-dynamic";
@@ -123,10 +125,14 @@ async function renderDay(timezoneName: string, requested: string | null) {
   // instead, as the Plan finds it, so Thursday does not offer to log a run
   // already logged on Tuesday.
   let loggedElsewhere: Completion[];
+  let replacedByCoach: Set<string>;
   try {
-    loggedElsewhere = await (
-      await createCompletionLog()
-    ).findByPlanSessions(planned.map((session) => session.id));
+    [loggedElsewhere, replacedByCoach] = await Promise.all([
+      (await createCompletionLog()).findByPlanSessions(
+        planned.map((session) => session.id),
+      ),
+      readReplacedByCoach(planned),
+    ]);
   } catch (error) {
     redirectOnAuthError(error);
     throw error;
@@ -139,6 +145,12 @@ async function renderDay(timezoneName: string, requested: string | null) {
     }
   }
   const sessions = planned
+    // A session the coach's replacement stands in for is not shown beside it
+    // (ADR-033), unless it was trained anyway.
+    .filter(
+      (session) =>
+        !replacedByCoach.has(session.id) || byPlanSession.has(session.id),
+    )
     .toSorted((left, right) => left.position - right.position)
     .map((session) =>
       toSessionView(session, byPlanSession.get(session.id) ?? null),
@@ -245,14 +257,16 @@ function redirectOnAuthError(error: unknown): void {
   const accessError =
     error instanceof ProfileAuthenticationError ||
     error instanceof RollingPlanAuthenticationError ||
-    error instanceof CompletionAuthenticationError
+    error instanceof CompletionAuthenticationError ||
+    error instanceof CoachCancellationAuthenticationError
       ? error.accessError
       : undefined;
   if (accessError?.reason === "not-owner") redirect("/auth/denied");
   if (
     error instanceof ProfileAuthenticationError ||
     error instanceof RollingPlanAuthenticationError ||
-    error instanceof CompletionAuthenticationError
+    error instanceof CompletionAuthenticationError ||
+    error instanceof CoachCancellationAuthenticationError
   ) {
     redirect("/");
   }
