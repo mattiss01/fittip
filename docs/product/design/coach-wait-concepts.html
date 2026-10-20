@@ -1,0 +1,1642 @@
+<title>Coach Wait Concepts</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo+Mono:wght@400;500&family=Schibsted+Grotesk:wght@400;500;700;800&display=swap">
+<style>
+/* Layout: a contact sheet of phone screens, each one a live concept, sharing one wait clock. */
+:root {
+  --bg: #edf0e8;
+  --fg: #17332e;
+  --muted: #62726c;
+  --card: #fffef9;
+  --line: #d5ddd0;
+  --accent: #d95d39;
+  --chip: #e3e8dc;
+  /* The app itself is light-only, so the phone screens keep these in both themes. */
+  --pine: #17332e;
+  --pine-soft: #2f5d50;
+  --moss: #62726c;
+  --ember: #d95d39;
+  --paper: #fffef9;
+  --sage: #edf0e8;
+  --fern: #d5ddd0;
+  --rule: #aab7a7;
+  --sans: "Schibsted Grotesk", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --mono: "Chivo Mono", ui-monospace, "SFMono-Regular", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1f1c; --fg: #e6ebe2; --muted: #9aaba3; --card: #17302b;
+    --line: #2a4741; --accent: #ee7a55; --chip: #21403a; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1f1c; --fg: #e6ebe2; --muted: #9aaba3; --card: #17302b;
+  --line: #2a4741; --accent: #ee7a55; --chip: #21403a; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--sans);
+  font-size: 15px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 56px;
+}
+.wrap { max-width: 1180px; margin: 0 auto; display: grid; gap: 28px; }
+header { display: grid; gap: 14px; }
+h1 { font-size: clamp(28px, 5vw, 42px); font-weight: 800; letter-spacing: -0.02em; line-height: 1.05; margin: 0; text-wrap: balance; }
+.lede { margin: 0; color: var(--muted); max-width: 64ch; }
+.rules { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.rules li { background: var(--chip); border-radius: 999px; padding: 4px 12px; font-size: 13px; }
+.controls {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+  background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 10px 12px;
+}
+.clock { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 14px; min-width: 9ch; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }
+.seg button, .btn {
+  font: inherit; font-size: 13px; color: var(--fg); background: transparent; border: 0;
+  padding: 6px 12px; cursor: pointer; min-height: 34px;
+}
+.seg button[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
+.btn { border: 1px solid var(--line); border-radius: 999px; }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.spacer { flex: 1; }
+.hint { font-size: 12px; color: var(--muted); }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 22px; }
+.concept {
+  background: var(--card); border: 1px solid var(--line); border-radius: 20px;
+  padding: 16px; display: grid; gap: 14px; align-content: start; min-width: 0;
+}
+.concept-head { display: flex; align-items: baseline; gap: 10px; }
+.letter { font-family: var(--mono); font-size: 13px; color: var(--accent); }
+.concept h2 { margin: 0; font-size: 19px; font-weight: 700; letter-spacing: -0.01em; }
+.concept p { margin: 0; font-size: 14px; }
+.concept .honest { color: var(--muted); font-size: 13px; }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.tags span { font-size: 12px; border: 1px solid var(--line); border-radius: 999px; padding: 1px 9px; color: var(--muted); }
+
+/* ---- the phone screen (always the app's light palette) ---- */
+.phone {
+  background: var(--sage); color: var(--pine); border-radius: 22px;
+  border: 6px solid #1d2b28; aspect-ratio: 390 / 560; max-width: 100%;
+  position: relative; overflow: hidden; display: grid; grid-template-rows: auto 1fr auto;
+}
+.appbar { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px 4px; font-size: 12px; color: var(--moss); }
+.appbar b { color: var(--pine); font-size: 15px; }
+.stage { position: relative; display: grid; place-items: center; min-height: 0; }
+.status { padding: 0 16px 16px; display: grid; gap: 2px; text-align: center; }
+.status .asking { font-weight: 700; font-size: 15px; }
+.status .elapsed { font-family: var(--mono); font-size: 13px; color: var(--moss); font-variant-numeric: tabular-nums; }
+.status .slow { font-size: 12.5px; color: var(--moss); min-height: 1.5em; opacity: 0; transition: opacity .6s; }
+.status .slow.on { opacity: 1; }
+.ready {
+  position: absolute; inset: 0; background: var(--sage); display: grid; place-items: center;
+  opacity: 0; pointer-events: none; transition: opacity .35s;
+}
+.ready.on { opacity: 1; }
+.ready-card { background: var(--paper); border: 1px solid var(--fern); border-radius: 18px; padding: 16px 18px; width: 78%; display: grid; gap: 6px; box-shadow: 0 12px 28px -14px rgb(23 51 46 / .22); }
+.ready-card small { color: var(--moss); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
+.ready-card b { font-size: 15px; }
+.ready-card i { font-style: normal; display: block; height: 8px; border-radius: 4px; background: var(--fern); }
+.ready-card i:nth-of-type(2) { width: 70%; }
+.ready-card span { margin-top: 6px; background: var(--ember); color: #fff; font-weight: 700; font-size: 13px; text-align: center; border-radius: 12px; padding: 8px; }
+
+svg { display: block; }
+.fill { width: 100%; height: 100%; }
+canvas { width: 100%; height: 100%; display: block; }
+.layer { position: absolute; inset: 0; display: grid; place-items: center; transition: opacity 1.2s ease; }
+.breath-label { position: absolute; font-weight: 700; font-size: 15px; color: var(--pine); }
+.lapnum { font-family: var(--mono); font-size: 12px; fill: var(--moss); }
+.sk { width: 84%; display: grid; gap: 9px; }
+.sk-row { display: grid; grid-template-columns: 34px 1fr; gap: 10px; align-items: center; background: var(--paper); border: 1px solid var(--fern); border-radius: 14px; padding: 10px; }
+.sk-day { height: 34px; border-radius: 10px; }
+.sk-lines { display: grid; gap: 6px; }
+.sk-lines i { display: block; height: 8px; border-radius: 4px; }
+.sk-lines i:last-child { width: 55%; }
+.shim { background: linear-gradient(100deg, var(--fern) 30%, #eef2ea 50%, var(--fern) 70%); background-size: 300% 100%; background-position: var(--shim, 100%) 0; }
+
+.sec { display: grid; gap: 16px; }
+.sec-head { display: grid; gap: 4px; }
+.sec-title { margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.015em; }
+svg.sport { width: 100%; max-height: 100%; }
+details.sec summary { cursor: pointer; }
+.cap-pick { display: grid; gap: 6px; margin-top: 6px; }
+.cap-pick .seg { justify-self: start; flex-wrap: wrap; }
+.cap-note { margin: 0; font-size: 13px; color: var(--muted); max-width: 64ch; }
+.sport-label {
+  position: absolute; top: 8px; left: 50%; transform: translateX(-50%); pointer-events: none;
+  background: var(--paper); border: 1px solid var(--fern); color: var(--pine); border-radius: 999px;
+  font-size: 12px; font-weight: 700; padding: 2px 10px; white-space: nowrap;
+}
+.caption {
+  position: absolute; left: 10px; right: 10px; bottom: 4px; text-align: center; pointer-events: none;
+  font-size: 13.5px; font-weight: 600; color: var(--pine); line-height: 1.3; text-wrap: balance;
+}
+.caption.in { animation: capIn .45s cubic-bezier(.2,.9,.3,1); }
+@keyframes capIn { from { opacity: 0; transform: translateY(6px); } }
+details.sec[open] summary { margin-bottom: 16px; }
+.stage.play { cursor: pointer; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
+.overlay { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.hud { position: absolute; top: 4px; left: 0; right: 0; display: grid; justify-items: center; gap: 0; pointer-events: none; color: var(--pine); }
+.hud-big { font-size: 24px; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; min-height: 1.2em; line-height: 1.2; }
+.hud-sub { font-size: 11.5px; color: var(--moss); font-family: var(--mono); }
+.hud-badge {
+  margin-top: 4px; background: var(--ember); color: #fff; font-weight: 800; font-size: 12px; letter-spacing: .08em;
+  border-radius: 999px; padding: 2px 10px; opacity: 0; transform: scale(.6); transition: opacity .15s, transform .25s cubic-bezier(.3,1.6,.5,1);
+}
+.hud-badge.on { opacity: 1; transform: scale(1); }
+.tap-hint {
+  position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%); pointer-events: none;
+  background: var(--pine); color: var(--paper); font-size: 12px; font-weight: 700; border-radius: 999px; padding: 4px 12px;
+  animation: nudge 1.4s ease-in-out infinite; white-space: nowrap;
+}
+@keyframes nudge { 50% { transform: translateX(-50%) scale(1.08); } }
+.ready.banner { inset: auto 8px 8px 8px; background: transparent; place-items: stretch; transform: translateY(20px); transition: opacity .3s, transform .35s cubic-bezier(.2,.9,.3,1); }
+.ready.banner.on { transform: none; pointer-events: auto; }
+.ready.banner .ready-card { width: 100%; grid-template-columns: 1fr auto; align-items: center; padding: 10px 12px; column-gap: 10px; }
+.ready.banner .ready-card small { grid-column: 1; }
+.ready.banner .ready-card b { grid-column: 1; font-size: 13px; }
+.ready.banner .ready-card i { display: none; }
+.ready.banner .ready-card span { grid-column: 2; grid-row: 1 / span 2; margin: 0; padding: 8px 14px; }
+footer { color: var(--muted); font-size: 13px; max-width: 70ch; }
+@media (prefers-reduced-motion: reduce) { .layer, .ready, .status .slow, .hud-badge { transition: none; } .tap-hint, .caption.in { animation: none; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Waiting for the coach</h1>
+    <p class="lede">Ideas for the 15 to 60 seconds after "Ask the coach". Every phone runs live on the same pretend wait: the reply lands at 0:48, shows the proposal for a moment, then the wait starts again. Use 5× to see the 30-second note and the arrival quickly.</p>
+    <ul class="rules" aria-label="Shared by every concept">
+      <li>Running timer under each one</li>
+      <li>"This can take up to a minute" after 0:30</li>
+      <li>No invented steps</li>
+      <li>Reduced-motion version</li>
+    </ul>
+  </header>
+
+  <div class="controls" role="group" aria-label="Simulation controls">
+    <span class="clock" id="clock">0:00</span>
+    <span class="seg" role="group" aria-label="Speed">
+      <button type="button" id="sp1" aria-pressed="true">1×</button>
+      <button type="button" id="sp5" aria-pressed="false">5×</button>
+    </span>
+    <span class="seg" role="group" aria-label="Motion">
+      <button type="button" id="mFull" aria-pressed="true">Full motion</button>
+      <button type="button" id="mReduced" aria-pressed="false">Reduced</button>
+    </span>
+    <button type="button" class="btn" id="restart">Restart wait</button>
+    <span class="spacer"></span>
+    <span class="hint">Reply arrives at 0:48</span>
+  </div>
+
+  <section class="sec" aria-labelledby="secGames">
+    <div class="sec-head">
+      <h2 class="sec-title" id="secGames">Play while you wait</h2>
+      <p class="lede">Tap the phone screens. Each one is a little sports game with a score that gets harder the longer you keep going. When the coach answers, a bar slides up at the bottom and the game keeps running until you tap Review.</p>
+    </div>
+    <div class="grid" id="gamesGrid"></div>
+  </section>
+
+  <section class="sec" aria-labelledby="secSports">
+    <div class="sec-head">
+      <h2 class="sec-title" id="secSports">Or just watch</h2>
+      <p class="lede">One athlete who keeps changing sport, with a new line of text every 4 seconds. Switch between three kinds of captions:</p>
+      <div class="cap-pick">
+        <span class="seg" role="group" aria-label="Captions">
+          <button type="button" data-cap="facts" aria-pressed="true">True facts</button>
+          <button type="button" data-cap="funny" aria-pressed="false">Funny</button>
+          <button type="button" data-cap="working" aria-pressed="false">"Working on it"</button>
+        </span>
+        <p class="cap-note" id="capNote"></p>
+      </div>
+    </div>
+    <div class="grid" id="sportsGrid"></div>
+  </section>
+
+  <details class="sec">
+    <summary class="sec-title">First round (the calm ones)</summary>
+    <div class="grid" id="grid"></div>
+  </details>
+
+  <footer>Ideas can be combined, for example "P1–P5, a different game each time" or "W1 with funny captions until I tap, then a game". Tell me the numbers. Nothing in the app has changed.</footer>
+</div>
+
+<script>
+(() => {
+  const NS = "http://www.w3.org/2000/svg";
+  const ARRIVE = 48, RESTART = 52;
+  let speed = 1, reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let t0 = performance.now(), simBase = 0;
+
+  const fmt = s => { s = Math.floor(s); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); };
+  const el = (tag, attrs = {}, parent) => {
+    const n = tag.startsWith("svg:") ? document.createElementNS(NS, tag.slice(4)) : document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) k === "text" ? (n.textContent = v) : n.setAttribute(k, v);
+    if (parent) parent.appendChild(n);
+    return n;
+  };
+
+  /* ---------- stages: each has mount(stageEl) and render(t, reduced) ---------- */
+
+  function Dial() {
+    let hand, arc, digits, C = 2 * Math.PI * 70;
+    return {
+      mount(s) {
+        const svg = el("svg:svg", { viewBox: "0 0 200 200", width: "72%", role: "img", "aria-label": "Stopwatch" }, s);
+        el("svg:circle", { cx: 100, cy: 100, r: 86, fill: "#fffef9", stroke: "#d5ddd0", "stroke-width": 2 }, svg);
+        for (let i = 0; i < 60; i++) {
+          const a = i / 60 * 2 * Math.PI, long = i % 5 === 0;
+          el("svg:line", { x1: 100 + Math.sin(a) * (long ? 74 : 78), y1: 100 - Math.cos(a) * (long ? 74 : 78),
+            x2: 100 + Math.sin(a) * 82, y2: 100 - Math.cos(a) * 82, stroke: long ? "#17332e" : "#aab7a7", "stroke-width": long ? 2 : 1 }, svg);
+        }
+        arc = el("svg:circle", { cx: 100, cy: 100, r: 70, fill: "none", stroke: "#d95d39", "stroke-width": 6,
+          "stroke-dasharray": C, "stroke-dashoffset": C, transform: "rotate(-90 100 100)", "stroke-linecap": "round", opacity: .9 }, svg);
+        digits = el("svg:text", { x: 100, y: 112, "text-anchor": "middle", "font-family": "Chivo Mono, monospace", "font-size": 34, fill: "#17332e" }, svg);
+        hand = el("svg:line", { x1: 100, y1: 100, x2: 100, y2: 30, stroke: "#d95d39", "stroke-width": 2.5, "stroke-linecap": "round" }, svg);
+        el("svg:circle", { cx: 100, cy: 100, r: 4, fill: "#d95d39" }, svg);
+      },
+      render(t, r) {
+        const sec = r ? Math.floor(t) : t;
+        hand.setAttribute("transform", `rotate(${(sec % 60) * 6} 100 100)`);
+        arc.setAttribute("stroke-dashoffset", C * (1 - Math.min(sec, 60) / 60));
+        digits.textContent = fmt(t);
+      }
+    };
+  }
+
+  function Breathe() {
+    let core, halo, label;
+    return {
+      mount(s) {
+        const svg = el("svg:svg", { viewBox: "0 0 200 200", width: "78%", "aria-hidden": "true" }, s);
+        halo = el("svg:circle", { cx: 100, cy: 100, r: 80, fill: "#d5ddd0", opacity: .55 }, svg);
+        core = el("svg:circle", { cx: 100, cy: 100, r: 60, fill: "#2f5d50" }, svg);
+        label = el("div", { class: "breath-label", "aria-live": "off" }, s);
+        label.style.color = "#fffef9";
+      },
+      render(t, r) {
+        if (r) { core.setAttribute("r", 58); halo.setAttribute("r", 76); label.textContent = "Take a breath"; return; }
+        const p = (t % 8) / 8, inhale = p < .5;
+        const k = .5 - .5 * Math.cos(p * 2 * Math.PI); // 0 → 1 → 0
+        core.setAttribute("r", 38 + 30 * k);
+        halo.setAttribute("r", 52 + 36 * k);
+        label.textContent = inhale ? "Breathe in" : "Breathe out";
+      }
+    };
+  }
+
+  function Track() {
+    let path, len, runner, trail = [], lapTxt, ticks = [];
+    const LAP = 12;
+    return {
+      mount(s) {
+        const svg = el("svg:svg", { viewBox: "0 0 260 170", width: "90%", "aria-hidden": "true" }, s);
+        const d = "M80,25 H180 A60,60 0 0 1 180,145 H80 A60,60 0 0 1 80,25 Z";
+        el("svg:path", { d, fill: "none", stroke: "#d95d39", "stroke-opacity": .18, "stroke-width": 22 }, svg);
+        el("svg:path", { d: "M80,47 H180 A38,38 0 0 1 180,123 H80 A38,38 0 0 1 80,47 Z", fill: "#cfdcc8" }, svg);
+        path = el("svg:path", { d, fill: "none", stroke: "#fffef9", "stroke-width": 1.2, "stroke-dasharray": "4 4" }, svg);
+        el("svg:line", { x1: 130, y1: 14, x2: 130, y2: 36, stroke: "#17332e", "stroke-width": 2 }, svg);
+        len = path.getTotalLength();
+        for (let i = 6; i >= 1; i--) trail.push(el("svg:circle", { r: 6 - i * .6, fill: "#d95d39", opacity: .5 - i * .07 }, svg));
+        runner = el("svg:circle", { r: 7, fill: "#d95d39", stroke: "#fffef9", "stroke-width": 2 }, svg);
+        lapTxt = el("svg:text", { x: 130, y: 82, "text-anchor": "middle", "font-size": 13, "font-weight": 700, fill: "#17332e" }, svg);
+        for (let i = 0; i < 5; i++) ticks.push(el("svg:rect", { x: 104 + i * 11, y: 94, width: 8, height: 8, rx: 2, fill: "#aab7a7" }, svg));
+      },
+      render(t, r) {
+        const lap = Math.floor(t / LAP);
+        const p = r ? 0 : (t % LAP) / LAP;
+        const at = f => path.getPointAtLength(((f % 1 + 1) % 1) * len);
+        // start at the finish line (top middle): offset by the first straight's half
+        const off = 50 / len;
+        let pt = at(p + off); runner.setAttribute("cx", pt.x); runner.setAttribute("cy", pt.y);
+        trail.forEach((c, i) => { const q = at(p + off - (6 - i) * .012); c.setAttribute("cx", q.x); c.setAttribute("cy", q.y); c.style.display = r ? "none" : ""; });
+        lapTxt.textContent = "Lap " + (lap + 1);
+        ticks.forEach((k, i) => k.setAttribute("fill", i < lap ? "#2f5d50" : "#aab7a7"));
+      }
+    };
+  }
+
+  function Plates() {
+    let g, plates = [], shown = -1;
+    const spec = [[50, "#d95d39"], [50, "#d95d39"], [42, "#2f5d50"], [42, "#2f5d50"], [34, "#17332e"], [34, "#17332e"], [26, "#62726c"], [26, "#62726c"]];
+    return {
+      mount(s) {
+        const svg = el("svg:svg", { viewBox: "0 0 260 160", width: "92%", "aria-hidden": "true" }, s);
+        el("svg:rect", { x: 10, y: 76, width: 240, height: 8, rx: 4, fill: "#aab7a7" }, svg);
+        el("svg:rect", { x: 112, y: 72, width: 36, height: 16, rx: 3, fill: "#62726c" }, svg);
+        el("svg:rect", { x: 62, y: 66, width: 6, height: 28, rx: 2, fill: "#17332e" }, svg);
+        el("svg:rect", { x: 192, y: 66, width: 6, height: 28, rx: 2, fill: "#17332e" }, svg);
+        g = el("svg:g", {}, svg);
+        // Pairs: plate i goes on both sides, outward from the collars.
+        let offs = 0;
+        for (let i = 0; i < spec.length; i += 2) {
+          const [h, c] = spec[i];
+          const w = 9;
+          const L = el("svg:rect", { x: 52 - offs - w, y: 80 - h, width: w, height: h * 2, rx: 2.5, fill: c }, g);
+          const R = el("svg:rect", { x: 208 + offs, y: 80 - h, width: w, height: h * 2, rx: 2.5, fill: c }, g);
+          plates.push([L, -1], [R, 1]); offs += w + 2;
+        }
+        plates.forEach(([p]) => { p.style.transition = "transform .45s cubic-bezier(.2,.9,.3,1), opacity .3s"; });
+      },
+      render(t, r) {
+        const n = Math.min(4, Math.floor(t / 9) + 1); // one pair every 9 s, max 4 pairs
+        if (n === shown) return; shown = n;
+        plates.forEach(([p, dir], i) => {
+          const on = Math.floor(i / 2) < n;
+          p.style.transition = r ? "none" : "transform .45s cubic-bezier(.2,.9,.3,1), opacity .3s";
+          p.style.opacity = on ? 1 : 0;
+          p.style.transform = on ? "translateX(0)" : `translateX(${dir * 40}px)`;
+        });
+      },
+      reset() { shown = -1; }
+    };
+  }
+
+  function Contours() {
+    let cv, ctx, w = 0, h = 0, lastDraw = -1;
+    const noise = (x, y, z) =>
+      Math.sin(x * 1.7 + z * .9) * .5 + Math.sin(y * 2.3 - z * .6 + x * .8) * .35 +
+      Math.sin((x + y) * 3.1 + z * 1.3) * .15;
+    return {
+      mount(s) { cv = el("canvas", { "aria-hidden": "true" }, s); ctx = cv.getContext("2d"); },
+      render(t, r) {
+        const dpr = Math.min(2, devicePixelRatio || 1);
+        const cw = cv.clientWidth, ch = cv.clientHeight;
+        if (!cw || !ch) return;
+        if (cw * dpr !== w || ch * dpr !== h) { w = cv.width = cw * dpr; h = cv.height = ch * dpr; lastDraw = -1; }
+        const z = r ? 0 : t * .18;
+        if (r && lastDraw === 0) return; lastDraw = r ? 0 : 1;
+        ctx.clearRect(0, 0, w, h);
+        const lines = 22, step = 6 * dpr;
+        for (let i = 0; i < lines; i++) {
+          const base = (i + .5) / lines * h;
+          ctx.beginPath();
+          for (let x = 0; x <= w; x += step) {
+            const n = noise(x / w * 2.2, i / lines * 3, z);
+            const y = base + n * h * .07;
+            x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+          }
+          const hot = i === 11;
+          ctx.strokeStyle = hot ? "#d95d39" : (i % 4 === 0 ? "#2f5d50" : "#aab7a7");
+          ctx.lineWidth = (hot ? 2.2 : i % 4 === 0 ? 1.4 : 1) * dpr;
+          ctx.stroke();
+        }
+      }
+    };
+  }
+
+  function Skeleton() {
+    let rows = [];
+    return {
+      mount(s) {
+        const box = el("div", { class: "sk", "aria-hidden": "true" }, s);
+        for (let i = 0; i < 4; i++) {
+          const row = el("div", { class: "sk-row" }, box);
+          el("div", { class: "sk-day shim" }, row);
+          const ls = el("div", { class: "sk-lines" }, row);
+          el("i", { class: "shim" }, ls); el("i", { class: "shim" }, ls);
+          rows.push(row);
+        }
+      },
+      render(t, r) {
+        rows.forEach((row, i) => {
+          const p = r ? 50 : 100 - (((t / 1.8) - i * .12) % 1 + 1) % 1 * 100 * 1.5 + 25;
+          row.style.setProperty("--shim", p + "%");
+        });
+      }
+    };
+  }
+
+  function Rotation() {
+    const parts = [Track(), Plates(), Contours(), Breathe()];
+    const names = ["Track", "Plates", "Terrain", "Breathe"];
+    let layers = [], tag;
+    const SCENE = 12;
+    return {
+      mount(s) {
+        parts.forEach((p, i) => { const l = el("div", { class: "layer" }, s); p.mount(l); layers.push(l); });
+        tag = el("div", {}, s);
+        Object.assign(tag.style, { position: "absolute", top: "6px", left: "50%", transform: "translateX(-50%)", display: "flex", gap: "5px" });
+        parts.forEach(() => { const d = el("span", {}, tag); Object.assign(d.style, { width: "6px", height: "6px", borderRadius: "3px", background: "#aab7a7" }); });
+      },
+      render(t, r) {
+        const k = Math.floor(t / SCENE) % parts.length;
+        layers.forEach((l, i) => { l.style.opacity = i === k ? 1 : 0; });
+        [...tag.children].forEach((d, i) => d.style.background = i === k ? "#d95d39" : "#aab7a7");
+        parts[k].render(t, r);
+      },
+      reset() { parts.forEach(p => p.reset && p.reset()); }
+    };
+  }
+
+  /* ---------- sports: drawn athletes ---------- */
+
+  const NEAR = "#17332e", FAR = "#8a9c95", SHIRT = "#d95d39";
+  const P = (x, y) => ({ x, y });
+  const fromDown = (p, l, a) => P(p.x + l * Math.sin(a), p.y + l * Math.cos(a)); // angle 0 = straight down, + = forward
+  const cl = x => Math.max(0, Math.min(1, x));
+  const sm = x => { x = cl(x); return x * x * (3 - 2 * x); };
+  function ik(a, b, l1, l2, pick) {
+    const dx = b.x - a.x, dy = b.y - a.y, base = Math.atan2(dy, dx);
+    const d = Math.max(Math.abs(l1 - l2) + .01, Math.min(Math.hypot(dx, dy), l1 + l2 - .01));
+    const g = Math.acos((l1 * l1 + d * d - l2 * l2) / (2 * l1 * d));
+    const j1 = P(a.x + l1 * Math.cos(base + g), a.y + l1 * Math.sin(base + g));
+    const j2 = P(a.x + l1 * Math.cos(base - g), a.y + l1 * Math.sin(base - g));
+    return [pick(j1, j2) ? j1 : j2, P(a.x + d * Math.cos(base), a.y + d * Math.sin(base))];
+  }
+  const stroke = (parent, color, w, extra = {}) => {
+    const p = el("svg:path", { fill: "none", stroke: color, "stroke-width": w, "stroke-linecap": "round", "stroke-linejoin": "round", ...extra }, parent);
+    p.set = (...pts) => p.setAttribute("d", "M" + pts.map(q => q.x.toFixed(1) + "," + q.y.toFixed(1)).join("L"));
+    return p;
+  };
+  const dot = (parent, r, fill, extra = {}) => {
+    const c = el("svg:circle", { r, fill, ...extra }, parent);
+    c.at = q => { c.setAttribute("cx", q.x.toFixed(1)); c.setAttribute("cy", q.y.toFixed(1)); };
+    return c;
+  };
+  const sportSvg = s => el("svg:svg", { viewBox: "0 0 240 190", class: "sport", "aria-hidden": "true" }, s);
+  function Dashes(parent, n, y, len, gap) {
+    const ls = [...Array(n)].map(() => stroke(parent, "#aab7a7", 2));
+    const span = n * gap;
+    return shift => ls.forEach((l, i) => { const x = ((i * gap + shift) % span + span) % span - len; l.set(P(x, y), P(x + len, y)); });
+  }
+
+  function Run() {
+    const g = {}; let dash;
+    return {
+      mount(s) {
+        const v = sportSvg(s);
+        stroke(v, "#aab7a7", 2).set(P(0, 161), P(240, 161));
+        dash = Dashes(v, 6, 171, 16, 48);
+        g.fl = stroke(v, FAR, 6); g.fa = stroke(v, FAR, 5);
+        g.t = stroke(v, SHIRT, 10); g.h = dot(v, 8, NEAR);
+        g.nl = stroke(v, NEAR, 6); g.na = stroke(v, NEAR, 5);
+      },
+      render(t, r) {
+        if (r) t = .18;
+        const ph = 2 * Math.PI / .72 * t;
+        const hip = P(118, 99 + 1.5 * (Math.cos(2 * ph) + 1));
+        const leg = (p, path) => {
+          const th = .55 * Math.sin(p), k = .2 + 1.3 * Math.pow(Math.max(0, Math.cos(p)), 1.5);
+          const K = fromDown(hip, 30, th), F = fromDown(K, 30, th - k);
+          path.set(hip, K, F, fromDown(F, 7, th - k + 1.5));
+        };
+        const lean = .18, S = fromDown(hip, 34, Math.PI - lean);
+        const arm = (p, path) => { const a = -.7 * Math.sin(p); const E = fromDown(S, 19, a); path.set(S, E, fromDown(E, 17, a + 1.7)); };
+        leg(ph + Math.PI, g.fl); arm(ph + Math.PI, g.fa);
+        g.t.set(hip, S); g.h.at(fromDown(S, 13, Math.PI - lean * 1.3));
+        leg(ph, g.nl); arm(ph, g.na);
+        dash(-t * 170);
+      }
+    };
+  }
+
+  function Cycle() {
+    const g = {}, wheels = []; let dash;
+    const B = P(112, 140), hip = P(100, 86);
+    return {
+      mount(s) {
+        const v = sportSvg(s);
+        stroke(v, "#aab7a7", 2).set(P(0, 171), P(240, 171));
+        dash = Dashes(v, 6, 180, 16, 48);
+        g.fl = stroke(v, FAR, 6); g.fc = stroke(v, "#8a9c95", 3);
+        for (const c of [P(68, 140), P(176, 140)]) {
+          el("svg:circle", { cx: c.x, cy: c.y, r: 29, fill: "none", stroke: NEAR, "stroke-width": 3 }, v);
+          const wg = el("svg:g", {}, v);
+          for (let k = 0; k < 3; k++) stroke(wg, "#aab7a7", 1.2, { transform: `rotate(${k * 60} ${c.x} ${c.y})` }).set(P(c.x - 28, c.y), P(c.x + 28, c.y));
+          wheels.push({ wg, c });
+        }
+        const R = P(68, 140), ST = P(98, 92), HT = P(160, 88), HB = P(164, 102), F = P(176, 140);
+        stroke(v, "#2f5d50", 4).set(R, B, ST, R);
+        stroke(v, "#2f5d50", 4).set(ST, HT, HB, B);
+        stroke(v, "#2f5d50", 4).set(HB, F);
+        stroke(v, NEAR, 4).set(P(89, 88), P(106, 88));
+        stroke(v, NEAR, 4).set(HT, P(166, 80), P(172, 85));
+        el("svg:circle", { cx: B.x, cy: B.y, r: 9, fill: "none", stroke: NEAR, "stroke-width": 2 }, v);
+        g.t = stroke(v, SHIRT, 10); g.h = dot(v, 8, NEAR);
+        g.nl = stroke(v, NEAR, 6); g.nc = stroke(v, NEAR, 3); g.na = stroke(v, NEAR, 5);
+      },
+      render(t, r) {
+        if (r) t = .1;
+        const a = 2 * Math.PI / .8 * t;
+        const leg = (ang, path, crank) => {
+          const pd = P(B.x + 14 * Math.cos(ang), B.y + 14 * Math.sin(ang));
+          const [K, Fp] = ik(hip, pd, 36, 36, (p, q) => p.x > q.x);
+          path.set(hip, K, Fp, P(pd.x + 7, pd.y)); crank.set(B, pd);
+        };
+        leg(a + Math.PI, g.fl, g.fc);
+        const S = P(138, 58), H = P(165, 83);
+        g.t.set(hip, S); g.h.at(P(150, 47));
+        leg(a, g.nl, g.nc);
+        const [E] = ik(S, H, 20, 20, (p, q) => p.y > q.y); g.na.set(S, E, H);
+        const deg = (t * 600) % 360;
+        wheels.forEach(w => w.wg.setAttribute("transform", `rotate(${deg} ${w.c.x} ${w.c.y})`));
+        dash(-t * 170);
+      }
+    };
+  }
+
+  function Swim() {
+    const g = {}, bubbles = [];
+    const S = P(142, 99), H = P(98, 103);
+    return {
+      mount(s) {
+        const v = sportSvg(s);
+        g.fa = stroke(v, FAR, 5); g.fl = stroke(v, FAR, 6);
+        g.t = stroke(v, SHIRT, 10); g.h = dot(v, 8, NEAR);
+        g.nl = stroke(v, NEAR, 6); g.na = stroke(v, NEAR, 5);
+        g.wf = el("svg:path", { fill: "#2f5d50", "fill-opacity": .2 }, v);
+        g.ws = stroke(v, "#2f5d50", 1.5, { "stroke-opacity": .7 });
+        for (let i = 0; i < 8; i++) bubbles.push(dot(v, 1.5 + i % 3, "none", { stroke: "#2f5d50", "stroke-opacity": .45, "stroke-width": 1.2 }));
+      },
+      render(t, r) {
+        if (r) t = .5;
+        const w = 2 * Math.PI / 1.8, wl = 2 * Math.PI / .55;
+        const arm = (b, path) => {
+          const k = Math.max(0, -Math.sin(b));
+          path.set(S, P(S.x + 21 * Math.cos(b), S.y + 21 * Math.sin(b) - 6 * k), P(S.x + 40 * Math.cos(b), S.y + 34 * Math.sin(b)));
+        };
+        const leg = (p, path) => {
+          const a = Math.PI + .16 * Math.sin(p), a2 = a - .1 - .1 * Math.sin(p);
+          const K = P(H.x + 26 * Math.cos(a), H.y + 26 * Math.sin(a)), F = P(K.x + 26 * Math.cos(a2), K.y + 26 * Math.sin(a2));
+          path.set(H, K, F, P(F.x - 6, F.y + 1));
+        };
+        arm(w * t + Math.PI, g.fa); leg(wl * t + Math.PI, g.fl);
+        g.t.set(H, S); g.h.at(P(157, 95));
+        leg(wl * t, g.nl); arm(w * t, g.na);
+        const pts = [];
+        for (let x = 0; x <= 240; x += 8) pts.push(P(x, 97 + 2.5 * Math.sin(x / 16 + 4 * t)));
+        g.ws.set(...pts);
+        g.wf.setAttribute("d", "M0,190L" + pts.map(q => q.x + "," + q.y.toFixed(1)).join("L") + "L240,190Z");
+        bubbles.forEach((b, i) => b.at(P(((i * 34 - t * 60) % 272 + 272) % 272 - 16, 118 + (i * 17) % 46)));
+      }
+    };
+  }
+
+  function Row() {
+    const g = {}; let dash;
+    const foot = P(150, 120);
+    return {
+      mount(s) {
+        const v = sportSvg(s);
+        dash = Dashes(v, 6, 160, 18, 50);
+        el("svg:path", { d: "M14,122 L226,122 Q214,138 120,138 Q30,138 14,122 Z", fill: NEAR }, v);
+        stroke(v, "#aab7a7", 2).set(P(86, 121), P(124, 121));
+        stroke(v, NEAR, 3).set(P(146, 124), P(154, 113));
+        g.seat = el("svg:rect", { width: 14, height: 4, rx: 2, fill: "#62726c" }, v);
+        g.l = stroke(v, NEAR, 6); g.t = stroke(v, SHIRT, 10); g.h = dot(v, 8, NEAR); g.a = stroke(v, NEAR, 5);
+        g.o = stroke(v, "#62726c", 3);
+        g.b = el("svg:ellipse", { rx: 9, ry: 3.5, fill: "#2f5d50" }, v);
+        g.wf = el("svg:path", { fill: "#2f5d50", "fill-opacity": .2 }, v);
+        g.ws = stroke(v, "#2f5d50", 1.5, { "stroke-opacity": .7 });
+      },
+      render(t, r) {
+        if (r) t = .5;
+        const u = (t % 2.4) / 2.4;
+        const s = u < .38 ? sm(u / .38) : 1 - sm((u - .38) / .62);
+        const legs = cl(s / .5), body = cl((s - .25) / .5), arms = cl((s - .55) / .45);
+        const hip = P(120 - 24 * legs, 114);
+        const [K] = ik(hip, foot, 28, 28, (p, q) => p.y < q.y);
+        g.l.set(hip, K, foot, P(154, 113));
+        g.seat.setAttribute("x", hip.x - 7); g.seat.setAttribute("y", 116);
+        const a = .45 - .8 * body, S = P(hip.x + 36 * Math.sin(a), hip.y - 36 * Math.cos(a));
+        g.t.set(hip, S); g.h.at(P(S.x + 12 * Math.sin(a * .8) + 1, S.y - 12 * Math.cos(a * .8)));
+        const hand = P(S.x + 40 - 34 * arms, S.y + 12 + 4 * arms);
+        const [E] = ik(S, hand, 21, 21, (p, q) => p.y > q.y); g.a.set(S, E, hand);
+        const inWater = u < .38 ? cl(u / .04) * cl((.40 - u) / .04) : 0;
+        const bl = P(.6 * hand.x + 95, 124 + 17 * inWater);
+        g.o.set(hand, bl);
+        g.b.setAttribute("cx", bl.x); g.b.setAttribute("cy", bl.y);
+        g.b.setAttribute("transform", `rotate(${Math.atan2(bl.y - hand.y, bl.x - hand.x) * 180 / Math.PI} ${bl.x} ${bl.y})`);
+        const pts = [];
+        for (let x = 0; x <= 240; x += 8) pts.push(P(x, 132 + 1.5 * Math.sin(x / 20 - 3 * t)));
+        g.ws.set(...pts);
+        g.wf.setAttribute("d", "M0,190L" + pts.map(q => q.x + "," + q.y.toFixed(1)).join("L") + "L240,190Z");
+        dash(t * 90);
+      }
+    };
+  }
+
+  function Squat() {
+    const g = {}; const A = P(120, 164);
+    return {
+      mount(s) {
+        const v = sportSvg(s);
+        el("svg:ellipse", { cx: 122, cy: 171, rx: 30, ry: 4, fill: "#d5ddd0" }, v);
+        stroke(v, "#aab7a7", 2).set(P(20, 168), P(220, 168));
+        g.pl = dot(v, 19, "#d95d39"); g.pi = dot(v, 6, "#a93f25");
+        g.fl = stroke(v, FAR, 6); g.t = stroke(v, SHIRT, 10); g.h = dot(v, 8, NEAR);
+        g.nl = stroke(v, NEAR, 6); g.a = stroke(v, NEAR, 5); g.be = dot(v, 3, NEAR);
+      },
+      render(t, r) {
+        if (r) t = .7;
+        this.pose(sm((1 - Math.cos(2 * Math.PI * t / 2.8)) / 2));
+      },
+      plate(rad) { g.pl.setAttribute("r", rad); },
+      bar() { return P(+g.be.getAttribute("cx"), +g.be.getAttribute("cy")); },
+      pose(d) {
+        const hip = P(116 - 26 * d, 106 + 30 * d);
+        const leg = (path, off) => {
+          const h = P(hip.x + off, hip.y), a = P(A.x + off, A.y);
+          const [K, F] = ik(h, a, 30, 30, (p, q) => p.x > q.x);
+          path.set(h, K, F, P(a.x + 15, a.y + 2));
+        };
+        leg(g.fl, 4);
+        const lean = .12 + .55 * d, S = P(hip.x + 38 * Math.sin(lean), hip.y - 38 * Math.cos(lean));
+        const bar = P(S.x - 4 * Math.cos(lean), S.y - 4 * Math.sin(lean));
+        g.pl.at(bar); g.pi.at(bar); g.be.at(bar);
+        g.t.set(hip, S); g.h.at(P(S.x + 12 * Math.sin(lean * .5) + 2, S.y - 12 * Math.cos(lean * .5)));
+        leg(g.nl, 0);
+        const hand = P(bar.x + 4, bar.y + 1);
+        const [E] = ik(S, hand, 17, 17, (p, q) => p.y > q.y); g.a.set(S, E, hand);
+      }
+    };
+  }
+
+  function Rope() {
+    const g = {}; const T = .62;
+    return {
+      mount(s) {
+        const v = sportSvg(s);
+        g.sh = el("svg:ellipse", { cx: 120, cy: 172, ry: 3.5, fill: "#d5ddd0" }, v);
+        g.rb = el("svg:path", { fill: "none", stroke: "#8a9c95", "stroke-width": 2.2 }, v);
+        g.ll = stroke(v, NEAR, 6); g.rl = stroke(v, NEAR, 6);
+        g.t = el("svg:path", { fill: "none", stroke: SHIRT, "stroke-width": 10, "stroke-linecap": "round" }, v);
+        g.h = dot(v, 8, NEAR);
+        g.la = stroke(v, NEAR, 5); g.ra = stroke(v, NEAR, 5);
+        g.rf = el("svg:path", { fill: "none", stroke: "#2f5d50", "stroke-width": 2.4 }, v);
+      },
+      render(t, r) {
+        if (r) t = T / 2;
+        const th = 2 * Math.PI * t / T;
+        this.draw(th, 9 * Math.pow((1 + Math.cos(th)) / 2, 2), false);
+      },
+      draw(th, hop, flash) {
+        const sy = 80 - hop, hy = 114 - hop, fy = 166 - hop, bend = 3 * (1 - hop / 9);
+        g.t.setAttribute("d", `M107,${sy} L133,${sy} M120,${sy} L120,${hy}`);
+        g.h.at(P(120, sy - 15));
+        g.ll.set(P(115, hy), P(112 - bend, hy + 26), P(114, fy));
+        g.rl.set(P(125, hy), P(128 + bend, hy + 26), P(126, fy));
+        const HL = P(90 + 3 * Math.cos(th), sy + 32 + 3 * Math.sin(th)), HR = P(150 - 3 * Math.cos(th), sy + 32 + 3 * Math.sin(th));
+        g.la.set(P(108, sy + 2), P(97, sy + 20), HL);
+        g.ra.set(P(132, sy + 2), P(143, sy + 20), HR);
+        const apex = 99 + 73 * Math.cos(th), cy = 2 * apex - HL.y;
+        const d = `M${HL.x.toFixed(1)},${HL.y.toFixed(1)} Q120,${cy.toFixed(1)} ${HR.x.toFixed(1)},${HR.y.toFixed(1)}`;
+        const front = Math.sin(th) < 0;
+        g.rf.setAttribute("d", front ? d : ""); g.rb.setAttribute("d", front ? "" : d);
+        g.sh.setAttribute("rx", Math.max(6, 20 - hop * .6));
+        g.t.setAttribute("stroke", flash ? "#991b1b" : SHIRT);
+      }
+    };
+  }
+
+  function Climb() {
+    const g = {}, holds = [], panels = [];
+    const D = 22, T = 3.2;
+    const limbs = [{ x: -26, o: 0, H: 40, c: "#d95d39" }, { x: 26, o: .5, H: 40, c: "#2f5d50" }, { x: -22, o: .25, H: -42, c: "#62726c" }, { x: 22, o: .75, H: -42, c: "#62726c" }];
+    return {
+      mount(s) {
+        const v = sportSvg(s);
+        el("svg:rect", { x: 0, y: 0, width: 240, height: 190, fill: "#e4e9df" }, v);
+        for (let i = 0; i < 5; i++) panels.push(stroke(v, "#d5ddd0", 1.5));
+        limbs.forEach(l => { for (let k = 0; k < 7; k++) holds.push(el("svg:ellipse", { rx: 6, ry: 4.5, fill: l.c }, v)); });
+        g.ll = stroke(v, NEAR, 6); g.rl = stroke(v, NEAR, 6);
+        g.t = el("svg:path", { fill: "none", stroke: SHIRT, "stroke-width": 10, "stroke-linecap": "round" }, v);
+        g.h = dot(v, 8, NEAR);
+        g.la = stroke(v, NEAR, 5); g.ra = stroke(v, NEAR, 5);
+      },
+      render(t, r) {
+        if (r) t = .4;
+        const c = t / T, bodyY = c * 2 * D;
+        const scr = (x, wy) => P(120 + x, 96 - (wy - bodyY));
+        const worldOf = l => {
+          const u = c + l.o, n = Math.floor(u), f = u - n, base = n * 2 * D + l.H - l.o * 2 * D;
+          return f < .75 ? base : base + 2 * D * sm((f - .75) / .25);
+        };
+        let i = 0;
+        limbs.forEach(l => {
+          const k0 = Math.floor(c + l.o);
+          for (let k = k0 - 3; k <= k0 + 3; k++) {
+            const p = scr(l.x, k * 2 * D + l.H - l.o * 2 * D);
+            holds[i].setAttribute("cx", p.x); holds[i].setAttribute("cy", p.y.toFixed(1)); i++;
+          }
+        });
+        panels.forEach((p, j) => { const y = scr(0, (Math.floor(bodyY / 70) + j - 2) * 70).y; p.set(P(0, y), P(240, y)); });
+        const sx = 2.5 * Math.sin(4 * Math.PI * c);
+        const SL = P(108 + sx, 96), SR = P(132 + sx, 96), HL = P(112 + sx, 134), HR = P(128 + sx, 134);
+        const end = l => scr(l.x, worldOf(l));
+        const out = sign => (p, q) => sign < 0 ? p.x < q.x : p.x > q.x;
+        const [EL, AL] = ik(SL, end(limbs[0]), 24, 24, out(-1)); g.la.set(SL, EL, AL);
+        const [ER, AR] = ik(SR, end(limbs[1]), 24, 24, out(1)); g.ra.set(SR, ER, AR);
+        const [KL, FL] = ik(HL, end(limbs[2]), 24, 24, out(-1)); g.ll.set(HL, KL, FL);
+        const [KR, FR] = ik(HR, end(limbs[3]), 24, 24, out(1)); g.rl.set(HR, KR, FR);
+        g.t.setAttribute("d", `M${SL.x},96 L${SR.x},96 M${120 + sx},96 L${120 + sx},134 M${HL.x},134 L${HR.x},134`);
+        g.h.at(P(120 + sx, 81));
+      }
+    };
+  }
+
+  function Mix(makers, scene) {
+    const parts = makers.map(m => m());
+    let layers = [], tag;
+    return {
+      mount(s) {
+        parts.forEach(p => { const l = el("div", { class: "layer" }, s); p.mount(l); layers.push(l); });
+        tag = el("div", {}, s);
+        Object.assign(tag.style, { position: "absolute", top: "6px", left: "50%", transform: "translateX(-50%)", display: "flex", gap: "5px" });
+        parts.forEach(() => { const d = el("span", {}, tag); Object.assign(d.style, { width: "6px", height: "6px", borderRadius: "3px", background: "#aab7a7" }); });
+      },
+      render(t, r) {
+        const k = Math.floor(t / scene) % parts.length;
+        layers.forEach((l, i) => { l.style.opacity = i === k ? 1 : 0; });
+        [...tag.children].forEach((d, i) => d.style.background = i === k ? "#d95d39" : "#aab7a7");
+        parts[k].render(t, r);
+      }
+    };
+  }
+
+  /* ---------- games: tap to play while you wait ---------- */
+
+  const rand = (a, b) => a + Math.random() * (b - a);
+  function svgPoint(v, e) {
+    const pt = v.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY;
+    return pt.matrixTransform(v.getScreenCTM().inverse());
+  }
+  function FX(v) {
+    const items = [];
+    return {
+      burst(x, y, color, n = 12) {
+        if (reduced) return;
+        for (let i = 0; i < n; i++) {
+          const a = rand(0, 2 * Math.PI), sp = rand(60, 180);
+          items.push({ c: dot(v, rand(1.8, 3.6), color), x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 50, life: .65, max: .65 });
+        }
+      },
+      text(x, y, str, color = "#d95d39", size = 18) {
+        const tx = el("svg:text", { x, y, "text-anchor": "middle", "font-weight": 800, "font-size": size, fill: color, "font-family": "Schibsted Grotesk, sans-serif" }, v);
+        tx.textContent = str;
+        items.push({ tx, x, y, vx: 0, vy: reduced ? 0 : -45, life: .9, max: .9 });
+      },
+      update(dt) {
+        for (let i = items.length - 1; i >= 0; i--) {
+          const it = items[i]; it.life -= dt;
+          if (it.life <= 0) { (it.c || it.tx).remove(); items.splice(i, 1); continue; }
+          if (it.c) it.vy += 260 * dt;
+          it.x += it.vx * dt; it.y += it.vy * dt;
+          const o = Math.min(1, it.life / it.max * 1.6);
+          if (it.c) { it.c.at(P(it.x, it.y)); it.c.setAttribute("opacity", o); }
+          else { it.tx.setAttribute("y", it.y.toFixed(1)); it.tx.setAttribute("opacity", o); }
+        }
+      }
+    };
+  }
+  function Hud(st, hintText) {
+    const hud = el("div", { class: "hud" }, st);
+    const big = el("div", { class: "hud-big" }, hud);
+    const sub = el("div", { class: "hud-sub" }, hud);
+    const badge = el("div", { class: "hud-badge" }, hud);
+    const hint = el("div", { class: "tap-hint", text: hintText }, st);
+    return { big, sub, badge, hint };
+  }
+
+  function Sprint() {
+    const run = Run(); let st, h, lines = [], s = 1, vt = 0, best = 9;
+    return {
+      live: true,
+      mount(stage) {
+        st = stage;
+        const v = el("svg:svg", { viewBox: "0 0 240 190", class: "overlay", "aria-hidden": "true", preserveAspectRatio: "none" }, st);
+        for (let i = 0; i < 9; i++) lines.push(stroke(v, "#d95d39", 2, { opacity: 0 }));
+        run.mount(st);
+        h = Hud(st, "Tap fast to sprint");
+        h.badge.textContent = "SPRINT!";
+      },
+      tap() { s = Math.min(4.6, s + .42); h.hint.hidden = true; },
+      render(t, r, dt) {
+        s += (1 - s) * Math.min(1, dt * .9);
+        vt += dt * s;
+        run.render(vt, false);
+        const kmh = 9 + (s - 1) * 7.5; best = Math.max(best, kmh);
+        h.big.textContent = kmh.toFixed(1) + " km/h";
+        h.sub.textContent = "top " + best.toFixed(1) + " km/h";
+        h.badge.classList.toggle("on", s > 3.2);
+        const o = cl((s - 1.6) / 2) * .85;
+        lines.forEach((l, i) => {
+          const x = ((i * 37 - vt * 420) % 300 + 300) % 300 - 30, y = 18 + i * 19;
+          l.set(P(x, y), P(x + 18 + s * 10, y)); l.setAttribute("opacity", o);
+        });
+        st.style.transform = !r && s > 3.6 ? `translate(${rand(-1.6, 1.6)}px,${rand(-1.6, 1.6)}px)` : "";
+      }
+    };
+  }
+
+  function RopeGame() {
+    const rope = Rope(); let fx, h, th = 0, jumpT = -1, streak = 0, best = 0, trip = 0, demo = true, clock = 0, lastTap = -99;
+    return {
+      live: true,
+      mount(st) { rope.mount(st); fx = FX(st.querySelector("svg")); h = Hud(st, "Tap to jump"); h.badge.textContent = "ON FIRE"; },
+      tap() {
+        if (trip > 0) return;
+        if (demo) { demo = false; streak = 0; th = Math.PI; }
+        if (jumpT < 0) jumpT = 0;
+        lastTap = clock; h.hint.hidden = true;
+      },
+      render(t, r, dt) {
+        clock += dt; fx.update(dt);
+        if (!demo && clock - lastTap > 6) { demo = true; h.hint.hidden = false; }
+        if (trip > 0) { trip -= dt; rope.draw(0, 0, true); return; }
+        const prev = th, T = demo ? .8 : Math.max(.42, .9 - streak * .018);
+        th += dt * 2 * Math.PI / T;
+        let hop;
+        if (demo) hop = 9 * Math.pow((1 + Math.cos(th)) / 2, 2);
+        else if (jumpT >= 0) { jumpT += dt; hop = jumpT < .34 ? 24 * Math.sin(Math.PI * jumpT / .34) : 0; if (jumpT >= .34) jumpT = -1; }
+        else hop = 0;
+        if (!demo && Math.floor(th / (2 * Math.PI)) > Math.floor(prev / (2 * Math.PI))) {
+          if (hop > 5) {
+            streak++; best = Math.max(best, streak);
+            fx.text(120 + rand(-30, 30), 150, "+1", "#2f5d50", 14);
+            if (streak % 10 === 0) { fx.burst(120, 120, "#d95d39", 22); fx.text(120, 70, streak + " in a row!", "#d95d39", 20); }
+          } else {
+            trip = .7; streak = 0; th = 0; hop = 0;
+            fx.text(120, 60, "Tripped!", "#991b1b", 20);
+          }
+        }
+        rope.draw(th, hop, false);
+        h.big.textContent = demo ? "Jump rope" : String(streak);
+        h.sub.textContent = best ? "best " + best : (demo ? "keep the rhythm" : "in a row");
+        h.badge.classList.toggle("on", !demo && streak >= 15);
+      }
+    };
+  }
+
+  function Keepy() {
+    let v, fx, h, ball, shadow, bg, x = 120, y = 164, vx = 0, vy = 0, rot = 0, count = 0, best = 0, resting = true;
+    return {
+      live: true,
+      mount(st) {
+        v = sportSvg(st);
+        bg = el("svg:text", { x: 120, y: 120, "text-anchor": "middle", "font-size": 88, "font-weight": 800, fill: "#d5ddd0", "font-family": "Schibsted Grotesk, sans-serif" }, v);
+        stroke(v, "#aab7a7", 2).set(P(0, 177), P(240, 177));
+        for (let i = 0; i < 16; i++) stroke(v, "#9fb39a", 1.5).set(P(8 + i * 15, 177), P(11 + i * 15, 171));
+        shadow = el("svg:ellipse", { cx: 120, cy: 178, ry: 2.5, fill: "#aab7a7" }, v);
+        ball = el("svg:g", {}, v);
+        el("svg:circle", { r: 12, fill: "#fffef9", stroke: NEAR, "stroke-width": 2 }, ball);
+        el("svg:path", { d: "M0,-5 L4.8,-1.5 L3,4 L-3,4 L-4.8,-1.5 Z", fill: NEAR }, ball);
+        for (const a of [0, 72, 144, 216, 288]) stroke(ball, NEAR, 1.4, { transform: `rotate(${a})` }).set(P(0, -5), P(0, -11));
+        fx = FX(v);
+        h = Hud(st, "Tap the ball");
+        h.badge.textContent = "CLEAN!";
+      },
+      tap(e) {
+        const p = svgPoint(v, e);
+        if (Math.hypot(p.x - x, p.y - y) > 42) return;
+        if (!resting) { count++; best = Math.max(best, count); fx.text(x, y - 22, String(count), "#d95d39", 16); }
+        if (count && count % 10 === 0) fx.burst(x, y, "#d95d39", 20);
+        vy = -rand(300, 345); vx = (x - p.x) * 5 + rand(-40, 40); resting = false;
+        fx.burst(x, y + 10, "#2f5d50", 6);
+        h.hint.hidden = true;
+      },
+      render(t, r, dt) {
+        fx.update(dt);
+        if (!resting) {
+          vy += 650 * dt; x += vx * dt; y += vy * dt; rot += vx * dt * 4;
+          if (x < 14) { x = 14; vx = Math.abs(vx) * .8; }
+          if (x > 226) { x = 226; vx = -Math.abs(vx) * .8; }
+          if (y < 14) { y = 14; vy = Math.abs(vy) * .4; }
+          if (y > 164) {
+            y = 164;
+            if (count > 0) { fx.text(120, 60, "Dropped at " + count, "#991b1b", 16); count = 0; h.hint.hidden = false; }
+            if (Math.abs(vy) > 120) vy = -vy * .35; else { vy = 0; vx = 0; resting = true; }
+          }
+          vx *= .995;
+        }
+        ball.setAttribute("transform", `translate(${x.toFixed(1)},${y.toFixed(1)}) rotate(${rot.toFixed(0)})`);
+        shadow.setAttribute("cx", x.toFixed(1)); shadow.setAttribute("rx", (6 + 8 * (y / 164)).toFixed(1));
+        bg.textContent = count || "";
+        h.big.textContent = count ? "" : "Keepy-uppy";
+        h.sub.textContent = best ? "best " + best : "don't let it drop";
+        h.badge.classList.toggle("on", count >= 10);
+      }
+    };
+  }
+
+  function Reaction() {
+    let v, fx, h, target, ring, phase = "idle", clock = 0, nextAt = 0, shownAt = 0, tx = 120, ty = 95, best = 0, last = [];
+    const arm = () => { phase = "wait"; nextAt = clock + rand(.8, 2.4); };
+    return {
+      live: true,
+      mount(st) {
+        v = sportSvg(st);
+        ring = el("svg:circle", { r: 0, fill: "none", stroke: "#d95d39", "stroke-width": 2 }, v);
+        target = el("svg:circle", { r: 0, fill: "#d95d39" }, v);
+        fx = FX(v);
+        h = Hud(st, "Tap to start");
+        h.badge.textContent = "LIGHTNING";
+      },
+      tap(e) {
+        const p = svgPoint(v, e);
+        h.hint.hidden = true;
+        if (phase === "idle") { arm(); return; }
+        if (phase === "wait") { fx.text(120, 100, "Too soon!", "#991b1b", 20); arm(); return; }
+        if (Math.hypot(p.x - tx, p.y - ty) > 28) { fx.text(p.x, p.y, "miss", "#62726c", 13); return; }
+        const ms = Math.round((clock - shownAt) * 1000);
+        best = best ? Math.min(best, ms) : ms; last = [ms, ...last].slice(0, 4);
+        fx.burst(tx, ty, ms < 350 ? "#d95d39" : "#2f5d50", ms < 350 ? 22 : 10);
+        fx.text(tx, ty - 24, ms + " ms", "#17332e", 16);
+        h.badge.classList.toggle("on", ms < 300);
+        target.setAttribute("r", 0); ring.setAttribute("r", 0);
+        arm();
+      },
+      render(t, r, dt) {
+        clock += dt; fx.update(dt);
+        if (phase === "wait" && clock >= nextAt) { phase = "go"; shownAt = clock; tx = rand(30, 210); ty = rand(60, 165); }
+        if (phase === "go") {
+          const age = clock - shownAt;
+          if (age > 2) { fx.text(tx, ty, "Too slow", "#62726c", 14); target.setAttribute("r", 0); ring.setAttribute("r", 0); arm(); }
+          else {
+            target.setAttribute("cx", tx); target.setAttribute("cy", ty); target.setAttribute("r", (18 * sm(age / .1)).toFixed(1));
+            ring.setAttribute("cx", tx); ring.setAttribute("cy", ty);
+            const k = (age * 2) % 1;
+            ring.setAttribute("r", r ? 22 : (18 + 14 * k).toFixed(1)); ring.setAttribute("opacity", r ? .6 : 1 - k);
+          }
+        }
+        h.big.textContent = last.length ? last[0] + " ms" : "Reaction";
+        h.sub.textContent = phase === "idle" ? "tap the dot as fast as you can" : best ? "best " + best + " ms" + (last.length > 1 ? " · " + last.slice(1).join(" · ") : "") : "wait for the dot…";
+      }
+    };
+  }
+
+  function Lift() {
+    const sq = Squat(); let fx, h, d = 1, kg = 60, phase = "push", hold = 0, clock = 0, lastTap = -99, best = 60;
+    return {
+      live: true,
+      mount(st) { sq.mount(st); fx = FX(st.querySelector("svg")); h = Hud(st, "Tap fast to stand up"); h.badge.textContent = "NEW BEST"; },
+      tap() { if (phase === "push") d = Math.max(0, d - .13); lastTap = clock; h.hint.hidden = true; },
+      render(t, r, dt) {
+        clock += dt; fx.update(dt);
+        if (phase === "push") {
+          if (d <= 0) {
+            const b = sq.bar();
+            fx.burst(b.x, b.y, "#d95d39", 18); fx.text(120, 40, "+10 kg", "#d95d39", 18);
+            kg += 10; if (kg > best) { best = kg; }
+            phase = "hold"; hold = .35;
+          } else d = Math.min(1, d + dt * (.12 + (kg - 60) * .006));
+          if (kg > 60 && clock - lastTap > 5) { fx.text(120, 60, "Racked at " + kg + " kg", "#62726c", 15); kg = 60; h.hint.hidden = false; }
+        } else if (phase === "hold") { hold -= dt; if (hold <= 0) phase = "down"; }
+        else { d += dt * 1.4; if (d >= 1) { d = 1; phase = "push"; } }
+        sq.plate(Math.min(27, 15 + (kg - 60) * .25));
+        sq.pose(d);
+        h.big.textContent = kg + " kg";
+        h.sub.textContent = "best " + best + " kg";
+        h.badge.classList.toggle("on", kg >= best && kg > 60 && phase !== "push");
+      }
+    };
+  }
+
+  /* ---------- one athlete, many sports: poses that can blend into each other ---------- */
+
+  const lerpP = (a, b, f) => P(a.x + (b.x - a.x) * f, a.y + (b.y - a.y) * f);
+  function lerpSk(a, b, f) {
+    const o = { front: f < .5 ? a.front : b.front };
+    for (const key of Object.keys(a)) {
+      if (key === "front") continue;
+      o[key] = Array.isArray(a[key]) ? a[key].map((q, i) => lerpP(q, b[key][i], f)) : lerpP(a[key], b[key], f);
+    }
+    return o;
+  }
+  function mapSk(k, fn) {
+    const o = { front: k.front };
+    for (const key of Object.keys(k)) if (key !== "front") o[key] = Array.isArray(k[key]) ? k[key].map(fn) : fn(k[key]);
+    return o;
+  }
+  const sideSk = (hip, S, head, nl, fl, na, fa) => ({ spA: hip, spB: S, SL: S, SR: S, HL: hip, HR: hip, head, nl, fl, na, fa, front: false });
+  function Figure(parent) {
+    const g = el("svg:g", {}, parent);
+    const fl = stroke(g, FAR, 6), fa = stroke(g, FAR, 5);
+    const torso = el("svg:path", { fill: "none", stroke: SHIRT, "stroke-width": 10, "stroke-linecap": "round" }, g);
+    const head = dot(g, 8, NEAR), nl = stroke(g, NEAR, 6), na = stroke(g, NEAR, 5);
+    const f = q => q.x.toFixed(1) + "," + q.y.toFixed(1);
+    return {
+      g,
+      set(k, front) {
+        fl.set(...k.fl); fa.set(...k.fa); nl.set(...k.nl); na.set(...k.na);
+        fl.setAttribute("stroke", front ? NEAR : FAR); fa.setAttribute("stroke", front ? NEAR : FAR);
+        torso.setAttribute("d", `M${f(k.spA)}L${f(k.spB)}M${f(k.SL)}L${f(k.SR)}M${f(k.HL)}L${f(k.HR)}`);
+        head.at(k.head);
+      },
+      color(c) { torso.setAttribute("stroke", c); }
+    };
+  }
+
+  function runPose(t) {
+    const ph = 2 * Math.PI / .72 * t;
+    const hip = P(118, 99 + 1.5 * (Math.cos(2 * ph) + 1));
+    const leg = p => {
+      const th = .55 * Math.sin(p), k = .2 + 1.3 * Math.pow(Math.max(0, Math.cos(p)), 1.5);
+      const K = fromDown(hip, 30, th), F = fromDown(K, 30, th - k);
+      return [hip, K, F, fromDown(F, 7, th - k + 1.5)];
+    };
+    const lean = .18, S = fromDown(hip, 34, Math.PI - lean);
+    const arm = p => { const a = -.7 * Math.sin(p); const E = fromDown(S, 19, a); return [S, E, fromDown(E, 17, a + 1.7)]; };
+    return sideSk(hip, S, fromDown(S, 13, Math.PI - lean * 1.3), leg(ph), leg(ph + Math.PI), arm(ph), arm(ph + Math.PI));
+  }
+  const CB = P(112, 140);
+  const pedalAt = ang => P(CB.x + 14 * Math.cos(ang), CB.y + 14 * Math.sin(ang));
+  function cyclePose(t) {
+    const a = 2 * Math.PI / .8 * t, hip = P(100, 86);
+    const leg = ang => { const pd = pedalAt(ang); const [K, F] = ik(hip, pd, 36, 36, (p, q) => p.x > q.x); return [hip, K, F, P(pd.x + 7, pd.y)]; };
+    const S = P(138, 58), H = P(165, 83);
+    const [E] = ik(S, H, 20, 20, (p, q) => p.y > q.y);
+    return sideSk(hip, S, P(150, 47), leg(a), leg(a + Math.PI), [S, E, H], [S, P(E.x - 3, E.y - 1), P(H.x - 3, H.y)]);
+  }
+  function swimPose(t) {
+    const S = P(142, 99), H = P(98, 103), w = 2 * Math.PI / 1.8, wl = 2 * Math.PI / .55;
+    const arm = b => { const k = Math.max(0, -Math.sin(b)); return [S, P(S.x + 21 * Math.cos(b), S.y + 21 * Math.sin(b) - 6 * k), P(S.x + 40 * Math.cos(b), S.y + 34 * Math.sin(b))]; };
+    const leg = p => {
+      const a = Math.PI + .16 * Math.sin(p), a2 = a - .1 - .1 * Math.sin(p);
+      const K = P(H.x + 26 * Math.cos(a), H.y + 26 * Math.sin(a)), F = P(K.x + 26 * Math.cos(a2), K.y + 26 * Math.sin(a2));
+      return [H, K, F, P(F.x - 6, F.y + 1)];
+    };
+    return sideSk(H, S, P(157, 95), leg(wl * t), leg(wl * t + Math.PI), arm(w * t), arm(w * t + Math.PI));
+  }
+  function rowCalc(t) {
+    const u = (t % 2.4) / 2.4;
+    const s = u < .38 ? sm(u / .38) : 1 - sm((u - .38) / .62);
+    const legs = cl(s / .5), body = cl((s - .25) / .5), arms = cl((s - .55) / .45);
+    const hip = P(120 - 24 * legs, 114), foot = P(150, 120);
+    const [K] = ik(hip, foot, 28, 28, (p, q) => p.y < q.y);
+    const a = .45 - .8 * body, S = P(hip.x + 36 * Math.sin(a), hip.y - 36 * Math.cos(a));
+    const hand = P(S.x + 40 - 34 * arms, S.y + 12 + 4 * arms);
+    const [E] = ik(S, hand, 21, 21, (p, q) => p.y > q.y);
+    const inWater = u < .38 ? cl(u / .04) * cl((.40 - u) / .04) : 0;
+    return { hip, foot, K, S, hand, E, a, inWater };
+  }
+  function rowPose(t) {
+    const c = rowCalc(t), sh = q => P(q.x + 3, q.y - 1);
+    const nl = [c.hip, c.K, c.foot, P(154, 113)], na = [c.S, c.E, c.hand];
+    return sideSk(c.hip, c.S, P(c.S.x + 12 * Math.sin(c.a * .8) + 1, c.S.y - 12 * Math.cos(c.a * .8)), nl, nl.map(sh), na, na.map(sh));
+  }
+  function squatPose(t) { return squatAt(sm((1 - Math.cos(2 * Math.PI * t / 2.8)) / 2)); }
+  function squatAt(d) {
+    const hip = P(116 - 26 * d, 106 + 30 * d), A = P(120, 164);
+    const leg = off => { const h = P(hip.x + off, hip.y), a = P(A.x + off, A.y); const [K, F] = ik(h, a, 30, 30, (p, q) => p.x > q.x); return [h, K, F, P(a.x + 15, a.y + 2)]; };
+    const lean = .12 + .55 * d, S = P(hip.x + 38 * Math.sin(lean), hip.y - 38 * Math.cos(lean));
+    const bar = P(S.x - 4 * Math.cos(lean), S.y - 4 * Math.sin(lean)), hand = P(bar.x + 4, bar.y + 1);
+    const [E] = ik(S, hand, 17, 17, (p, q) => p.y > q.y);
+    return sideSk(hip, S, P(S.x + 12 * Math.sin(lean * .5) + 2, S.y - 12 * Math.cos(lean * .5)), leg(0), leg(4), [S, E, hand], [S, P(E.x - 2, E.y), P(hand.x - 2, hand.y)]);
+  }
+  const ROPE_T = .62;
+  function ropePose(t) {
+    const th = 2 * Math.PI * t / ROPE_T, hop = 9 * Math.pow((1 + Math.cos(th)) / 2, 2);
+    const sy = 80 - hop, hy = 114 - hop, fy = 166 - hop, bend = 3 * (1 - hop / 9);
+    const HL = P(90 + 3 * Math.cos(th), sy + 32 + 3 * Math.sin(th)), HR = P(150 - 3 * Math.cos(th), sy + 32 + 3 * Math.sin(th));
+    return { spA: P(120, hy), spB: P(120, sy), SL: P(107, sy), SR: P(133, sy), HL: P(115, hy), HR: P(125, hy), head: P(120, sy - 15),
+      fl: [P(115, hy), P(112 - bend, hy + 26), P(114, fy), P(110, fy)], nl: [P(125, hy), P(128 + bend, hy + 26), P(126, fy), P(130, fy)],
+      fa: [P(108, sy + 2), P(97, sy + 20), HL], na: [P(132, sy + 2), P(143, sy + 20), HR], front: true };
+  }
+  const CL = { D: 22, T: 3.2, limbs: [{ x: -26, o: 0, H: 40, c: "#d95d39" }, { x: 26, o: .5, H: 40, c: "#2f5d50" }, { x: -22, o: .25, H: -42, c: "#62726c" }, { x: 22, o: .75, H: -42, c: "#62726c" }] };
+  const climbScr = (t, x, wy) => P(120 + x, 96 - (wy - t / CL.T * 2 * CL.D));
+  function climbPose(t) {
+    const c = t / CL.T, D = CL.D;
+    const worldOf = l => { const u = c + l.o, n = Math.floor(u), f = u - n, base = n * 2 * D + l.H - l.o * 2 * D; return f < .75 ? base : base + 2 * D * sm((f - .75) / .25); };
+    const end = l => climbScr(t, l.x, worldOf(l));
+    const sx = 2.5 * Math.sin(4 * Math.PI * c);
+    const SL = P(108 + sx, 96), SR = P(132 + sx, 96), HL = P(112 + sx, 134), HR = P(128 + sx, 134);
+    const out = sg => (p, q) => sg < 0 ? p.x < q.x : p.x > q.x;
+    const [EL, AL] = ik(SL, end(CL.limbs[0]), 24, 24, out(-1));
+    const [ER, AR] = ik(SR, end(CL.limbs[1]), 24, 24, out(1));
+    const [KL, FL] = ik(HL, end(CL.limbs[2]), 24, 24, out(-1));
+    const [KR, FR] = ik(HR, end(CL.limbs[3]), 24, 24, out(1));
+    return { spA: P(120 + sx, 134), spB: P(120 + sx, 96), SL, SR, HL, HR, head: P(120 + sx, 81),
+      fa: [SL, EL, AL], na: [SR, ER, AR], fl: [HL, KL, FL, FL], nl: [HR, KR, FR, FR], front: true };
+  }
+
+  function waterProps(front, base, amp, k1, k2) {
+    const wf = el("svg:path", { fill: "#2f5d50", "fill-opacity": .2 }, front), ws = stroke(front, "#2f5d50", 1.5, { "stroke-opacity": .7 });
+    return t => {
+      const pts = [];
+      for (let x = 0; x <= 240; x += 8) pts.push(P(x, base + amp * Math.sin(x / k1 + k2 * t)));
+      ws.set(...pts);
+      wf.setAttribute("d", "M0,190L" + pts.map(q => q.x + "," + q.y.toFixed(1)).join("L") + "L240,190Z");
+    };
+  }
+  const scenes = [
+    { name: "Running", pose: runPose, mount(back) {
+        stroke(back, "#aab7a7", 2).set(P(0, 161), P(240, 161));
+        const dash = Dashes(back, 6, 171, 16, 48);
+        return t => dash(-t * 170);
+      } },
+    { name: "Cycling", pose: cyclePose, mount(back, front) {
+        stroke(back, "#aab7a7", 2).set(P(0, 171), P(240, 171));
+        const dash = Dashes(back, 6, 180, 16, 48), fc = stroke(back, FAR, 3), wheels = [];
+        for (const c of [P(68, 140), P(176, 140)]) {
+          el("svg:circle", { cx: c.x, cy: c.y, r: 29, fill: "none", stroke: NEAR, "stroke-width": 3 }, back);
+          const wg = el("svg:g", {}, back);
+          for (let k = 0; k < 3; k++) stroke(wg, "#aab7a7", 1.2, { transform: `rotate(${k * 60} ${c.x} ${c.y})` }).set(P(c.x - 28, c.y), P(c.x + 28, c.y));
+          wheels.push({ wg, c });
+        }
+        const R = P(68, 140), ST = P(98, 92), HT = P(160, 88), HB = P(164, 102), F = P(176, 140);
+        stroke(back, "#2f5d50", 4).set(R, CB, ST, R);
+        stroke(back, "#2f5d50", 4).set(ST, HT, HB, CB);
+        stroke(back, "#2f5d50", 4).set(HB, F);
+        stroke(back, NEAR, 4).set(P(89, 88), P(106, 88));
+        stroke(back, NEAR, 4).set(HT, P(166, 80), P(172, 85));
+        el("svg:circle", { cx: CB.x, cy: CB.y, r: 9, fill: "none", stroke: NEAR, "stroke-width": 2 }, back);
+        const nc = stroke(front, NEAR, 3);
+        return t => {
+          const a = 2 * Math.PI / .8 * t;
+          fc.set(CB, pedalAt(a + Math.PI)); nc.set(CB, pedalAt(a));
+          const deg = (t * 600) % 360;
+          wheels.forEach(w => w.wg.setAttribute("transform", `rotate(${deg} ${w.c.x} ${w.c.y})`));
+          dash(-t * 170);
+        };
+      } },
+    { name: "Swimming", pose: swimPose, mount(back, front) {
+        const water = waterProps(front, 97, 2.5, 16, 4), bubbles = [];
+        for (let i = 0; i < 8; i++) bubbles.push(dot(front, 1.5 + i % 3, "none", { stroke: "#2f5d50", "stroke-opacity": .45, "stroke-width": 1.2 }));
+        return t => { water(t); bubbles.forEach((b, i) => b.at(P(((i * 34 - t * 60) % 272 + 272) % 272 - 16, 118 + (i * 17) % 46))); };
+      } },
+    { name: "Rowing", pose: rowPose, mount(back, front) {
+        const dash = Dashes(back, 6, 160, 18, 50);
+        el("svg:path", { d: "M14,122 L226,122 Q214,138 120,138 Q30,138 14,122 Z", fill: NEAR }, back);
+        stroke(back, "#aab7a7", 2).set(P(86, 121), P(124, 121));
+        stroke(back, NEAR, 3).set(P(146, 124), P(154, 113));
+        const seat = el("svg:rect", { width: 14, height: 4, rx: 2, y: 116, fill: "#62726c" }, back);
+        const oar = stroke(front, "#62726c", 3), blade = el("svg:ellipse", { rx: 9, ry: 3.5, fill: "#2f5d50" }, front);
+        const water = waterProps(front, 132, 1.5, 20, -3);
+        return (t, k) => {
+          const hand = k.na[2], bl = P(.6 * hand.x + 95, 124 + 17 * rowCalc(t).inWater);
+          seat.setAttribute("x", (k.spA.x - 7).toFixed(1));
+          oar.set(hand, bl);
+          blade.setAttribute("cx", bl.x); blade.setAttribute("cy", bl.y);
+          blade.setAttribute("transform", `rotate(${Math.atan2(bl.y - hand.y, bl.x - hand.x) * 180 / Math.PI} ${bl.x} ${bl.y})`);
+          water(t); dash(t * 90);
+        };
+      } },
+    { name: "Squat", pose: squatPose, mount(back, front) {
+        el("svg:ellipse", { cx: 122, cy: 171, rx: 30, ry: 4, fill: "#d5ddd0" }, back);
+        stroke(back, "#aab7a7", 2).set(P(20, 168), P(220, 168));
+        const pl = dot(back, 19, "#d95d39"), pi = dot(back, 6, "#a93f25"), be = dot(front, 3, NEAR);
+        return (t, k) => { const b = P(k.na[2].x - 4, k.na[2].y - 1); pl.at(b); pi.at(b); be.at(b); };
+      } },
+    { name: "Jump rope", pose: ropePose, mount(back, front) {
+        el("svg:ellipse", { cx: 120, cy: 172, ry: 3.5, rx: 16, fill: "#d5ddd0" }, back);
+        const rb = el("svg:path", { fill: "none", stroke: FAR, "stroke-width": 2.2 }, back);
+        const rf = el("svg:path", { fill: "none", stroke: "#2f5d50", "stroke-width": 2.4 }, front);
+        return (t, k) => {
+          const th = 2 * Math.PI * t / ROPE_T, L = k.fa[2], R = k.na[2];
+          const cy = 2 * (99 + 73 * Math.cos(th)) - (L.y + R.y) / 2;
+          const d = `M${L.x.toFixed(1)},${L.y.toFixed(1)} Q${((L.x + R.x) / 2).toFixed(1)},${cy.toFixed(1)} ${R.x.toFixed(1)},${R.y.toFixed(1)}`;
+          const fr = Math.sin(th) < 0;
+          rf.setAttribute("d", fr ? d : ""); rb.setAttribute("d", fr ? "" : d);
+        };
+      } },
+    { name: "Climbing", pose: climbPose, mount(back) {
+        el("svg:rect", { x: 0, y: 0, width: 240, height: 190, fill: "#e4e9df" }, back);
+        const panels = [...Array(5)].map(() => stroke(back, "#d5ddd0", 1.5)), holds = [];
+        CL.limbs.forEach(l => { for (let k = 0; k < 7; k++) holds.push(el("svg:ellipse", { rx: 6, ry: 4.5, fill: l.c }, back)); });
+        return t => {
+          const c = t / CL.T, bodyY = c * 2 * CL.D;
+          CL.limbs.forEach((l, li) => {
+            const k0 = Math.floor(c + l.o);
+            for (let k = 0; k < 7; k++) {
+              const p = climbScr(t, l.x, (k0 - 3 + k) * 2 * CL.D + l.H - l.o * 2 * CL.D), e = holds[li * 7 + k];
+              e.setAttribute("cx", p.x); e.setAttribute("cy", p.y.toFixed(1));
+            }
+          });
+          panels.forEach((p, j) => { const y = climbScr(t, 0, (Math.floor(bodyY / 70) + j - 2) * 70).y; p.set(P(0, y), P(240, y)); });
+        };
+      } },
+  ];
+
+  function SportSwitch(scene, tr, flip) {
+    let fig, backs, fronts, ups, label, caption, shownCap = "";
+    return {
+      mount(st) {
+        const v = sportSvg(st);
+        backs = scenes.map(() => el("svg:g", { opacity: 0 }, v));
+        fig = Figure(v);
+        fronts = scenes.map(() => el("svg:g", { opacity: 0 }, v));
+        ups = scenes.map((sc, i) => sc.mount(backs[i], fronts[i]));
+        label = el("div", { class: "sport-label" }, st);
+        caption = el("div", { class: "caption", "aria-live": "polite" }, st);
+      },
+      render(t, r) {
+        const n = scenes.length, i = Math.floor(t / scene) % n, j = (i + 1) % n;
+        const b = r ? 0 : sm(((t % scene) - (scene - tr)) / tr);
+        const tp = r ? .3 : t;
+        let k = scenes[i].pose(tp);
+        if (b > 0) k = lerpSk(k, scenes[j].pose(tp), b);
+        fig.set(k, k.front);
+        if (b > 0 && b < 1) {
+          const c = lerpP(k.spA, k.spB, .5), lift = -22 * Math.sin(Math.PI * b);
+          fig.g.setAttribute("transform", `translate(0 ${lift.toFixed(1)})` + (flip ? ` rotate(${(360 * b).toFixed(1)} ${c.x.toFixed(1)} ${c.y.toFixed(1)})` : ""));
+        } else fig.g.removeAttribute("transform");
+        scenes.forEach((_, x) => {
+          const o = x === i ? 1 - b : x === j ? b : 0;
+          backs[x].setAttribute("opacity", o); fronts[x].setAttribute("opacity", o);
+          backs[x].style.display = fronts[x].style.display = o > 0 ? "" : "none";
+        });
+        ups[i](tp, k); if (b > 0) ups[j](tp, k);
+        label.textContent = (b > .5 ? scenes[j] : scenes[i]).name;
+        const lines = CAPTIONS[capMode].lines, line = lines[Math.floor(t / 4) % lines.length];
+        if (line !== shownCap) {
+          shownCap = line; caption.textContent = line;
+          caption.classList.remove("in"); void caption.offsetWidth; caption.classList.add("in");
+        }
+      }
+    };
+  }
+
+  /* Captions under the watch cards, one every 4 seconds. */
+  const CAPTIONS = {
+    facts: { lines: [
+      "Your request is with the coach.",
+      "It has your goals in front of it.",
+      "And what you asked it to remember about you.",
+      "Your recent training is in there too.",
+      "Safety rules come first, whatever the goals say.",
+      "Nothing changes until you accept it.",
+    ] },
+    funny: { lines: [
+      "Warming up the ideas.",
+      "Stretching before the heavy thinking.",
+      "Tying its shoelaces. Double knot.",
+      "Counting reps so you don't have to.",
+      "Quick sip of water. Back in a sec.",
+      "Arguing with itself about leg day.",
+      "Rest day or best day? Thinking.",
+      "Chalking up for the big answer.",
+    ] },
+    working: { lines: [
+      "Thinking about what's best for your goals.",
+      "Fitting sessions around your week.",
+      "Looking at how your last weeks went.",
+      "Balancing hard days with easy ones.",
+      "Making sure there's room to recover.",
+      "Putting the finishing touches on it.",
+    ] },
+  };
+  let capMode = "facts";
+
+  /* ---------- more timing games ---------- */
+
+  function Hurdles() {
+    let v, fig, fx, h, dash, pool = [], vt = 0, gx = 0, y = 0, vy = 0, speed = 110, score = 0, best = 0, demo = true, crash = 0, clock = 0, lastTap = -99;
+    const reset = () => pool.forEach((p, i) => { p.x = 280 + i * 170; p.passed = false; });
+    return {
+      live: true,
+      mount(st) {
+        v = sportSvg(st);
+        stroke(v, "#aab7a7", 2).set(P(0, 161), P(240, 161));
+        dash = Dashes(v, 6, 171, 16, 48);
+        for (let i = 0; i < 3; i++) {
+          const g = el("svg:g", {}, v);
+          stroke(g, "#62726c", 2.5).set(P(0, 161), P(0, 137));
+          stroke(g, "#62726c", 2.5).set(P(-6, 161), P(6, 161));
+          stroke(g, "#d95d39", 5).set(P(-5, 137), P(5, 137));
+          pool.push({ g, x: 0, passed: false });
+        }
+        reset();
+        fig = Figure(v); fx = FX(v);
+        h = Hud(st, "Tap to jump the hurdles"); h.badge.textContent = "FLYING";
+      },
+      tap() {
+        if (crash > 0) return;
+        if (demo) { demo = false; score = 0; speed = 110; reset(); }
+        if (y === 0) vy = -270;
+        lastTap = clock; h.hint.hidden = true;
+      },
+      render(t, r, dt) {
+        clock += dt; fx.update(dt);
+        if (!demo && clock - lastTap > 7) { demo = true; h.hint.hidden = false; }
+        if (crash > 0) { crash -= dt; if (crash <= 0) { fig.color(SHIRT); reset(); } return; }
+        vt += dt * speed / 110; gx -= dt * speed; dash(gx);
+        if (vy !== 0 || y < 0) { vy += 900 * dt; y += vy * dt; if (y >= 0) { y = 0; vy = 0; } }
+        let maxX = -999;
+        pool.forEach(p => {
+          p.x -= speed * dt;
+          if (demo && y === 0 && p.x > 144 && p.x < 156) vy = -270;
+          if (!p.passed && p.x < 106) {
+            p.passed = true;
+            if (!demo) {
+              score++; best = Math.max(best, score); speed = Math.min(250, speed + 5);
+              fx.text(110, 120, "+1", "#2f5d50", 14);
+              if (score % 10 === 0) { fx.burst(118, 110, "#d95d39", 22); fx.text(120, 70, score + " clean!", "#d95d39", 20); }
+            }
+          }
+          if (!demo && !p.passed && p.x > 108 && p.x < 130 && -y < 22) {
+            crash = .8; score = 0; speed = 110; fig.color("#991b1b");
+            fx.text(120, 70, "Hit the hurdle!", "#991b1b", 18);
+          }
+          maxX = Math.max(maxX, p.x);
+        });
+        pool.forEach(p => {
+          if (p.x < -20) { p.x = Math.max(260, maxX + rand(130, 230) * Math.sqrt(speed / 110)); p.passed = false; maxX = p.x; }
+          p.g.setAttribute("transform", `translate(${p.x.toFixed(1)},0)`);
+        });
+        fig.set(mapSk(runPose(vt), q => P(q.x, q.y + y)), false);
+        h.big.textContent = demo ? "Hurdles" : String(score);
+        h.sub.textContent = best ? "best " + best : "tap just before each hurdle";
+        h.badge.classList.toggle("on", !demo && score >= 10);
+      }
+    };
+  }
+
+  function FreeThrow() {
+    let v, fx, h, ball, meterInd, zone, net, phase = "aim", clock = 0, x = 40, y = 150, vx = 0, vy = 0, rot = 0, streak = 0, best = 0, result = null, wig = 0;
+    const RIM = P(191, 72), START = P(40, 150), G = 500, ANG = 55 * Math.PI / 180;
+    const vPerfect = (() => { const dx = RIM.x - START.x, dy = RIM.y - START.y, c = Math.cos(ANG); return Math.sqrt(G * dx * dx / (2 * c * c * (dy + dx * Math.tan(ANG)))); })();
+    const period = () => Math.max(.7, 1.3 - streak * .05), half = () => Math.max(.035, .07 - streak * .004);
+    const meter = () => (1 - Math.cos(2 * Math.PI * clock / period())) / 2;
+    return {
+      live: true,
+      mount(st) {
+        v = sportSvg(st);
+        stroke(v, "#aab7a7", 2).set(P(0, 176), P(240, 176));
+        stroke(v, "#aab7a7", 3).set(P(214, 80), P(214, 176));
+        el("svg:rect", { x: 206, y: 30, width: 5, height: 52, rx: 1.5, fill: NEAR }, v);
+        net = el("svg:g", {}, v);
+        for (let i = 0; i < 5; i++) stroke(net, "#aab7a7", 1.2).set(P(180 + i * 5.5, 72), P(184 + i * 3.5, 94));
+        stroke(net, "#aab7a7", 1.2).set(P(182, 82), P(200, 82));
+        stroke(v, "#d95d39", 3).set(P(178, 72), P(205, 72));
+        el("svg:rect", { x: 14, y: 40, width: 9, height: 110, rx: 4.5, fill: "#d5ddd0" }, v);
+        zone = el("svg:rect", { x: 14, width: 9, rx: 2, fill: "#d95d39", opacity: .55 }, v);
+        meterInd = stroke(v, NEAR, 3);
+        ball = el("svg:g", {}, v);
+        el("svg:circle", { r: 7.5, fill: "#e07a4f", stroke: "#a93f25", "stroke-width": 1.2 }, ball);
+        stroke(ball, "#a93f25", 1).set(P(-7.5, 0), P(7.5, 0));
+        stroke(ball, "#a93f25", 1).set(P(0, -7.5), P(0, 7.5));
+        fx = FX(v);
+        h = Hud(st, "Tap when the marker is in the orange"); h.badge.textContent = "ON FIRE";
+      },
+      tap() {
+        h.hint.hidden = true;
+        if (phase !== "aim") return;
+        const sp = vPerfect * (1 + (meter() - .68) * .35);
+        vx = sp * Math.cos(ANG); vy = -sp * Math.sin(ANG); phase = "fly"; result = null;
+      },
+      render(t, r, dt) {
+        clock += dt; fx.update(dt);
+        const hw = half();
+        zone.setAttribute("y", (150 - (.68 + hw) * 110).toFixed(1)); zone.setAttribute("height", (2 * hw * 110).toFixed(1));
+        const my = 150 - meter() * 110;
+        meterInd.set(P(10, my), P(27, my));
+        if (phase === "aim") { x = START.x; y = START.y; }
+        else {
+          const py = y;
+          vy += G * dt; x += vx * dt; y += vy * dt; rot += vx * dt * 3;
+          if (x > 202 && x < 214 && y > 30 && y < 82 && vx > 0) vx = -Math.abs(vx) * .5;
+          if (!result && py < RIM.y && y >= RIM.y) {
+            const off = Math.abs(x - RIM.x);
+            if (off < 7) result = "swish";
+            else if (off < 12) { result = "in"; vy = -50; vx *= -.2; }
+            else if (off < 16) { result = "out"; vy = -110; vx = (x < RIM.x ? -1 : 1) * 60; }
+            if (result === "swish" || result === "in") {
+              streak++; best = Math.max(best, streak); wig = .5;
+              fx.burst(RIM.x, RIM.y + 8, "#d95d39", result === "swish" ? 22 : 12);
+              fx.text(140, 44, result === "swish" ? "SWISH!" : "In off the rim!", "#d95d39", result === "swish" ? 22 : 16);
+            } else if (result === "out") { fx.text(140, 44, "Rim out", "#991b1b", 18); streak = 0; }
+          }
+          if (y > 168) {
+            if (!result) { fx.text(110, 60, x < RIM.x ? "Short" : "Long", "#991b1b", 18); streak = 0; result = "miss"; }
+            y = 168; vy = -Math.abs(vy) * .3; vx *= .6;
+            if (Math.abs(vy) < 40) phase = "aim";
+          }
+          if (x > 250 || x < -10) phase = "aim";
+        }
+        if (wig > 0) { wig -= dt; net.setAttribute("transform", `translate(0 ${(Math.sin(wig * 40) * 4 * wig).toFixed(1)})`); } else net.removeAttribute("transform");
+        ball.setAttribute("transform", `translate(${x.toFixed(1)},${y.toFixed(1)}) rotate(${rot.toFixed(0)})`);
+        h.big.textContent = streak ? String(streak) : "Free throws";
+        h.sub.textContent = best ? "best " + best + " in a row" : "make them in a row";
+        h.badge.classList.toggle("on", streak >= 5);
+      }
+    };
+  }
+
+  function Keeper() {
+    let v, fx, h, fig, ball, net, phase = "wind", clock = 0, next = 1, shotAt = 0, dur = .95, side = 1, tx = 0, ty = 0, dive = 0, diveT = 0,
+      streak = 0, best = 0, demo = true, lastTap = -99, bx = 120, by = 178, br = 12, bvx = 0, bvy = 0, hold = 0;
+    const stand = { spA: P(120, 128), spB: P(120, 98), SL: P(108, 98), SR: P(132, 98), HL: P(114, 128), HR: P(126, 128), head: P(120, 84),
+      fl: [P(114, 128), P(106, 140), P(104, 152), P(100, 152)], nl: [P(126, 128), P(134, 140), P(136, 152), P(140, 152)],
+      fa: [P(108, 98), P(96, 106), P(90, 94)], na: [P(132, 98), P(144, 106), P(150, 94)], front: true };
+    const reach = { ...stand, fa: [P(108, 98), P(104, 80), P(101, 64)], na: [P(132, 98), P(136, 80), P(139, 64)],
+      fl: [P(114, 128), P(110, 142), P(108, 156), P(104, 156)], nl: [P(126, 128), P(132, 142), P(134, 156), P(138, 156)] };
+    const newShot = () => { phase = "wind"; next = clock + rand(.6, 1.3); bx = 120; by = 178; br = 12; dive = 0; diveT = 0; };
+    return {
+      live: true,
+      mount(st) {
+        v = sportSvg(st);
+        net = el("svg:g", {}, v);
+        for (let x = 48; x < 200; x += 16) stroke(net, "#d5ddd0", 1).set(P(x, 60), P(x, 150));
+        for (let y = 72; y < 150; y += 15) stroke(net, "#d5ddd0", 1).set(P(40, y), P(200, y));
+        stroke(v, "#aab7a7", 2).set(P(0, 150), P(240, 150));
+        stroke(v, NEAR, 4).set(P(40, 150), P(40, 60), P(200, 60), P(200, 150));
+        fig = Figure(v);
+        ball = el("svg:g", {}, v);
+        el("svg:circle", { r: 10, fill: "#fffef9", stroke: NEAR, "stroke-width": 1.6 }, ball);
+        el("svg:path", { d: "M0,-4 L3.8,-1.2 L2.4,3.2 L-2.4,3.2 L-3.8,-1.2 Z", fill: NEAR }, ball);
+        fx = FX(v);
+        h = Hud(st, "Tap left or right to dive"); h.badge.textContent = "THE WALL";
+        newShot();
+      },
+      tap(e) {
+        const p = svgPoint(v, e);
+        h.hint.hidden = true; lastTap = clock;
+        if (demo) { demo = false; streak = 0; newShot(); return; }
+        if (dive === 0 && (phase === "fly" || phase === "wind")) { dive = p.x < 120 ? -1 : 1; diveT = 0; }
+      },
+      render(t, r, dt) {
+        clock += dt; fx.update(dt);
+        if (!demo && clock - lastTap > 8) { demo = true; h.hint.hidden = false; }
+        if (phase === "wind" && clock >= next) {
+          phase = "fly"; shotAt = clock; side = Math.random() < .5 ? -1 : 1;
+          tx = 120 + side * rand(44, 66); ty = rand(76, 138); dur = demo ? .95 : Math.max(.42, .95 - streak * .03);
+        }
+        if (phase === "fly") {
+          const f = (clock - shotAt) / dur;
+          if (demo && dive === 0 && f > .35) { dive = side; diveT = 0; }
+          if (f >= 1) {
+            bx = tx; by = ty;
+            if (dive === side && diveT > .15) {
+              if (!demo) { streak++; best = Math.max(best, streak); }
+              fx.burst(tx, ty, "#d95d39", 18); fx.text(120, 52, "SAVE!", "#d95d39", 22);
+              phase = "deflect"; bvx = side * 140; bvy = -150;
+            } else {
+              if (!demo) streak = 0;
+              fx.text(120, 52, "Goal…", "#991b1b", 20);
+              phase = "goal"; hold = .7;
+            }
+          } else { bx = 120 + (tx - 120) * f; by = 178 + (ty - 178) * f - 30 * Math.sin(Math.PI * f); br = 12 - 6 * f; }
+        } else if (phase === "deflect") {
+          bvy += 500 * dt; bx += bvx * dt; by += bvy * dt;
+          if (by > 200 || bx < -20 || bx > 260) newShot();
+        } else if (phase === "goal") {
+          hold -= dt;
+          net.setAttribute("transform", `translate(0 ${(-3 * Math.sin(hold * 20) * hold).toFixed(1)})`);
+          if (hold <= 0) { net.removeAttribute("transform"); newShot(); }
+        }
+        if (dive !== 0) diveT += dt;
+        const s = dive ? sm(diveT / .22) : 0;
+        fig.set(lerpSk(stand, reach, s), true);
+        fig.g.setAttribute("transform", dive ? `translate(${(dive * 30 * s).toFixed(1)} ${(10 * s).toFixed(1)}) rotate(${(dive * 72 * s).toFixed(1)} 120 128)` : "");
+        ball.setAttribute("transform", `translate(${bx.toFixed(1)},${by.toFixed(1)}) scale(${(br / 10).toFixed(2)})`);
+        h.big.textContent = demo ? "Goalkeeper" : String(streak);
+        h.sub.textContent = best ? "best " + best + " saves in a row" : "save as many as you can";
+        h.badge.classList.toggle("on", !demo && streak >= 8);
+      }
+    };
+  }
+
+  const games = [
+    { key: "P1", name: "Jump rope", make: RopeGame, play: true,
+      feel: "A rhythm game: tap to jump as the rope comes round. It turns faster the longer you go. Miss and you trip.",
+      tags: ["timing", "gets harder"] },
+    { key: "P2", name: "Keepy-uppy", make: Keepy, play: true,
+      feel: "Tap the ball to keep it in the air. Where you hit it decides where it flies. The count is huge behind it.",
+      tags: ["physics", "one more go"] },
+    { key: "P3", name: "Hurdles", make: Hurdles, play: true,
+      feel: "The runner goes on their own; tap to jump each hurdle. Every clean one speeds the track up. Clip one and you start again.",
+      tags: ["new", "timing", "gets faster"] },
+    { key: "P4", name: "Free throws", make: FreeThrow, play: true,
+      feel: "A marker swings up and down the power bar. Tap in the orange to shoot. Hit it in the middle for a swish. The zone shrinks and the marker speeds up as your streak grows.",
+      tags: ["new", "timing", "real ball flight"] },
+    { key: "P5", name: "Goalkeeper", make: Keeper, play: true,
+      feel: "Penalties, one after another. Tap the left or right half to dive. Shots get faster with every save.",
+      tags: ["new", "reaction", "gets faster"] },
+    { key: "P6", name: "Sprint", make: Sprint, play: true,
+      feel: "Tap as fast as you can and the runner speeds up, with speed lines and a shaking screen.",
+      tags: ["mash", "instant"] },
+    { key: "P7", name: "Reaction", make: Reaction, play: true,
+      feel: "A dot appears after a random pause; hit it and see your time in milliseconds.",
+      tags: ["reflex", "quick rounds"] },
+    { key: "P8", name: "Max lift", make: Lift, play: true,
+      feel: "Tap to drive the bar up out of the squat. Each rep adds 10 kg and the bar sinks faster.",
+      tags: ["mash", "gets harder"] },
+  ];
+
+  const watch = [
+    { key: "W1", name: "Sport switch", make: () => SportSwitch(4, 1.1, true),
+      feel: "Every 4 seconds the athlete jumps, does a flip and lands already in the next sport: off the road onto the bike, off the bike into the water, into the boat, under the bar, onto the rope, up the wall.",
+      tags: ["changing", "with flips"] },
+    { key: "W2", name: "Quick change", make: () => SportSwitch(2.6, .9, false),
+      feel: "Faster: every 2.6 seconds the body changes shape straight into the next sport, without a flip, while the scenery fades from one to the next.",
+      tags: ["changing", "faster", "smoother"] },
+  ];
+
+
+  const concepts = [
+    { key: "A", name: "Stopwatch", make: Dial,
+      feel: "The wait itself becomes the picture: a sweeping hand and an orange arc that fills toward one minute.",
+      honest: "Shows only time passed. The arc fills to a minute, not to \"done\", so a 20-second reply simply stops early.",
+      tags: ["calm", "most honest", "sporty"] },
+    { key: "B", name: "Breathe", make: Breathe,
+      feel: "A slow four-in, four-out circle. Turns the wait into a few seconds of recovery instead of staring at a spinner.",
+      honest: "Invites, never claims. Reduced motion keeps a still circle with \"Take a breath\".",
+      tags: ["calm", "recovery", "personal"] },
+    { key: "C", name: "Track laps", make: Track,
+      feel: "A runner circles a 400 m oval; one lap is 12 seconds, and the squares below fill per lap.",
+      honest: "Laps are just elapsed time in another unit, so nothing pretends to know how far along the coach is.",
+      tags: ["playful", "sporty", "readable"] },
+    { key: "D", name: "Loading the bar", make: Plates,
+      feel: "A pair of plates slides onto the barbell every 9 seconds, heaviest first. \"Loading\" taken literally.",
+      honest: "Stops at four pairs, about 30 s. Never shows a \"full\" bar that would read as finished.",
+      tags: ["playful", "gym", "witty"] },
+    { key: "E", name: "Terrain", make: Contours,
+      feel: "Map contour lines drift slowly like moving ground, with one orange line. Ambient and always changing.",
+      honest: "Pure atmosphere with no meaning to misread. Reduced motion freezes it into a still map.",
+      tags: ["ambient", "beautiful", "changing"] },
+    { key: "F", name: "Proposal shape", make: Skeleton,
+      feel: "Grey session cards where the proposal will appear, with a light shimmer passing over them.",
+      honest: "Only honest if the card count is fixed. A shimmer of four cards when five arrive is a small lie, so it shows generic rows.",
+      tags: ["quiet", "app-native", "familiar"] },
+    { key: "G", name: "Rotation", make: Rotation,
+      feel: "Your \"changing\" idea: every 12 seconds the scene crossfades (track → plates → terrain → breathe). The dots show which.",
+      honest: "Scenes change on a clock, never on progress, so a change can't be read as \"step 2 of 4\".",
+      tags: ["changing", "most variety", "busier"] },
+  ];
+
+  const build = (grid, list) => list.map(c => {
+    const card = el("article", { class: "concept" }, grid);
+    const phone = el("div", { class: "phone" }, card);
+    const bar = el("div", { class: "appbar" }, phone);
+    el("b", { text: "Fill with coach" }, bar); el("span", { text: "Week 43" }, bar);
+    const stage = el("div", { class: c.play ? "stage play" : "stage" }, phone);
+    const status = el("div", { class: "status" }, phone);
+    el("div", { class: "asking", text: "Asking the coach…" }, status);
+    const elapsed = el("div", { class: "elapsed", text: "0:00" }, status);
+    const slow = el("div", { class: "slow", text: "This can take up to a minute." }, status);
+    const ready = el("div", { class: c.play ? "ready banner" : "ready", "aria-hidden": "true" }, phone);
+    const rc = el("div", { class: "ready-card" }, ready);
+    el("small", { text: "Coach proposal" }, rc); el("b", { text: "Week 43 · 4 sessions" }, rc);
+    el("i", {}, rc); el("i", {}, rc); el("span", { text: "Review" }, rc);
+
+    const head = el("div", { class: "concept-head" }, card);
+    el("span", { class: "letter", text: c.key }, head); el("h2", { text: c.name }, head);
+    el("p", { text: c.feel }, card);
+    if (c.honest) el("p", { class: "honest", text: c.honest }, card);
+    const tg = el("div", { class: "tags" }, card); c.tags.forEach(x => el("span", { text: x }, tg));
+
+    const inst = c.make(); inst.mount(stage);
+    if (inst.tap) stage.addEventListener("pointerdown", e => { e.preventDefault(); inst.tap(e); });
+    return { inst, elapsed, slow, ready };
+  });
+  const live = [
+    ...build(document.getElementById("gamesGrid"), games),
+    ...build(document.getElementById("sportsGrid"), watch),
+    ...build(document.getElementById("grid"), concepts),
+  ];
+
+  const clock = document.getElementById("clock");
+  function now() { return simBase + (performance.now() - t0) / 1000 * speed; }
+  function restart() { simBase = 0; t0 = performance.now(); live.forEach(l => l.inst.reset && l.inst.reset()); }
+
+  let lastSec = -1, lastMs = performance.now();
+  function frame() {
+    let t = now();
+    if (t >= RESTART) { restart(); t = 0; }
+    const ms = performance.now(), dt = Math.min(.05, (ms - lastMs) / 1000); lastMs = ms;
+    const waiting = Math.min(t, ARRIVE);
+    const sec = Math.floor(waiting);
+    // Under reduced motion, ambient pieces redraw once a second; games still answer every tap.
+    const tick = !reduced || sec !== lastSec;
+    live.forEach(l => {
+      if (tick || l.inst.live) l.inst.render(waiting, reduced, dt);
+      if (tick) {
+        l.elapsed.textContent = fmt(waiting);
+        l.slow.classList.toggle("on", waiting >= 30);
+        l.ready.classList.toggle("on", t >= ARRIVE);
+      }
+    });
+    if (tick) { clock.textContent = t >= ARRIVE ? "Arrived" : fmt(waiting); lastSec = sec; }
+    requestAnimationFrame(frame);
+  }
+
+  const setPressed = (on, off) => { on.setAttribute("aria-pressed", "true"); off.setAttribute("aria-pressed", "false"); };
+  const sp1 = document.getElementById("sp1"), sp5 = document.getElementById("sp5");
+  const mFull = document.getElementById("mFull"), mRed = document.getElementById("mReduced");
+  function setSpeed(v) { simBase = now(); t0 = performance.now(); speed = v; setPressed(v === 1 ? sp1 : sp5, v === 1 ? sp5 : sp1); }
+  function setReduced(v) { reduced = v; lastSec = -1; live.forEach(l => l.inst.reset && l.inst.reset()); setPressed(v ? mRed : mFull, v ? mFull : mRed); }
+  sp1.onclick = () => setSpeed(1); sp5.onclick = () => setSpeed(5);
+  mFull.onclick = () => setReduced(false); mRed.onclick = () => setReduced(true);
+  document.getElementById("restart").onclick = restart;
+  const capNotes = {
+    facts: "Every line is true for every request: the coach really does get your goals, memory, recent training and plan. Shown in a loop, not as steps.",
+    funny: "Jokes that claim nothing, so they can't be wrong. Reads best if each wait starts at a random line.",
+    working: "Closest to what you described. The catch: the app can't see what the coach is doing, so these lines describe steps nobody can check, which the backlog item ruled out. Your call.",
+  };
+  const capButtons = [...document.querySelectorAll("[data-cap]")];
+  const setCap = m => {
+    capMode = m;
+    capButtons.forEach(b => b.setAttribute("aria-pressed", String(b.dataset.cap === m)));
+    document.getElementById("capNote").textContent = capNotes[m];
+  };
+  capButtons.forEach(b => b.onclick = () => setCap(b.dataset.cap));
+  setCap("facts");
+  setReduced(reduced);
+  requestAnimationFrame(frame);
+})();
+</script>

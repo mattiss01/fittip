@@ -15,6 +15,7 @@ import {
 import styles from "./fill-with-coach.module.css";
 import type { FillProposal } from "./fill-state";
 
+import { CoachWait } from "@/components/coach-wait/coach-wait";
 import { CoachSpark } from "@/components/home/coach-spark";
 import type {
   ActivityEditorHandle,
@@ -307,6 +308,7 @@ export function FillWithCoach({
             <CoachSpark size={16} />
             {asking ? COPY.asking : COPY.ask}
           </button>
+          {asking ? <CoachWait kind="fill" /> : null}
         </section>
       ) : (
         <section

@@ -10,6 +10,7 @@ import styles from "./proposal.module.css";
 import { SheetLayer } from "../plan-sheet";
 
 import { DateField } from "@/components/date-field/date-field";
+import { CoachWait } from "@/components/coach-wait/coach-wait";
 import { CoachSpark } from "@/components/home/coach-spark";
 import {
   COACH_START_MAX_DAYS_AHEAD,
@@ -261,6 +262,7 @@ export function ComposeProposal({
             {COPY.generateAction}
           </button>
         )}
+        {pending ? <CoachWait kind="plan" /> : null}
         <p
           className={state.status === "idle" ? styles.srOnly : styles.notice}
           data-state={pending ? "pending" : state.status}
