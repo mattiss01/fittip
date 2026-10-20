@@ -20,10 +20,11 @@ import { ROADMAP_CONTROL_COPY } from "@/lib/roadmap/roadmap-control-copy";
  * here, where the owner can Keep or try again.
  */
 export function RoadmapDelete({
-  expectedHeadRevision,
+  versionId,
   headingId,
 }: {
-  expectedHeadRevision: number;
+  /** The roadmap shown: one in force since is not deleted from here. */
+  versionId: string;
   headingId: string;
 }) {
   const { state, submit, pending } = useRoadmapWrite(deleteRoadmapAction);
@@ -42,11 +43,7 @@ export function RoadmapDelete({
           {state.message}
         </p>
       ) : null}
-      <input
-        type="hidden"
-        name="expectedHeadRevision"
-        value={expectedHeadRevision}
-      />
+      <input type="hidden" name="versionId" value={versionId} />
       <button type="submit" className={w.confirmDanger} disabled={pending}>
         {ROADMAP_CONTROL_COPY.deleteConfirm}
       </button>

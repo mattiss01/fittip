@@ -611,17 +611,12 @@ export class RoadmapRepository {
 
   /**
    * Erase the roadmap, every version, proposal and request of it, with its
-   * ticks and reviews (ADR-036). With no roadmap in force the database
-   * reports a replay and touches nothing, so the transport retry below is
-   * safe here too.
+   * ticks and reviews (ADR-036), answering to the version the owner was
+   * shown. With no roadmap in force the database reports a replay and
+   * touches nothing, so the transport retry below is safe here too.
    */
-  async deleteRoadmap(
-    expectedHeadRevision: number,
-  ): Promise<"deleted" | "replayed"> {
-    const data = await this.call("delete_roadmap", {
-      p_expected_head_revision: expectedHeadRevision,
-    });
-    return (data as unknown as string) === "deleted" ? "deleted" : "replayed";
+  async deleteRoadmap(versionId: string): Promise<void> {
+    await this.call("delete_roadmap", { p_version_id: versionId });
   }
 
   /**

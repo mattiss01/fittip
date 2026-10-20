@@ -577,9 +577,9 @@ export async function rewriteRoadmapAction(
 /**
  * Delete the roadmap, all of it (owner, 19 Oct 2026; ADR-036).
  *
- * Only the head revision comes from the form, and only ever as a stale value:
- * the database compares it under the roadmap lock. Which rows go is the
- * database's to decide, held to the caller.
+ * Only the version the owner was shown comes from the form, and only ever as
+ * a stale value: the database compares it with the one in force under the
+ * roadmap lock. Which rows go is the database's to decide, held to the caller.
  */
 export async function deleteRoadmapAction(
   previous: RoadmapActionState,
@@ -589,7 +589,7 @@ export async function deleteRoadmapAction(
   try {
     const roadmaps = await createRoadmapRepository();
     await roadmaps.deleteRoadmap(
-      parseExpectedHeadRevision(formData.get("expectedHeadRevision")),
+      parseRoadmapVersionId(formData.get("versionId")),
     );
     return landed("deleted", submission);
   } catch (error) {

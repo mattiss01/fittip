@@ -404,31 +404,31 @@ describe("roadmap server actions", () => {
     const remove = (values: Record<string, string>) =>
       deleteRoadmapAction(INITIAL_ROADMAP_ACTION_STATE, form(values));
 
-    it("deletes at the head the owner read and invalidates the roadmap and the Plan", async () => {
-      deleteRoadmap.mockResolvedValue("deleted");
+    it("deletes the version the owner was shown and invalidates the roadmap and the Plan", async () => {
+      deleteRoadmap.mockResolvedValue(undefined);
 
-      const result = await remove({ expectedHeadRevision: "2" });
+      const result = await remove({ versionId: VERSION_ID });
 
       expect(result).toMatchObject({
         status: "deleted",
         message: OUTCOMES.deleted,
       });
-      expect(deleteRoadmap).toHaveBeenCalledWith(2);
+      expect(deleteRoadmap).toHaveBeenCalledWith(VERSION_ID);
       expect(revalidatePathMock).toHaveBeenCalledWith("/home/plan/roadmap");
       expect(revalidatePathMock).toHaveBeenCalledWith("/home/plan");
     });
 
-    it("refuses a head that is not a revision before touching the database", async () => {
-      const result = await remove({ expectedHeadRevision: "two" });
+    it("refuses a malformed version before touching the database", async () => {
+      const result = await remove({ versionId: "not-a-uuid" });
 
       expect(result.status).toBe("validation");
       expect(deleteRoadmap).not.toHaveBeenCalled();
     });
 
-    it("says the roadmap changed when the head moved", async () => {
+    it("says the roadmap changed when another is in force", async () => {
       deleteRoadmap.mockRejectedValue(new RoadmapConflictError("stale"));
 
-      const result = await remove({ expectedHeadRevision: "2" });
+      const result = await remove({ versionId: VERSION_ID });
 
       expect(result).toMatchObject({
         status: "conflict",

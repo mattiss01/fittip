@@ -17,11 +17,14 @@
 --     keeps an id that points at nothing, as a deleted log's does (ADR-031);
 --   * a plan proposal's `roadmap_version` source likewise keeps its id.
 --
--- The delete answers to the head revision the owner last read, under the
+-- The delete answers to the version the owner was shown, by id, under the
 -- same per-owner lock every roadmap write takes, so it cannot interleave with
--- an acceptance, an edit, or a coach result being stored. A coach request
--- still running when the roadmap goes has nothing left to finish into, and its
--- result is refused as an unknown request.
+-- an acceptance, an edit, or a coach result being stored. Not to the head
+-- revision: that starts again from 0 after a delete, so a question left open
+-- from before one could match a new roadmap's revision and erase it. A version
+-- id is never reused. A coach request still running when the roadmap goes has
+-- nothing left to finish into, and its result is refused as an unknown
+-- request.
 --
 -- With no roadmap in force there is nothing to delete, and the call reports
 -- `replayed` without touching anything. That makes a transport retry of a
@@ -29,7 +32,7 @@
 -- and it cannot erase a proposal the owner started after the delete.
 
 create or replace function public.delete_roadmap(
-  p_expected_head_revision bigint
+  p_version_id uuid
 )
 returns text
 language plpgsql
@@ -38,7 +41,7 @@ set search_path = ''
 as $$
 declare
   v_user_id uuid := auth.uid();
-  v_revision bigint;
+  v_current uuid;
 begin
   if v_user_id is null then
     raise exception using
@@ -46,7 +49,7 @@ begin
       message = 'An authenticated FitTip user is required.';
   end if;
 
-  if p_expected_head_revision is null or p_expected_head_revision < 1 then
+  if p_version_id is null then
     raise exception using
       errcode = '22023',
       message = 'Invalid roadmap.';
@@ -65,7 +68,7 @@ begin
         message = 'Your roadmap changed. Reload and try again.';
   end;
 
-  select head.revision into v_revision
+  select head.current_version_id into v_current
   from public.roadmap_heads head
   where head.user_id = v_user_id
   for update;
@@ -74,7 +77,7 @@ begin
     return 'replayed';
   end if;
 
-  if v_revision <> p_expected_head_revision then
+  if v_current <> p_version_id then
     raise exception using
       errcode = 'PT409',
       message = 'Your roadmap changed. Reload and try again.';
@@ -95,6 +98,6 @@ begin
 end;
 $$;
 
-revoke all privileges on function public.delete_roadmap(bigint)
+revoke all privileges on function public.delete_roadmap(uuid)
   from public, anon, authenticated, service_role;
-grant execute on function public.delete_roadmap(bigint) to authenticated;
+grant execute on function public.delete_roadmap(uuid) to authenticated;

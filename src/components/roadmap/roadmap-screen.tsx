@@ -251,7 +251,7 @@ export function RoadmapScreen({ state }: { state: RoadmapScreenState }) {
                   }
                   remove={
                     <RoadmapDelete
-                      expectedHeadRevision={state.head.revision}
+                      versionId={state.current.id}
                       headingId={ACTIONS_SHEET_TITLE_IDS.delete}
                     />
                   }

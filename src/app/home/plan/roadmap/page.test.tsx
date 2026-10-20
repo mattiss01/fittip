@@ -414,10 +414,9 @@ describe("Roadmap", () => {
     expect(document.querySelector("[data-roadmap-write]")).toBeNull();
   });
 
-  // ADR-036: deleting asks first, in the middle of the screen, and answers to
-  // the head this page read.
-  it("asks before deleting the roadmap, against the head it read", async () => {
-    getHead.mockResolvedValue({ revision: 3, currentVersionId: "v" });
+  // ADR-036: deleting asks first, in the middle of the screen, and names the
+  // roadmap this page shows.
+  it("asks before deleting the roadmap, naming the version it shows", async () => {
     listVersions.mockResolvedValue([version(1)]);
 
     render(await RoadmapPage());
@@ -431,12 +430,9 @@ describe("Roadmap", () => {
     });
     expect(within(question).getByText(ROADMAP_COPY.deleteDetail)).toBeTruthy();
     expect(
-      (
-        question.querySelector(
-          'input[name="expectedHeadRevision"]',
-        ) as HTMLInputElement
-      ).value,
-    ).toBe("3");
+      (question.querySelector('input[name="versionId"]') as HTMLInputElement)
+        .value,
+    ).toBe(version(1).id);
     fireEvent.click(
       within(question).getByRole("button", { name: ROADMAP_COPY.deleteKeep }),
     );

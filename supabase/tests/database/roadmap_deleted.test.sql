@@ -2,8 +2,8 @@
 --
 -- Proved against the real functions: `delete_roadmap` erases every roadmap
 -- record of its caller, the versions, the proposals open or decided, the
--- coach requests, sources, decisions, ticks and reviews; it refuses a stale or
--- invalid head; with no roadmap in force it reports a replay and touches
+-- coach requests, sources, decisions, ticks and reviews; it refuses a version
+-- that is not the one in force, a new roadmap's included; with no roadmap in force it reports a replay and touches
 -- nothing, so a retry cannot erase what came after; another owner's roadmap is
 -- untouched; anonymous callers are refused; and a new roadmap can be accepted
 -- afterwards, from revision 0.
@@ -79,22 +79,22 @@ $$;
 create temporary table made (label text primary key, id uuid);
 grant all on made to public;
 
-select plan(14);
+select plan(15);
 
 -- The function ----------------------------------------------------------------------
 
 select ok(
   has_function_privilege(
-    'authenticated', 'public.delete_roadmap(bigint)', 'EXECUTE'
+    'authenticated', 'public.delete_roadmap(uuid)', 'EXECUTE'
   )
   and not has_function_privilege(
-    'anon', 'public.delete_roadmap(bigint)', 'EXECUTE'
+    'anon', 'public.delete_roadmap(uuid)', 'EXECUTE'
   )
   and not has_function_privilege(
-    'service_role', 'public.delete_roadmap(bigint)', 'EXECUTE'
+    'service_role', 'public.delete_roadmap(uuid)', 'EXECUTE'
   )
   and not has_function_privilege(
-    'public', 'public.delete_roadmap(bigint)', 'EXECUTE'
+    'public', 'public.delete_roadmap(uuid)', 'EXECUTE'
   ),
   'only authenticated may delete a roadmap'
 );
@@ -189,21 +189,22 @@ set local role authenticated;
 -- Refusals ------------------------------------------------------------------------------
 
 select throws_ok(
-  'select public.delete_roadmap(0)',
+  'select public.delete_roadmap(null)',
   '22023', 'Invalid roadmap.',
-  'a head of 0 names no roadmap to delete'
+  'no version names no roadmap to delete'
 );
 select throws_ok(
-  'select public.delete_roadmap(2)',
+  format('select public.delete_roadmap(%L)', gen_random_uuid()),
   'PT409', 'Your roadmap changed. Reload and try again.',
-  'a head that is not the real one is refused'
+  'a version that is not the one in force is refused'
 );
 
 set local role anon;
 select set_config('request.jwt.claims', '{"role":"anon"}', true);
 select throws_ok(
-  'select public.delete_roadmap(1)',
-  '42501', null,
+  format('select public.delete_roadmap(%L)',
+    (select id from made where label = 'v1')),
+  '42501', 'permission denied for function delete_roadmap',
   'anonymous callers cannot delete'
 );
 
@@ -214,7 +215,11 @@ select set_config(
   'request.jwt.claims',
   '{"sub":"74000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
 
-select is(public.delete_roadmap(1), 'deleted', 'the roadmap is deleted');
+select is(
+  public.delete_roadmap((select id from made where label = 'v1')),
+  'deleted',
+  'the roadmap is deleted'
+);
 
 reset role;
 select is(
@@ -231,19 +236,21 @@ select is(
 set local role authenticated;
 
 select is(
-  public.delete_roadmap(1),
+  public.delete_roadmap((select id from made where label = 'v1')),
   'replayed',
   'a repeat finds nothing in force and reports a replay'
 );
 
--- Another owner's delete only ever reaches their own roadmap.
+-- Another owner naming this owner's version reaches only their own roadmap,
+-- and is refused.
 select set_config(
   'request.jwt.claims',
   '{"sub":"74000000-0000-4000-8000-000000000002","role":"authenticated"}', true);
 select throws_ok(
-  'select public.delete_roadmap(5)',
+  format('select public.delete_roadmap(%L)',
+    (select id from made where label = 'v1')),
   'PT409', 'Your roadmap changed. Reload and try again.',
-  'the other owner answers to their own head'
+  'the other owner answers to their own roadmap'
 );
 
 -- Afterwards -----------------------------------------------------------------------------
@@ -274,6 +281,14 @@ select is(
   (select count(*) from public.roadmap_milestone_marks),
   0::bigint,
   'with no tick carried over'
+);
+-- A question left open from before the delete names the old version, and
+-- cannot erase the new roadmap at the same revision.
+select throws_ok(
+  format('select public.delete_roadmap(%L)',
+    (select id from made where label = 'v1')),
+  'PT409', 'Your roadmap changed. Reload and try again.',
+  'a stale question cannot delete the new roadmap'
 );
 
 select * from finish();
