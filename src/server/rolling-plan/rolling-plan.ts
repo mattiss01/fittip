@@ -180,6 +180,16 @@ export type RollingPlanCardSlice = Omit<RollingPlanSlice, "sessions"> & {
   sessions: RollingPlanSessionCard[];
 };
 
+export function toSessionCard(
+  session: RollingPlanSession,
+): RollingPlanSessionCard {
+  const { activities, intent, note, ...card } = session;
+  void activities;
+  void intent;
+  void note;
+  return card;
+}
+
 /**
  * What one series operation did to the occurrences already on the Plan.
  * `completedKept` is the count an occurrence that already carries a completion

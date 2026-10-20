@@ -509,6 +509,14 @@ export class CoachAIService {
           context: assembled.context,
         });
         if (validation.outcome === "rejected") {
+          // TEMPORARY local debug, never commit.
+          if (
+            process.env.NODE_ENV === "development" &&
+            !process.env.VERCEL_ENV
+          ) {
+            console.log("[coach-debug] roadmap rejected:", validation.reason);
+            console.log("[coach-debug] body:", candidate.body);
+          }
           draft.outcome = "rejected";
           draft.rejectionReason = validation.reason;
           throw new CoachAIError("output_invalid");
@@ -525,6 +533,14 @@ export class CoachAIService {
           context: assembled.context,
         });
         if (validation.outcome === "rejected") {
+          // TEMPORARY local debug, never commit.
+          if (
+            process.env.NODE_ENV === "development" &&
+            !process.env.VERCEL_ENV
+          ) {
+            console.log("[coach-debug] plan rejected:", validation.reason);
+            console.log("[coach-debug] body:", candidate.body);
+          }
           draft.outcome = "rejected";
           draft.rejectionReason = validation.reason;
           throw new CoachAIError("output_invalid");

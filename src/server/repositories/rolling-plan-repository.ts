@@ -108,7 +108,11 @@ export class PostgresRollingPlanAdapter implements RollingPlanAdapter {
         ),
         rolling_plan_recovery_days ( local_date )`,
       )
+      // The owner on every table read, not only on the plan the rows hang
+      // from: their composite key already ties them to it, and RLS backs both.
       .eq("user_id", userId)
+      .eq("rolling_plan_sessions.user_id", userId)
+      .eq("rolling_plan_recovery_days.user_id", userId)
       .gte("rolling_plan_sessions.local_date", startDate)
       .lte("rolling_plan_sessions.local_date", endDate)
       .gte("rolling_plan_recovery_days.local_date", startDate)
@@ -392,22 +396,26 @@ function parseSession(value: unknown): RollingPlanSession {
   };
 }
 
-function parseCardRow(row: {
-  id: string;
-  local_date: string;
-  position: number;
-  title: string;
-  sport: string;
-  expected_duration_minutes: number | null;
-  status: string;
-  cancelled_at: string | null;
-  series_id: string | null;
-  occurrence_date: string | null;
-  has_diverged: boolean;
-}): RollingPlanSessionCard {
+function parseCardRow(value: unknown): RollingPlanSessionCard {
+  const row = readRecord(value);
   if (
+    !isUuid(row.id) ||
+    !isIsoDate(row.local_date) ||
+    !isInteger(row.position, 0) ||
+    typeof row.title !== "string" ||
+    typeof row.sport !== "string" ||
+    !(
+      row.expected_duration_minutes === null ||
+      isInteger(row.expected_duration_minutes, 1)
+    ) ||
     !(row.status === "active" || row.status === "cancelled") ||
-    (row.series_id === null) !== (row.occurrence_date === null)
+    !(row.cancelled_at === null || typeof row.cancelled_at === "string") ||
+    // Both halves of an occurrence identity or neither, as in `parseSession`:
+    // half of one no longer says which rule produced the session.
+    !(row.series_id === null || isUuid(row.series_id)) ||
+    !(row.occurrence_date === null || isIsoDate(row.occurrence_date)) ||
+    (row.series_id === null) !== (row.occurrence_date === null) ||
+    typeof row.has_diverged !== "boolean"
   ) {
     throw new RollingPlanPersistenceError();
   }
