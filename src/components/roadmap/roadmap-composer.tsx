@@ -13,6 +13,7 @@ import {
 import { ROADMAP_NOTE_MAX_LENGTH } from "@/app/home/plan/roadmap/action-state";
 import { generateRoadmapAction } from "@/app/home/plan/roadmap/actions";
 import styles from "@/app/home/plan/roadmap/roadmap.module.css";
+import { CoachWait } from "@/components/coach-wait/coach-wait";
 import { CoachSpark } from "@/components/home/coach-spark";
 import {
   COACH_START_MAX_DAYS_AHEAD,
@@ -252,9 +253,12 @@ export function RoadmapComposer({
       </form>
 
       {pending ? (
-        <p className={styles.pending} role="status">
-          {ROADMAP_CONTROL_COPY.pending}
-        </p>
+        <>
+          <p className={styles.pending} role="status">
+            {ROADMAP_CONTROL_COPY.pending}
+          </p>
+          <CoachWait kind="roadmap" />
+        </>
       ) : null}
     </section>
   );

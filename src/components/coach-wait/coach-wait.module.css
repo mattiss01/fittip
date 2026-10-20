@@ -1,0 +1,77 @@
+/* The coach wait (owner, 20 Oct 2026): the whole screen, above the
+   navigation, the save dock and every sheet, holding the athlete, a caption
+   under it, the time waited and, after 30 s, the "up to a minute" note. */
+.screen {
+  position: fixed;
+  z-index: 90;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: max(1rem, env(safe-area-inset-top)) 1rem
+    max(1rem, env(safe-area-inset-bottom));
+  background: var(--paper);
+  outline: none;
+}
+
+.wait {
+  width: 100%;
+  max-width: 24rem;
+  display: grid;
+  justify-items: center;
+  gap: 0.35rem;
+  text-align: center;
+}
+
+.stage {
+  display: block;
+  width: 100%;
+  max-width: 21rem;
+  height: auto;
+  aspect-ratio: 240 / 190;
+  border-radius: var(--radius-card, 1rem);
+  overflow: hidden;
+}
+
+.caption {
+  min-height: 2.6em;
+  margin: 0.25rem 0 0;
+  padding: 0 1rem;
+  color: var(--pine);
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.3;
+  text-wrap: balance;
+}
+
+.line {
+  display: inline-block;
+  animation: caption-in 450ms cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+
+@keyframes caption-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+.elapsed {
+  margin: 0;
+  color: var(--moss);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.slow {
+  min-height: 1.4em;
+  margin: 0;
+  color: var(--moss);
+  font-size: 0.82rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .line {
+    animation: none;
+  }
+}

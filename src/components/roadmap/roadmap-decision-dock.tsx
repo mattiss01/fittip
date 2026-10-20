@@ -18,6 +18,7 @@ import {
 } from "@/app/home/plan/roadmap/actions";
 import styles from "@/app/home/plan/roadmap/roadmap.module.css";
 import { SheetLayer } from "@/app/home/plan/plan-sheet";
+import { CoachWait } from "@/components/coach-wait/coach-wait";
 import { CoachSpark } from "@/components/home/coach-spark";
 import {
   GoalSuggestions,
@@ -272,9 +273,12 @@ export function RoadmapDecisionDock({
               </p>
             </div>
             {askAgain.pending ? (
-              <p className={styles.pending} role="status">
-                {ROADMAP_CONTROL_COPY.pending}
-              </p>
+              <>
+                <p className={styles.pending} role="status">
+                  {ROADMAP_CONTROL_COPY.pending}
+                </p>
+                <CoachWait kind="roadmap" />
+              </>
             ) : null}
           </form>
         ) : (

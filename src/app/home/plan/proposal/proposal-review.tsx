@@ -26,6 +26,7 @@ import { CancelReasonFields } from "../cancel-reason-fields";
 import { SheetLayer } from "../plan-sheet";
 import { SessionFields } from "../session-fields";
 
+import { CoachWait } from "@/components/coach-wait/coach-wait";
 import { CoachSpark } from "@/components/home/coach-spark";
 import {
   PLAN_PROPOSAL_COPY,
@@ -508,6 +509,7 @@ export function ProposalReview({
             </div>
           </form>
         ) : null}
+        {regenerating ? <CoachWait kind="plan" /> : null}
         <p
           className={notice.status === "idle" ? styles.srOnly : styles.notice}
           data-state={busy ? "pending" : notice.status}
