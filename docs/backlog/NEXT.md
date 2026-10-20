@@ -95,11 +95,6 @@ Ordered by dependency. A lane is named where it is not the build lane.
 
 Not worth their own slot; do them when work lands nearby.
 
-- **Fill with Coach takes a new key after a deadline.** `fill-with-coach.tsx` clears its
-  key on any `refused` reply, and a `deadline_exceeded` is one, while the provider call
-  may still be running; the next tap is a second paid call. The plan and roadmap forms
-  keep the key there since 17 Oct 2026 (`attemptEnded`); give the fill reply the same.
-
 - **`plan-month-sheet.test.tsx` times out under a full local run.** Three times on
   16 Oct 2026 ("steps between the months…", over 5,000 ms), passing alone each time;
   `onboarding-manager.test.tsx` once. CI has not shown it. Likely a slow render under
@@ -218,7 +213,3 @@ Not worth their own slot; do them when work lands nearby.
   series stands (ADR-013, amended 2 Oct 2026): a cancelled or deleted occurrence is not
   listed, and an edited or moved one appears both as its own dated entry and
   inside the rule.
-- **A superseded roadmap is named only by version.** When the owner accepts a new roadmap after
-  a proposal was made, review says which version the proposal was planned under and that it has
-  been replaced, but cannot describe it: the content of a superseded version is still stored,
-  and reading it back for display was not in this slice.
