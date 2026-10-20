@@ -289,4 +289,31 @@ describe("FillWithCoach", () => {
     expect(first.note).toBe("keep it short");
     expect(second.idempotencyKey).toBe(first.idempotencyKey);
   });
+
+  it("keeps the key after a deadline, and takes a new one after a refusal", async () => {
+    fillMock.mockResolvedValueOnce({
+      status: "refused",
+      message: "Too slow.",
+      mayStillRun: true,
+    });
+    fillMock.mockResolvedValueOnce({ status: "refused", message: "No." });
+    fillMock.mockResolvedValueOnce({ status: "refused", message: "No." });
+    setup();
+
+    for (let round = 0; round < 3; round += 1) {
+      await act(async () => {
+        fireEvent.click(
+          screen.getByRole("button", { name: "Fill with Coach" }),
+        );
+      });
+    }
+
+    const keys = fillMock.mock.calls.map(
+      ([input]) => (input as { idempotencyKey: string }).idempotencyKey,
+    );
+    // The provider call may still be running: asking again replays it.
+    expect(keys[1]).toBe(keys[0]);
+    // A definite refusal ends the attempt: asking again is a new question.
+    expect(keys[2]).not.toBe(keys[1]);
+  });
 });

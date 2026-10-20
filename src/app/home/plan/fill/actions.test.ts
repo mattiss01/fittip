@@ -217,6 +217,16 @@ describe("fillSessionActivitiesAction", () => {
       message: "The suggestion limit has been reached.",
     });
 
+    // Past the deadline the call may still be running at the provider.
+    generateMock.mockRejectedValueOnce(new CoachAIError("deadline_exceeded"));
+    await expect(
+      fillSessionActivitiesAction({
+        sessionId: SESSION_ID,
+        note: "",
+        idempotencyKey: KEY,
+      }),
+    ).resolves.toMatchObject({ status: "refused", mayStillRun: true });
+
     generateMock.mockRejectedValueOnce(
       new SessionActivityConflictError("session-past"),
     );

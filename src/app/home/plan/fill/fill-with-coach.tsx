@@ -179,7 +179,10 @@ export function FillWithCoach({
           note,
           idempotencyKey,
         });
-        if (result.status === "pending") {
+        if (
+          result.status === "pending" ||
+          (result.status === "refused" && result.mayStillRun)
+        ) {
           setMessage(result.message);
           return;
         }

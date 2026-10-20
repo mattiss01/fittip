@@ -96,7 +96,12 @@ export async function fillSessionActivitiesAction(input: {
     revalidatePath("/home/plan");
     return { status: "proposal", proposal: toFillProposal(proposal) };
   } catch (error) {
-    return refused(fillFailureCopy(error));
+    return {
+      ...refused(fillFailureCopy(error)),
+      ...(error instanceof CoachAIError && error.code === "deadline_exceeded"
+        ? { mayStillRun: true as const }
+        : {}),
+    };
   }
 }
 
