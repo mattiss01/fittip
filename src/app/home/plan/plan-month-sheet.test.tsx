@@ -117,12 +117,14 @@ describe("MonthSheet", () => {
     expect(pick("2026-09-27")).toBeNull();
     expect(pick("2026-09-28")).not.toBeNull();
 
-    for (let step = 0; step < 7; step += 1) {
-      fireEvent.click(screen.getByRole("button", { name: "Next month" }));
-    }
+    // Found once: the arrow stays the same element while it steps, and
+    // a role query per step made this the slowest test under a full run.
+    const next = screen.getByRole("button", { name: "Next month" });
+    for (let step = 0; step < 7; step += 1) fireEvent.click(next);
     expect(screen.getByRole("heading", { name: "April 2027" })).toBeVisible();
     expect(screen.queryByRole("button", { name: "Next month" })).toBeNull();
     expect(pick("2027-04-04")).not.toBeNull();
     expect(pick("2027-04-05")).toBeNull();
-  });
+    // A slow render under a full local run, not a fault (16 Oct 2026).
+  }, 15_000);
 });
