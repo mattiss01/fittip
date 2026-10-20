@@ -6,6 +6,7 @@ import { RoadmapDetail } from "./roadmap-detail";
 import { RoadmapLandingFocus } from "./roadmap-landing-focus";
 import { RoadmapOutcomeNotice } from "./roadmap-outcome";
 import { RoadmapNew } from "./roadmap-new";
+import { RoadmapRecoveredNotice } from "./roadmap-recovered-notice";
 import { RoadmapReviewDue } from "./roadmap-review-due";
 import { RoadmapProposalReview } from "./roadmap-proposal-review";
 import { RoadmapWriter } from "./roadmap-writer";
@@ -191,6 +192,8 @@ export function RoadmapScreen({ state }: { state: RoadmapScreenState }) {
       {state.current === null ? null : (
         <section className={styles.card} data-roadmap-current>
           <RoadmapLandingFocus />
+          {/* A waiting proposal's dock says it there instead. */}
+          {canAct ? <RoadmapRecoveredNotice /> : null}
           <RoadmapDetail
             version={state.current}
             reached={state.reached}
