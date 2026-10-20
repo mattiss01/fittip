@@ -3,6 +3,8 @@ import {
   type Completion,
 } from "@/server/completions/completion-log";
 
+import { dayLabel } from "./day-label";
+
 /**
  * What "Delete log" needs to ask first and then delete (ADR-031): the
  * revision the owner is looking at, and every name its question says.
@@ -16,15 +18,7 @@ export type DeleteLogTarget = {
   replaces: string[];
 };
 
-const DAY_LABEL = new Intl.DateTimeFormat("en-GB", {
-  weekday: "short",
-  day: "numeric",
-  month: "short",
-  timeZone: "UTC",
-});
-
 export function deleteLogTarget(completion: Completion): DeleteLogTarget {
-  const parsed = Date.parse(`${completion.actualLocalDate}T00:00:00.000Z`);
   return {
     completionId: completion.id,
     revision: completion.revision,
@@ -32,9 +26,7 @@ export function deleteLogTarget(completion: Completion): DeleteLogTarget {
       completion.title ??
       completion.plannedSnapshot?.title ??
       "unplanned training",
-    day: Number.isFinite(parsed)
-      ? DAY_LABEL.format(new Date(parsed))
-      : completion.actualLocalDate,
+    day: dayLabel(completion.actualLocalDate),
     planned:
       completion.planSessionId === null
         ? null

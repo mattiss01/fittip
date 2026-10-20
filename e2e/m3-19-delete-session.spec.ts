@@ -150,7 +150,9 @@ test.describe("M3-19 delete a planned session", () => {
       await logCompletion(request, account, sessionId, today, "skipped");
 
       await openSession(page, tomorrow, "Logged run");
-      await expect(page).toHaveURL(/\/home\/progress\/[0-9a-f-]+\?from=plan$/);
+      await expect(page).toHaveURL(
+        /\/home\/progress\/[0-9a-f-]+\?from=plan&date=[\d-]+$/,
+      );
       await expect(page.getByRole("link", { name: "Edit log" })).toBeVisible();
       await expect(
         page.getByRole("button", { name: "Delete log" }),

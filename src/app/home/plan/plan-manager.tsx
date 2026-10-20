@@ -25,6 +25,7 @@ import {
   type SwipeSide,
 } from "./plan-swipe";
 import { COMPLETION_OUTCOME_LABELS } from "../log/log-action-state";
+import { recordHref } from "../progress/record-href";
 import { CreateSession, SkippedDates } from "./create-session";
 import { MonthSheet } from "./plan-month-sheet";
 import { markSlide, Slide } from "@/components/motion/slide";
@@ -804,7 +805,10 @@ function PlanSessionCard({
             // A logged session opens its log's record, logged beside
             // planned (owner, 20 Oct 2026).
             session.log
-              ? `/home/progress/${session.log.completionId}?from=plan`
+              ? recordHref(session.log.completionId, {
+                  from: "plan",
+                  date: session.localDate,
+                })
               : sessionHref(
                   session.id,
                   past ? { date: session.localDate } : null,

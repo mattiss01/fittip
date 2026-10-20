@@ -7,6 +7,11 @@ import {
 } from "../completion-record";
 import { formatMonth, monthOf } from "../month";
 import { describeTarget } from "../planned-target";
+import {
+  originQuery,
+  readRecordOrigin,
+  type RecordOrigin,
+} from "../record-href";
 import type { ProgressCompletionView } from "../progress-record";
 import styles from "../progress.module.css";
 
@@ -36,8 +41,6 @@ type Props = {
   }>;
 };
 
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
-
 const UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -54,6 +57,7 @@ const UUID =
 export default async function CompletionPage({ params, searchParams }: Props) {
   const id = (await params).id;
   const query = (await searchParams) ?? {};
+  const origin = readRecordOrigin(query.from, query.date);
 
   let completion: Completion | null = null;
   // An id that is not a UUID cannot name a record, so it is refused before any
@@ -71,7 +75,7 @@ export default async function CompletionPage({ params, searchParams }: Props) {
     <main className={`${homeStyles.shell} ${styles.page}`} id="main-content">
       {/* The way back is at the top, as on a planned session's page (R3);
           the session's own name is the page's heading. */}
-      <BackLink {...backTo(completion, query)} />
+      <BackLink {...backTo(completion, origin)} />
 
       {completion === null ? (
         <section
@@ -93,18 +97,19 @@ export default async function CompletionPage({ params, searchParams }: Props) {
             planned={toPlannedView(completion)}
           />
           {/* The one log editor, opened from here and returning here, so a
-              correction does not go by way of Today. */}
+              correction does not go by way of Today; where this record was
+              opened from goes with it, to come back to. */}
           <div className={styles.logActions}>
             <Link
               className={styles.mainAction}
-              href={`/home/log?completion=${completion.id}&from=progress`}
+              href={`/home/log?completion=${completion.id}&from=progress${originQuery(origin, "&", "via")}`}
             >
               Edit log
             </Link>
             {/* Beside Edit log, not inside the form (owner, 20 Oct 2026). */}
             <DeleteLog
               {...deleteLogTarget(completion)}
-              leaveTo={backTo(completion, query).afterDelete}
+              leaveTo={backTo(completion, origin).afterDelete}
             />
           </div>
           {/* Training that happened can become a saved session; a skip or a
@@ -175,7 +180,7 @@ function toPlannedView(completion: Completion): PlannedSnapshotView | null {
  */
 function backTo(
   completion: Completion | null,
-  query: { from?: string | string[]; date?: string | string[] },
+  origin: RecordOrigin | null,
 ): { href: string; label: string; afterDelete: string } {
   if (completion === null) {
     return {
@@ -184,17 +189,14 @@ function backTo(
       afterDelete: "/home/progress",
     };
   }
-  if (
-    query.from === "today" &&
-    typeof query.date === "string" &&
-    ISO_DATE.test(query.date)
-  ) {
-    const today = `/home/today?date=${query.date}`;
+  if (origin?.from === "today") {
+    const today = `/home/today?date=${origin.date}`;
     return { href: today, label: "Today", afterDelete: today };
   }
-  if (query.from === "plan") {
+  if (origin?.from === "plan") {
     return {
-      href: "/home/plan",
+      // The week it was opened in, not this one.
+      href: `/home/plan?day=${origin.date}`,
       label: "Plan",
       afterDelete:
         completion.planSessionId === null

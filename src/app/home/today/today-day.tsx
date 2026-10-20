@@ -11,6 +11,7 @@ import {
 } from "../log/log-action-state";
 import { SaveToLibrary } from "../plan/saved/save-to-library";
 import { sessionHref } from "../plan/session-view";
+import { recordHref } from "../progress/record-href";
 import {
   ActivityList,
   type ActivityListItem,
@@ -386,7 +387,7 @@ function SessionCard({
  * planned, and comes back to this day (owner, 20 Oct 2026).
  */
 function logHref(completionId: string, date: string) {
-  return `/home/progress/${completionId}?from=today&date=${date}`;
+  return recordHref(completionId, { from: "today", date });
 }
 
 function CompletionFacts({

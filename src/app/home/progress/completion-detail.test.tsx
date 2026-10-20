@@ -184,6 +184,12 @@ describe("one completion", () => {
     expect(
       screen.getByRole("link", { name: "Back to Today" }).getAttribute("href"),
     ).toBe("/home/today?date=2026-08-12");
+    // Edit log carries the way back, to return here and then to Today.
+    expect(
+      screen.getByRole("link", { name: "Edit log" }).getAttribute("href"),
+    ).toBe(
+      `/home/log?completion=${COMPLETION_ID}&from=progress&via=today&date=2026-08-12`,
+    );
     // Beside Edit log, and asks first (owner, 20 Oct 2026; ADR-031).
     fireEvent.click(screen.getByRole("button", { name: "Delete log" }));
     const dialog = screen.getByRole("alertdialog", {
@@ -200,13 +206,13 @@ describe("one completion", () => {
     render(
       await CompletionPage({
         params: Promise.resolve({ id: COMPLETION_ID }),
-        searchParams: Promise.resolve({ from: "plan" }),
+        searchParams: Promise.resolve({ from: "plan", date: "2026-08-12" }),
       }),
     );
 
     expect(
       screen.getByRole("link", { name: "Back to Plan" }).getAttribute("href"),
-    ).toBe("/home/plan");
+    ).toBe("/home/plan?day=2026-08-12");
     fireEvent.click(screen.getByRole("button", { name: "Delete log" }));
     expect(
       document.querySelector<HTMLInputElement>('input[name="leaveTo"]')?.value,

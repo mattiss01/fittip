@@ -10,6 +10,7 @@ import {
 } from "react";
 
 import { logCompletionAction } from "./actions";
+import { dayLabel } from "./day-label";
 import {
   ActualActivities,
   type LogPlannedActivityView,
@@ -1198,20 +1199,6 @@ function countPhrase(count: number): string {
     : count === 1
       ? "1 activity"
       : `${count} activities`;
-}
-
-const DAY_LABEL = new Intl.DateTimeFormat("en-GB", {
-  weekday: "short",
-  day: "numeric",
-  month: "short",
-  timeZone: "UTC",
-});
-
-function dayLabel(localDate: string): string {
-  const parsed = Date.parse(`${localDate}T00:00:00.000Z`);
-  return Number.isFinite(parsed)
-    ? DAY_LABEL.format(new Date(parsed))
-    : localDate;
 }
 
 /** "a, b and c", so the warning names every field rather than a count. */

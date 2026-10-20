@@ -17,6 +17,7 @@ import {
 import { readLibraryOptions } from "../plan/activities/library-options";
 import { readMeasurementHistory } from "../plan/activities/measurement-history";
 import { readSavedSessionOptions } from "../plan/saved/session-options";
+import { readRecordOrigin, recordHref } from "../progress/record-href";
 import { isoDateInTimezone, shiftIsoDate } from "@/lib/date/local-date";
 import type { LogPlannedActivityView } from "./actual-activities";
 import { type Completion } from "@/server/completions/completion-log";
@@ -110,7 +111,11 @@ async function renderForm(
   timezoneName: string,
   completionId: string | null,
   plannedSessionId: string | null,
-  params: { date?: string | string[]; from?: string | string[] },
+  params: {
+    date?: string | string[];
+    from?: string | string[];
+    via?: string | string[];
+  },
 ) {
   const today = isoDateInTimezone(new Date(), timezoneName);
   const date = readDate(params.date) ?? today;
@@ -181,7 +186,10 @@ async function renderForm(
             returnTo={
               params.from === "progress"
                 ? {
-                    href: `/home/progress/${completion.id}`,
+                    href: recordHref(
+                      completion.id,
+                      readRecordOrigin(params.via, params.date),
+                    ),
                     label: "Back to the record",
                   }
                 : params.from === "session" && completion.planSessionId !== null
