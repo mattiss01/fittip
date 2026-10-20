@@ -394,8 +394,8 @@ describe("Roadmap", () => {
     ).toEqual([
       ROADMAP_COPY.rewriteAction,
       ROADMAP_COPY.changeWithCoachAction,
-      ROADMAP_COPY.createRoadmapAction,
       ROADMAP_COPY.deleteAction,
+      ROADMAP_COPY.createRoadmapAction,
     ]);
 
     fireEvent.click(
@@ -472,7 +472,7 @@ describe("Roadmap", () => {
       within(openActions())
         .getAllByRole("listitem")
         .map((item) => item.textContent),
-    ).toEqual([ROADMAP_COPY.createRoadmapAction, ROADMAP_COPY.deleteAction]);
+    ).toEqual([ROADMAP_COPY.deleteAction, ROADMAP_COPY.createRoadmapAction]);
 
     fireEvent.click(
       within(notice).getByRole("button", {

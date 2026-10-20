@@ -28,7 +28,8 @@ type View = "create" | "change" | "fresh" | "write" | "rewrite" | "delete";
  *
  * It is drawn in four places. Beside the title of the roadmap in force it is
  * ⋯, a list of what can be done with it: edit it by hand (ADR-030), edit it
- * with the coach, delete it (ADR-036), or create a new one. Delete asks first,
+ * with the coach, delete it (ADR-036), or create a new one, in the
+ * owner's order. Delete asks first,
  * in the middle of the screen, as a session's does. Once the roadmap has ended it is
  * "Create a new roadmap", above the roadmap and again below it. On a due
  * review it is "Edit with Coach" and opens that form directly; and while there
@@ -113,7 +114,8 @@ export function RoadmapNew({
         },
       },
       rewrite: { idempotencyKey: writeKey, setPending, close },
-      // The delete uses no key either: it answers to the head.
+      // The delete sends no key, like the writes: it answers to the head.
+      // The session is for the pending lock and the close.
       delete: { idempotencyKey: writeKey, setPending, close },
     };
   }, []);
@@ -154,16 +156,6 @@ export function RoadmapNew({
                   {ROADMAP_CONTROL_COPY.changeWithCoachAction}
                 </MenuItem>
               )}
-              {canCreate ? (
-                <MenuItem
-                  onSelect={() => {
-                    close();
-                    open("create");
-                  }}
-                >
-                  {ROADMAP_CONTROL_COPY.createRoadmapAction}
-                </MenuItem>
-              ) : null}
               {remove === null ? null : (
                 <MenuItem
                   danger
@@ -175,6 +167,16 @@ export function RoadmapNew({
                   {ROADMAP_CONTROL_COPY.deleteAction}
                 </MenuItem>
               )}
+              {canCreate ? (
+                <MenuItem
+                  onSelect={() => {
+                    close();
+                    open("create");
+                  }}
+                >
+                  {ROADMAP_CONTROL_COPY.createRoadmapAction}
+                </MenuItem>
+              ) : null}
             </>
           )}
         </MoreMenu>

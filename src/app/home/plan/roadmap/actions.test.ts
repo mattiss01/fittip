@@ -400,8 +400,6 @@ describe("roadmap server actions", () => {
     });
   });
 
-  // ADR-027. The form says which roadmap and which phase; that the phase has
-  // ended is the database's to decide.
   describe("delete", () => {
     const remove = (values: Record<string, string>) =>
       deleteRoadmapAction(INITIAL_ROADMAP_ACTION_STATE, form(values));
@@ -439,6 +437,8 @@ describe("roadmap server actions", () => {
     });
   });
 
+  // ADR-027. The form says which roadmap and which phase; that the phase has
+  // ended is the database's to decide.
   describe("review", () => {
     const review = (values: Record<string, string>) =>
       setRoadmapReviewedAction(
