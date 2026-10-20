@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { RoadmapComposer } from "./roadmap-composer";
+import { RoadmapDelete } from "./roadmap-delete";
 import { RoadmapDetail } from "./roadmap-detail";
 import { RoadmapLandingFocus } from "./roadmap-landing-focus";
 import { RoadmapOutcomeNotice } from "./roadmap-outcome";
@@ -71,6 +72,7 @@ function sheetTitleIds(prefix: string) {
     fresh: `${prefix}-fresh-title`,
     write: `${prefix}-write-title`,
     rewrite: `${prefix}-rewrite-title`,
+    delete: `${prefix}-delete-title`,
   };
 }
 
@@ -245,6 +247,12 @@ export function RoadmapScreen({ state }: { state: RoadmapScreenState }) {
                     <RoadmapWrite
                       state={state}
                       headingId={ACTIONS_SHEET_TITLE_IDS.write}
+                    />
+                  }
+                  remove={
+                    <RoadmapDelete
+                      expectedHeadRevision={state.head.revision}
+                      headingId={ACTIONS_SHEET_TITLE_IDS.delete}
                     />
                   }
                 />

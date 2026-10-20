@@ -63,6 +63,13 @@ export const ROADMAP_CONTROL_COPY = {
   /* Editing the roadmap in force (ADR-030): the writer's form, opened on it,
      with what has ended locked. */
   rewriteAction: "Edit roadmap",
+  /* Deleting it from ⋯ (owner, 19 Oct 2026: erased completely, ADR-036). */
+  deleteAction: "Delete roadmap",
+  deleteTitle: "Delete this roadmap?",
+  deleteDetail:
+    "It goes for good, with its ticks and reviews and every proposal. Your plan, logs and goals stay. There is no undo.",
+  deleteConfirm: "Delete",
+  deleteKeep: "Keep",
   rewriteTitle: "Edit your roadmap",
   rewriteSupport:
     "Saving changes your roadmap now. Ticks stay on milestones whose title and date you keep.",
@@ -251,6 +258,7 @@ export const ROADMAP_CONTROL_COPY = {
     edited: "Saved as a new proposal. Review it below.",
     written: "Saved. This is your roadmap now.",
     rewritten: "Saved. Your roadmap is changed.",
+    deleted: "Roadmap deleted.",
     /* "Ask for another" after its decline (owner, 14 Oct 2026). */
     askAgainFailed:
       "The proposal was declined, but the coach could not prepare another. Ask for a new roadmap below.",

@@ -38,6 +38,7 @@ vi.mock("@/app/home/plan/roadmap/actions", () => ({
   editRoadmapAction: vi.fn(),
   writeRoadmapAction: vi.fn(),
   rewriteRoadmapAction: vi.fn(),
+  deleteRoadmapAction: vi.fn(),
   askAgainRoadmapAction: vi.fn(),
   setMilestoneReachedAction: vi.fn(),
   setRoadmapReviewedAction: vi.fn(),
@@ -394,6 +395,7 @@ describe("Roadmap", () => {
       ROADMAP_COPY.rewriteAction,
       ROADMAP_COPY.changeWithCoachAction,
       ROADMAP_COPY.createRoadmapAction,
+      ROADMAP_COPY.deleteAction,
     ]);
 
     fireEvent.click(
@@ -410,6 +412,37 @@ describe("Roadmap", () => {
     // Nothing is asked for until a way is chosen.
     expect(document.querySelector("[data-roadmap-compose]")).toBeNull();
     expect(document.querySelector("[data-roadmap-write]")).toBeNull();
+  });
+
+  // ADR-036: deleting asks first, in the middle of the screen, and answers to
+  // the head this page read.
+  it("asks before deleting the roadmap, against the head it read", async () => {
+    getHead.mockResolvedValue({ revision: 3, currentVersionId: "v" });
+    listVersions.mockResolvedValue([version(1)]);
+
+    render(await RoadmapPage());
+    openActions();
+    fireEvent.click(
+      screen.getByRole("button", { name: ROADMAP_COPY.deleteAction }),
+    );
+
+    const question = screen.getByRole("dialog", {
+      name: ROADMAP_COPY.deleteTitle,
+    });
+    expect(within(question).getByText(ROADMAP_COPY.deleteDetail)).toBeTruthy();
+    expect(
+      (
+        question.querySelector(
+          'input[name="expectedHeadRevision"]',
+        ) as HTMLInputElement
+      ).value,
+    ).toBe("3");
+    fireEvent.click(
+      within(question).getByRole("button", { name: ROADMAP_COPY.deleteKeep }),
+    );
+    expect(
+      screen.queryByRole("dialog", { name: ROADMAP_COPY.deleteTitle }),
+    ).toBeNull();
   });
 
   // Owner, 19 Oct 2026: a roadmap whose last day has passed says so, and
@@ -439,7 +472,7 @@ describe("Roadmap", () => {
       within(openActions())
         .getAllByRole("listitem")
         .map((item) => item.textContent),
-    ).toEqual([ROADMAP_COPY.createRoadmapAction]);
+    ).toEqual([ROADMAP_COPY.createRoadmapAction, ROADMAP_COPY.deleteAction]);
 
     fireEvent.click(
       within(notice).getByRole("button", {

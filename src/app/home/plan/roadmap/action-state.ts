@@ -21,6 +21,8 @@ export type RoadmapActionStatus =
   | "written"
   /** The roadmap in force was edited by hand, in force at once (ADR-030). */
   | "rewritten"
+  /** The roadmap was deleted, all of it (ADR-036). */
+  | "deleted"
   /** A milestone was marked reached, or its mark taken back. */
   | "marked"
   /** A due review was marked reviewed. */

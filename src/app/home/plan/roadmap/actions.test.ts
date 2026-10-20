@@ -56,6 +56,7 @@ import {
   acceptRoadmapAction,
   askAgainRoadmapAction,
   declineRoadmapAction,
+  deleteRoadmapAction,
   editRoadmapAction,
   generateRoadmapAction,
   rewriteRoadmapAction,
@@ -105,6 +106,7 @@ const setMilestoneReached = vi.fn();
 const setReviewed = vi.fn();
 const writeRoadmap = vi.fn();
 const editRoadmap = vi.fn();
+const deleteRoadmap = vi.fn();
 const getCurrentVersion = vi.fn();
 
 describe("roadmap server actions", () => {
@@ -139,6 +141,7 @@ describe("roadmap server actions", () => {
       setReviewed,
       writeRoadmap,
       editRoadmap,
+      deleteRoadmap,
       getCurrentVersion,
     });
     writeRoadmap.mockResolvedValue({
@@ -399,6 +402,43 @@ describe("roadmap server actions", () => {
 
   // ADR-027. The form says which roadmap and which phase; that the phase has
   // ended is the database's to decide.
+  describe("delete", () => {
+    const remove = (values: Record<string, string>) =>
+      deleteRoadmapAction(INITIAL_ROADMAP_ACTION_STATE, form(values));
+
+    it("deletes at the head the owner read and invalidates the roadmap and the Plan", async () => {
+      deleteRoadmap.mockResolvedValue("deleted");
+
+      const result = await remove({ expectedHeadRevision: "2" });
+
+      expect(result).toMatchObject({
+        status: "deleted",
+        message: OUTCOMES.deleted,
+      });
+      expect(deleteRoadmap).toHaveBeenCalledWith(2);
+      expect(revalidatePathMock).toHaveBeenCalledWith("/home/plan/roadmap");
+      expect(revalidatePathMock).toHaveBeenCalledWith("/home/plan");
+    });
+
+    it("refuses a head that is not a revision before touching the database", async () => {
+      const result = await remove({ expectedHeadRevision: "two" });
+
+      expect(result.status).toBe("validation");
+      expect(deleteRoadmap).not.toHaveBeenCalled();
+    });
+
+    it("says the roadmap changed when the head moved", async () => {
+      deleteRoadmap.mockRejectedValue(new RoadmapConflictError("stale"));
+
+      const result = await remove({ expectedHeadRevision: "2" });
+
+      expect(result).toMatchObject({
+        status: "conflict",
+        message: OUTCOMES.stale,
+      });
+    });
+  });
+
   describe("review", () => {
     const review = (values: Record<string, string>) =>
       setRoadmapReviewedAction(
