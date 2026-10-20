@@ -464,26 +464,6 @@ export const ROADMAP_COPY = {
    * "Where this is going.".
    */
   routeTitle: "Roadmap",
-  /**
-   * What an expired proposal says.
-   *
-   * M3-11 marked proposals built on deleted training records `expired`, and no
-   * ticket can make one acceptable again. It is the one state on this surface
-   * that still offers nothing, and it says so outright rather than leaving the
-   * owner to find the missing control.
-   */
-  proposalExpired:
-    "This proposal can no longer be accepted. It stays here, unchanged, with everything it was built on.",
-  /**
-   * An undecided proposal that is not the open one.
-   *
-   * An owner edit supersedes its source without deciding it, so the source
-   * carries no decision and is still not what awaits one. Labelling it
-   * "Awaiting your decision" would put two waiting records on the screen, one
-   * of which nothing will ever decide.
-   */
-  proposalSuperseded:
-    "A later proposal replaced this one before it was decided. It stays here, unchanged.",
   /** The state chip on each proposal record. */
   proposalStateLabels: {
     open: "Awaiting your decision",
