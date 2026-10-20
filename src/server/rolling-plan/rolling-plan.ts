@@ -167,6 +167,20 @@ export type RollingPlanSlice = {
 };
 
 /**
+ * A session as the Plan's week cards show it (owner, 20 Oct 2026). Its
+ * activities, intent and note are only shown on the session's own page,
+ * which reads them itself, so the Plan's forty weeks are read without them.
+ */
+export type RollingPlanSessionCard = Omit<
+  RollingPlanSession,
+  "activities" | "intent" | "note"
+>;
+
+export type RollingPlanCardSlice = Omit<RollingPlanSlice, "sessions"> & {
+  sessions: RollingPlanSessionCard[];
+};
+
+/**
  * What one series operation did to the occurrences already on the Plan.
  * `completedKept` is the count an occurrence that already carries a completion
  * saved from removal (M3-15A), which the owner has to be told about because
@@ -209,6 +223,7 @@ export type ParsedPlanSlice = { startDate: string; endDate: string };
 
 export interface RollingPlanAdapter {
   getPlanSlice(input: ParsedPlanSlice): Promise<RollingPlanSlice>;
+  getPlanCards(input: ParsedPlanSlice): Promise<RollingPlanCardSlice>;
   listSeries(): Promise<RollingPlanSeries[]>;
   applyChangeSet(
     changeSet: RollingPlanChangeSet,
@@ -310,6 +325,13 @@ export class RollingPlan {
     const end = readIsoDate(endDate);
     if (end < start) throw new RollingPlanValidationError();
     return await this.adapter.getPlanSlice({ startDate: start, endDate: end });
+  }
+
+  async getPlanCards(startDate: unknown, endDate: unknown) {
+    const start = readIsoDate(startDate);
+    const end = readIsoDate(endDate);
+    if (end < start) throw new RollingPlanValidationError();
+    return await this.adapter.getPlanCards({ startDate: start, endDate: end });
   }
 
   async listSeries() {

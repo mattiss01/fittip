@@ -35,7 +35,7 @@ import {
   INITIAL_PLAN_ACTION_STATE,
   type PlanActionState,
 } from "./action-state";
-import { PlanManager, type PlanSessionView } from "./plan-manager";
+import { PlanManager, type PlanCardView } from "./plan-manager";
 
 // A Wednesday, so the first week has two days before today.
 const TODAY = "2026-08-19";
@@ -49,7 +49,7 @@ const LAST = DATES[13];
 const action = vi.fn();
 
 function manager(
-  sessions: PlanSessionView[] = [],
+  sessions: PlanCardView[] = [],
   extra: Partial<Parameters<typeof PlanManager>[0]> = {},
 ) {
   return (
@@ -67,7 +67,7 @@ function manager(
 
 function renderManager(
   state: PlanActionState = INITIAL_PLAN_ACTION_STATE,
-  sessions: PlanSessionView[] = [],
+  sessions: PlanCardView[] = [],
   extra: Partial<Parameters<typeof PlanManager>[0]> = {},
 ) {
   useActionStateMock.mockReturnValue([state, action, false]);
@@ -87,21 +87,16 @@ function createTitleInput() {
   return document.querySelector<HTMLInputElement>("#create-session-title")!;
 }
 
-function session(overrides: Partial<PlanSessionView> = {}): PlanSessionView {
+function session(overrides: Partial<PlanCardView> = {}): PlanCardView {
   return {
     id: "7f000000-0000-4000-8000-000000000001",
     localDate: TODAY,
     position: 0,
     title: "Aerobic run",
     sport: "Running",
-    intent: null,
     expectedDurationMinutes: 60,
-    note: null,
     status: "active",
-    activities: [],
     seriesId: null,
-    occurrenceDate: null,
-    hasDiverged: false,
     ...overrides,
   };
 }
@@ -706,10 +701,7 @@ describe("PlanManager", () => {
 
   it("opens a session from a compact card that carries no verbs", () => {
     renderManager(INITIAL_PLAN_ACTION_STATE, [
-      session({
-        intent: "Easy, conversational.",
-        seriesId: "7f000000-0000-4000-8000-0000000000b1",
-      }),
+      session({ seriesId: "7f000000-0000-4000-8000-0000000000b1" }),
     ]);
     const card = document.querySelector<HTMLElement>("[data-session-card]")!;
 
@@ -720,7 +712,6 @@ describe("PlanManager", () => {
     expect(card.querySelector("button, summary, form")).toBeNull();
     expect(card.textContent).toContain("60 min");
     expect(card.textContent).toContain("Recurring");
-    expect(card.textContent).not.toContain("Easy, conversational.");
   });
 
   it("opens a session from before today by its day", () => {

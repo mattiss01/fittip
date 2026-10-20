@@ -3,7 +3,7 @@ import "server-only";
 import { redirect } from "next/navigation";
 
 import type { PlanSeriesView } from "./recurring-session-controls";
-import type { PlanSessionView } from "./session-view";
+import type { PlanCardView, PlanSessionView } from "./session-view";
 
 import { toActivityValue } from "@/lib/training/activity-value";
 import { CompletionAuthenticationError } from "@/server/repositories/completion-log-repository";
@@ -13,10 +13,12 @@ import { RollingPlanAuthenticationError } from "@/server/repositories/rolling-pl
 import {
   CoachCancellationAuthenticationError,
   createCoachCancellations,
+  type CoachCancellationSession,
 } from "@/server/repositories/coach-cancellation-repository";
 import type {
   RollingPlanSeries,
   RollingPlanSession,
+  RollingPlanSessionCard,
 } from "@/server/rolling-plan/rolling-plan";
 import { RoadmapAuthenticationError } from "@/server/roadmap/roadmap-phases";
 import { SessionActivityAuthenticationError } from "@/server/session-detail/open-session-activity-proposals";
@@ -37,6 +39,20 @@ export function toSessionView(session: RollingPlanSession): PlanSessionView {
     seriesId: session.seriesId,
     occurrenceDate: session.occurrenceDate,
     hasDiverged: session.hasDiverged,
+  };
+}
+
+/** A week card's share of a session; its log is added beside it. */
+export function toCardView(session: RollingPlanSessionCard): PlanCardView {
+  return {
+    id: session.id,
+    localDate: session.localDate,
+    position: session.position,
+    title: session.title,
+    sport: session.sport,
+    expectedDurationMinutes: session.expectedDurationMinutes ?? null,
+    status: session.status,
+    seriesId: session.seriesId,
   };
 }
 
@@ -64,7 +80,7 @@ export function toSeriesView(series: RollingPlanSeries): PlanSeriesView {
  * they share the day. Reads nothing when nothing in it is cancelled.
  */
 export async function readReplacedByCoach(
-  sessions: readonly RollingPlanSession[],
+  sessions: readonly CoachCancellationSession[],
 ): Promise<Set<string>> {
   if (!sessions.some((session) => session.status === "cancelled")) {
     return new Set();

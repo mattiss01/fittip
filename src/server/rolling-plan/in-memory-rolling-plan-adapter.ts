@@ -15,6 +15,7 @@ import {
   type ParsedPlanSlice,
   type RollingPlanActivity,
   type RollingPlanAdapter,
+  type RollingPlanCardSlice,
   type RollingPlanChangeSet,
   type RollingPlanChangeReceipt,
   type RollingPlanMaterializationReceipt,
@@ -104,6 +105,19 @@ export class InMemoryRollingPlanAdapter implements RollingPlanAdapter {
       recoveryDates: [...this.recoveryDates]
         .filter((date) => date >= startDate && date <= endDate)
         .toSorted(),
+    };
+  }
+
+  async getPlanCards(input: ParsedPlanSlice): Promise<RollingPlanCardSlice> {
+    const slice = await this.getPlanSlice(input);
+    return {
+      ...slice,
+      sessions: slice.sessions.map(({ activities, intent, note, ...card }) => {
+        void activities;
+        void intent;
+        void note;
+        return card;
+      }),
     };
   }
 

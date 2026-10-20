@@ -57,6 +57,20 @@ export function registerRollingPlanContract(
       await plan.applyChangeSet(changeSet([add(sessionId, day(1), 0)]), 0);
 
       const added = await plan.getPlanSlice(day(1), day(1));
+      // The Plan's cards are the same read without what only a session's
+      // own page shows.
+      const cards = await plan.getPlanCards(day(1), day(1));
+      expect(cards).toEqual({
+        ...added,
+        sessions: added.sessions.map(
+          ({ activities, intent, note, ...card }) => {
+            void activities;
+            void intent;
+            void note;
+            return card;
+          },
+        ),
+      });
       expect(added).toMatchObject({
         revision: 1,
         recoveryDates: [],

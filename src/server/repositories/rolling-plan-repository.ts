@@ -21,6 +21,7 @@ import {
   type ParsedPlanSlice,
   type RollingPlanActivity,
   type RollingPlanAdapter,
+  type RollingPlanCardSlice,
   type RollingPlanChangeReceipt,
   type RollingPlanChangeSet,
   type RollingPlanMaterializationReceipt,
@@ -28,6 +29,7 @@ import {
   type RollingPlanSeries,
   type RollingPlanSeriesActivityInput,
   type RollingPlanSession,
+  type RollingPlanSessionCard,
   type RollingPlanSkippedOccurrence,
   type RollingPlanSlice,
 } from "@/server/rolling-plan/rolling-plan";
@@ -81,6 +83,54 @@ export class PostgresRollingPlanAdapter implements RollingPlanAdapter {
       );
     }
     return parseSliceReceipt(data);
+  }
+
+  /**
+   * The Plan's cards: the slice's sessions without what only a session's own
+   * page shows. Still one snapshot, as the slice function is: one request,
+   * which PostgREST answers with one statement, so the revision and the rows
+   * cannot come from either side of a change. The sessions and recovery days
+   * are embedded under the owner's plan, so the API's row limit counts the
+   * one plan, not the sessions.
+   */
+  async getPlanCards({
+    startDate,
+    endDate,
+  }: ParsedPlanSlice): Promise<RollingPlanCardSlice> {
+    const userId = await this.getVerifiedUserId();
+    const { data, error } = await this.client
+      .from("rolling_plans")
+      .select(
+        `id, revision,
+        rolling_plan_sessions (
+          id, local_date, position, title, sport, expected_duration_minutes,
+          status, cancelled_at, series_id, occurrence_date, has_diverged
+        ),
+        rolling_plan_recovery_days ( local_date )`,
+      )
+      .eq("user_id", userId)
+      .gte("rolling_plan_sessions.local_date", startDate)
+      .lte("rolling_plan_sessions.local_date", endDate)
+      .gte("rolling_plan_recovery_days.local_date", startDate)
+      .lte("rolling_plan_recovery_days.local_date", endDate)
+      .order("local_date", { referencedTable: "rolling_plan_sessions" })
+      .order("position", { referencedTable: "rolling_plan_sessions" })
+      .order("id", { referencedTable: "rolling_plan_sessions" })
+      .order("local_date", { referencedTable: "rolling_plan_recovery_days" })
+      .maybeSingle();
+    if (error) throw new RollingPlanPersistenceError();
+    // No plan row yet: nothing has ever been planned.
+    if (data === null) {
+      return { planId: null, revision: 0, sessions: [], recoveryDates: [] };
+    }
+    return {
+      planId: data.id,
+      revision: data.revision,
+      sessions: data.rolling_plan_sessions.map(parseCardRow),
+      recoveryDates: data.rolling_plan_recovery_days.map(
+        (row) => row.local_date,
+      ),
+    };
   }
 
   async listSeries(): Promise<RollingPlanSeries[]> {
@@ -339,6 +389,42 @@ function parseSession(value: unknown): RollingPlanSession {
     occurrenceDate: session.occurrenceDate,
     hasDiverged: session.hasDiverged,
     activities: session.activities.map(parseActivity),
+  };
+}
+
+function parseCardRow(row: {
+  id: string;
+  local_date: string;
+  position: number;
+  title: string;
+  sport: string;
+  expected_duration_minutes: number | null;
+  status: string;
+  cancelled_at: string | null;
+  series_id: string | null;
+  occurrence_date: string | null;
+  has_diverged: boolean;
+}): RollingPlanSessionCard {
+  if (
+    !(row.status === "active" || row.status === "cancelled") ||
+    (row.series_id === null) !== (row.occurrence_date === null)
+  ) {
+    throw new RollingPlanPersistenceError();
+  }
+  return {
+    id: row.id,
+    localDate: row.local_date,
+    position: row.position,
+    title: row.title,
+    sport: row.sport,
+    ...(row.expected_duration_minutes === null
+      ? {}
+      : { expectedDurationMinutes: row.expected_duration_minutes }),
+    status: row.status,
+    cancelledAt: row.cancelled_at,
+    seriesId: row.series_id,
+    occurrenceDate: row.occurrence_date,
+    hasDiverged: row.has_diverged,
   };
 }
 
