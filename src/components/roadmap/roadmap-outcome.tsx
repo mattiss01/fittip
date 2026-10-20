@@ -37,6 +37,7 @@ const LANDED = new Set([
   "edited",
   "written",
   "rewritten",
+  "deleted",
 ]);
 
 let outcome: RoadmapActionState | null = null;

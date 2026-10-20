@@ -17,10 +17,10 @@ import { ROADMAP_CONTROL_COPY } from "@/lib/roadmap/roadmap-control-copy";
 
 /**
  * What the sheet shows: the choice of who writes a new roadmap, the two ways
- * to a coach's proposal (ADR-028), and writing or editing one by hand
- * (ADR-029, ADR-030).
+ * to a coach's proposal (ADR-028), writing or editing one by hand (ADR-029,
+ * ADR-030), and the question before it is deleted (ADR-036).
  */
-type View = "create" | "change" | "fresh" | "write" | "rewrite";
+type View = "create" | "change" | "fresh" | "write" | "rewrite" | "delete";
 
 /**
  * The roadmap's controls and the one sheet they open (owner, 13 and 19 Oct
@@ -28,7 +28,9 @@ type View = "create" | "change" | "fresh" | "write" | "rewrite";
  *
  * It is drawn in four places. Beside the title of the roadmap in force it is
  * ⋯, a list of what can be done with it: edit it by hand (ADR-030), edit it
- * with the coach, or create a new one. Once the roadmap has ended it is
+ * with the coach, delete it (ADR-036), or create a new one, in the
+ * owner's order. Delete asks first,
+ * in the middle of the screen, as a session's does. Once the roadmap has ended it is
  * "Create a new roadmap", above the roadmap and again below it. On a due
  * review it is "Edit with Coach" and opens that form directly; and while there
  * is no roadmap, beside the coach's form, it is "Write it yourself".
@@ -51,6 +53,7 @@ export function RoadmapNew({
   fresh = null,
   write = null,
   rewrite = null,
+  remove = null,
 }: {
   /**
    * ⋯ beside the roadmap's title; "Create a new roadmap" once it has ended;
@@ -67,6 +70,8 @@ export function RoadmapNew({
   write?: ReactNode;
   /** The form that edits the roadmap in force (ADR-030). */
   rewrite?: ReactNode;
+  /** The question before the roadmap is deleted (ADR-036). */
+  remove?: ReactNode;
 }) {
   const [view, setView] = useState<View | null>(null);
   // Reached through the choice of who writes it, so "Back" returns there.
@@ -90,7 +95,7 @@ export function RoadmapNew({
   const freshKey = useRef<string | null>(null);
   const writeKey = useRef<string | null>(null);
   const sessions = useMemo<
-    Record<"change" | "fresh" | "write" | "rewrite", RoadmapComposeSession>
+    Record<Exclude<View, "create">, RoadmapComposeSession>
   >(() => {
     const close = () => setView(null);
     return {
@@ -109,6 +114,9 @@ export function RoadmapNew({
         },
       },
       rewrite: { idempotencyKey: writeKey, setPending, close },
+      // The delete sends no key, like the writes: it answers to the head.
+      // The session is for the pending lock and the close.
+      delete: { idempotencyKey: writeKey, setPending, close },
     };
   }, []);
 
@@ -146,6 +154,17 @@ export function RoadmapNew({
                   }}
                 >
                   {ROADMAP_CONTROL_COPY.changeWithCoachAction}
+                </MenuItem>
+              )}
+              {remove === null ? null : (
+                <MenuItem
+                  danger
+                  onSelect={() => {
+                    close();
+                    open("delete");
+                  }}
+                >
+                  {ROADMAP_CONTROL_COPY.deleteAction}
                 </MenuItem>
               )}
               {canCreate ? (
@@ -190,7 +209,19 @@ export function RoadmapNew({
           {ROADMAP_CONTROL_COPY.writeAction}
         </button>
       )}
-      {view === null ? null : (
+      {view === "delete" ? (
+        <SheetLayer
+          view="roadmap-delete"
+          placement="center"
+          labelledBy={titleIds.delete}
+          locked={pending}
+          onClose={() => setView(null)}
+        >
+          <RoadmapComposeSessionContext.Provider value={sessions[view]}>
+            {remove}
+          </RoadmapComposeSessionContext.Provider>
+        </SheetLayer>
+      ) : view === null ? null : (
         <SheetLayer
           view={`roadmap-${view}`}
           labelledBy={titleIds[view]}

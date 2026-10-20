@@ -610,6 +610,16 @@ export class RoadmapRepository {
   }
 
   /**
+   * Erase the roadmap, every version, proposal and request of it, with its
+   * ticks and reviews (ADR-036), answering to the version the owner was
+   * shown. With no roadmap in force the database reports a replay and
+   * touches nothing, so the transport retry below is safe here too.
+   */
+  async deleteRoadmap(versionId: string): Promise<void> {
+    await this.call("delete_roadmap", { p_version_id: versionId });
+  }
+
+  /**
    * One place that runs an ADR-015 function and maps its failure.
    *
    * These deliberately keep the client's default transport retry, unlike
@@ -670,7 +680,8 @@ type RoadmapFunctionName =
   | "apply_roadmap_proposal_change"
   | "accept_roadmap_proposal"
   | "write_roadmap"
-  | "edit_roadmap";
+  | "edit_roadmap"
+  | "delete_roadmap";
 
 type RoadmapFunctionArgs<Name extends RoadmapFunctionName> =
   Database["public"]["Functions"][Name]["Args"];

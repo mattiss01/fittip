@@ -2649,6 +2649,7 @@ export type Database = {
         Args: { p_decision: string; p_proposal_id: string };
         Returns: string;
       };
+      delete_roadmap: { Args: { p_version_id: string }; Returns: string };
       discard_plan_proposal: {
         Args: { p_proposal_id: string };
         Returns: Database["public"]["CompositeTypes"]["plan_review_receipt"];

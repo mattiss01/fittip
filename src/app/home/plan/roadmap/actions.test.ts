@@ -56,6 +56,7 @@ import {
   acceptRoadmapAction,
   askAgainRoadmapAction,
   declineRoadmapAction,
+  deleteRoadmapAction,
   editRoadmapAction,
   generateRoadmapAction,
   rewriteRoadmapAction,
@@ -105,6 +106,7 @@ const setMilestoneReached = vi.fn();
 const setReviewed = vi.fn();
 const writeRoadmap = vi.fn();
 const editRoadmap = vi.fn();
+const deleteRoadmap = vi.fn();
 const getCurrentVersion = vi.fn();
 
 describe("roadmap server actions", () => {
@@ -139,6 +141,7 @@ describe("roadmap server actions", () => {
       setReviewed,
       writeRoadmap,
       editRoadmap,
+      deleteRoadmap,
       getCurrentVersion,
     });
     writeRoadmap.mockResolvedValue({
@@ -394,6 +397,43 @@ describe("roadmap server actions", () => {
 
       expect(result.status).toBe("validation");
       expect(generateMock).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("delete", () => {
+    const remove = (values: Record<string, string>) =>
+      deleteRoadmapAction(INITIAL_ROADMAP_ACTION_STATE, form(values));
+
+    it("deletes the version the owner was shown and invalidates the roadmap and the Plan", async () => {
+      deleteRoadmap.mockResolvedValue(undefined);
+
+      const result = await remove({ versionId: VERSION_ID });
+
+      expect(result).toMatchObject({
+        status: "deleted",
+        message: OUTCOMES.deleted,
+      });
+      expect(deleteRoadmap).toHaveBeenCalledWith(VERSION_ID);
+      expect(revalidatePathMock).toHaveBeenCalledWith("/home/plan/roadmap");
+      expect(revalidatePathMock).toHaveBeenCalledWith("/home/plan");
+    });
+
+    it("refuses a malformed version before touching the database", async () => {
+      const result = await remove({ versionId: "not-a-uuid" });
+
+      expect(result.status).toBe("validation");
+      expect(deleteRoadmap).not.toHaveBeenCalled();
+    });
+
+    it("says the roadmap changed when another is in force", async () => {
+      deleteRoadmap.mockRejectedValue(new RoadmapConflictError("stale"));
+
+      const result = await remove({ versionId: VERSION_ID });
+
+      expect(result).toMatchObject({
+        status: "conflict",
+        message: OUTCOMES.stale,
+      });
     });
   });
 

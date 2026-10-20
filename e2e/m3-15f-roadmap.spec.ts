@@ -432,6 +432,29 @@ test.describe("M3-15F roadmap generation", () => {
       await expect(tenKm).toHaveAttribute("data-milestone-reached", "false");
       await expectNoHorizontalOverflow(page);
 
+      // ---- Deleted, all of it (owner, 19 Oct 2026; ADR-036): it asks
+      // ---- first, and Keep keeps it. ----
+      await actions.click();
+      await page.getByRole("button", { name: "Delete roadmap" }).click();
+      let question = page.getByRole("dialog", {
+        name: "Delete this roadmap?",
+      });
+      await expect(question).toBeVisible();
+      await expectNoHorizontalOverflow(page);
+      await question.getByRole("button", { name: "Keep" }).click();
+      await expect(page.locator('[data-roadmap-version="7"]')).toBeVisible();
+      await actions.click();
+      await page.getByRole("button", { name: "Delete roadmap" }).click();
+      question = page.getByRole("dialog", { name: "Delete this roadmap?" });
+      await question.getByRole("button", { name: "Delete" }).click();
+      await expectOutcome(page, "Roadmap deleted.");
+      await expect(page.locator("[data-roadmap-current]")).toHaveCount(0);
+      await expect(page.locator("[data-roadmap-compose]")).toBeVisible();
+      // It is gone from the database, not hidden by the page.
+      await page.reload();
+      await expect(page.locator("[data-roadmap-current]")).toHaveCount(0);
+      await expect(actions).toHaveCount(0);
+
       expect(pageErrors, pageErrors.map(String).join("\n")).toHaveLength(0);
       await testInfo.attach("roadmap-final", {
         body: await page.screenshot({ fullPage: true }),

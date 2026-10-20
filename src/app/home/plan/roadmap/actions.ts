@@ -575,6 +575,29 @@ export async function rewriteRoadmapAction(
 }
 
 /**
+ * Delete the roadmap, all of it (owner, 19 Oct 2026; ADR-036).
+ *
+ * Only the version the owner was shown comes from the form, and only ever as
+ * a stale value: the database compares it with the one in force under the
+ * roadmap lock. Which rows go is the database's to decide, held to the caller.
+ */
+export async function deleteRoadmapAction(
+  previous: RoadmapActionState,
+  formData: FormData,
+): Promise<RoadmapActionState> {
+  const submission = previous.submission + 1;
+  try {
+    const roadmaps = await createRoadmapRepository();
+    await roadmaps.deleteRoadmap(
+      parseRoadmapVersionId(formData.get("versionId")),
+    );
+    return landed("deleted", submission);
+  } catch (error) {
+    return toActionState(error, submission);
+  }
+}
+
+/**
  * Mark a milestone of the roadmap in force reached, or take the mark back
  * (ADR-026).
  *
@@ -678,13 +701,14 @@ type Landed =
   | "declined"
   | "edited"
   | "written"
-  | "rewritten";
+  | "rewritten"
+  | "deleted";
 
 function landed(status: Landed, submission: number): RoadmapActionState {
   revalidatePath("/home/plan/roadmap");
-  // A roadmap written or edited by hand is in force at once, and the Plan
-  // reads it.
-  if (status === "written" || status === "rewritten") {
+  // A roadmap written or edited by hand is in force at once, and a deleted
+  // one is gone at once; the Plan reads it, and its chip carries a dot.
+  if (status === "written" || status === "rewritten" || status === "deleted") {
     revalidatePath("/home/plan");
   }
   return { status, message: SUCCESS[status], submission };
@@ -697,6 +721,7 @@ const SUCCESS: Record<Landed, string> = {
   edited: OUTCOMES.edited,
   written: OUTCOMES.written,
   rewritten: OUTCOMES.rewritten,
+  deleted: OUTCOMES.deleted,
 };
 
 /**
