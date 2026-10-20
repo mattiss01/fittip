@@ -208,7 +208,14 @@ export function TodayDay({
                 >
                   <div className={styles.receiptHead}>
                     <OutcomeMark outcome={completion.outcome} />
-                    <h4>{completion.title ?? "Unplanned training"}</h4>
+                    <h4>
+                      <Link
+                        className={styles.cardLink}
+                        href={logHref(completion.id, date)}
+                      >
+                        {completion.title ?? "Unplanned training"}
+                      </Link>
+                    </h4>
                     <span
                       className={styles.stamp}
                       data-outcome={completion.outcome}
@@ -298,12 +305,17 @@ function SessionCard({
           <OutcomeMark outcome={session.completion.outcome} />
         )}
         {/* The title opens the session's own page, where every plan verb
-            lives now; its hit area covers the card, under the card's own
-            links, so Log and Edit log stay one tap. */}
+            lives now, or once logged the log's record (owner, 20 Oct 2026);
+            its hit area covers the card, under the card's own links, so Log
+            and Edit log stay one tap. */}
         <h4>
           <Link
             className={styles.cardLink}
-            href={sessionHref(session.id, { from: "today", date })}
+            href={
+              session.completion === null
+                ? sessionHref(session.id, { from: "today", date })
+                : logHref(session.completion.id, date)
+            }
           >
             {session.title}
           </Link>
@@ -367,6 +379,14 @@ function SessionCard({
       )}
     </li>
   );
+}
+
+/**
+ * A log opens its record on Progress, what was logged beside what was
+ * planned, and comes back to this day (owner, 20 Oct 2026).
+ */
+function logHref(completionId: string, date: string) {
+  return `/home/progress/${completionId}?from=today&date=${date}`;
 }
 
 function CompletionFacts({

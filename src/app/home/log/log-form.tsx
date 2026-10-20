@@ -30,7 +30,6 @@ import styles from "./log.module.css";
 
 import homeStyles from "../home.module.css";
 import { SaveToLibrary } from "../plan/saved/save-to-library";
-import { DeleteLog } from "./delete-log";
 import { DateField } from "@/components/date-field/date-field";
 import { SportInput } from "@/components/sports/sport-input";
 import type {
@@ -80,13 +79,6 @@ export type LogExistingView = {
   activities: LogRecordedActivityView[];
   /** The unplanned log a replaced one points at, if it points anywhere. */
   replacedById: string | null;
-  /**
-   * The planned session it answers, by the plan's name, which deleting it
-   * frees; null for unplanned training.
-   */
-  planned: string | null;
-  /** The planned sessions logged "Replaced" by this one, by name. */
-  replaces: string[];
   pain: boolean;
   illness: boolean;
   injury: boolean;
@@ -120,8 +112,6 @@ type Props = {
    * list, never from a URL the request carried.
    */
   returnTo?: { href: string; label: string };
-  /** Where deleting the log being edited leaves for (ADR-031). */
-  afterDelete?: string;
   /**
    * Unplanned training a replaced log may point at: this owner's, from a
    * week before the planned day to today, most recent first.
@@ -211,7 +201,6 @@ export function LogForm({
   today,
   returnDate,
   returnTo,
-  afterDelete,
   unplannedOptions = [],
   savedSessions = [],
   library = [],
@@ -595,7 +584,7 @@ export function LogForm({
   );
   const close = returnTo?.href ?? `/home/today?date=${returnDate}`;
 
-  const form = (
+  return (
     <form
       ref={formRef}
       className={styles.form}
@@ -1131,26 +1120,6 @@ export function LogForm({
         </section>
       ) : null}
     </form>
-  );
-  // A log being corrected can also be deleted, from its summary (ADR-031).
-  // Not beside a question: deleting is a decision about the whole log.
-  const deletion =
-    existing !== null && step === "summary" ? (
-      <DeleteLog
-        completionId={existing.id}
-        revision={existing.revision}
-        name={existing.title ?? "unplanned training"}
-        day={dayLabel(existing.actualLocalDate)}
-        leaveTo={afterDelete ?? `/home/today?date=${existing.actualLocalDate}`}
-        planned={existing.planned}
-        replaces={existing.replaces}
-      />
-    ) : null;
-  return (
-    <>
-      {form}
-      {deletion}
-    </>
   );
 
   function summaryRows(): [Step, string, string][] {

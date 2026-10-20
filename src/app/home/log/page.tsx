@@ -19,10 +19,7 @@ import { readMeasurementHistory } from "../plan/activities/measurement-history";
 import { readSavedSessionOptions } from "../plan/saved/session-options";
 import { isoDateInTimezone, shiftIsoDate } from "@/lib/date/local-date";
 import type { LogPlannedActivityView } from "./actual-activities";
-import {
-  replacesLabels,
-  type Completion,
-} from "@/server/completions/completion-log";
+import { type Completion } from "@/server/completions/completion-log";
 import {
   CompletionAuthenticationError,
   createCompletionLog,
@@ -194,7 +191,6 @@ async function renderForm(
                     }
                   : undefined
             }
-            afterDelete={afterDelete(params.from, completion)}
           />
         </>
       );
@@ -370,23 +366,6 @@ function Unavailable({
   );
 }
 
-/**
- * Where a delete leaves for: back where the log was opened from (owner,
- * 16 Oct 2026). From Progress that is the list, since the record's own page
- * goes with the log; from a Plan session, the session, which is free again;
- * otherwise the day on Today. `deleteLogAction` admits only these shapes.
- */
-function afterDelete(
-  from: string | string[] | undefined,
-  completion: Completion,
-): string {
-  if (from === "progress") return "/home/progress";
-  if (from === "session" && completion.planSessionId !== null) {
-    return `/home/plan/session/${completion.planSessionId}`;
-  }
-  return `/home/today?date=${completion.actualLocalDate}`;
-}
-
 function toExistingView(completion: Completion): LogExistingView {
   return {
     id: completion.id,
@@ -398,11 +377,6 @@ function toExistingView(completion: Completion): LogExistingView {
     note: completion.note ?? null,
     replacementDescription: completion.replacementDescription ?? null,
     replacedById: completion.replacedBy?.completionId ?? null,
-    planned:
-      completion.planSessionId === null
-        ? null
-        : (completion.plannedSnapshot?.title ?? "it answers"),
-    replaces: replacesLabels(completion).map((replaced) => replaced.label),
     title: completion.title ?? completion.plannedSnapshot?.title ?? null,
     sport: completion.sport ?? completion.plannedSnapshot?.sport ?? null,
     activities: completion.activities.map((activity) => ({

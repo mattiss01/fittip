@@ -800,10 +800,16 @@ function PlanSessionCard({
       <h3 className={w.cardTitle}>
         <Link
           className={w.cardLink}
-          href={sessionHref(
-            session.id,
-            past ? { date: session.localDate } : null,
-          )}
+          href={
+            // A logged session opens its log's record, logged beside
+            // planned (owner, 20 Oct 2026).
+            session.log
+              ? `/home/progress/${session.log.completionId}?from=plan`
+              : sessionHref(
+                  session.id,
+                  past ? { date: session.localDate } : null,
+                )
+          }
         >
           {session.title}
         </Link>

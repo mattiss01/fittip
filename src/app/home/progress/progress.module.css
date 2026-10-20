@@ -454,6 +454,19 @@
     transform 150ms var(--ease-out);
 }
 
+/* Edit log takes the row; Delete log sits beside it (owner, 20 Oct 2026). */
+.logActions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.logActions > .mainAction {
+  margin-top: 0;
+}
+
 .mainAction:active {
   background: var(--ember-dark);
   transform: scale(0.98);

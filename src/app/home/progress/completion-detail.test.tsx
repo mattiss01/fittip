@@ -1,4 +1,10 @@
-import { cleanup, render, screen, within } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const { createCompletionLogMock } = vi.hoisted(() => ({
@@ -12,6 +18,8 @@ vi.mock("@/server/repositories/completion-log-repository", async (original) => {
     >();
   return { ...actual, createCompletionLog: createCompletionLogMock };
 });
+
+vi.mock("../log/actions", () => ({ deleteLogAction: vi.fn() }));
 
 import CompletionPage from "./[id]/page";
 
@@ -161,6 +169,48 @@ describe("one completion", () => {
         .getByRole("link", { name: "Back to August 2026" })
         .getAttribute("href"),
     ).toBe("/home/progress?month=2026-08");
+  });
+
+  it("goes back to the day on Today it was opened from, and deletes to there", async () => {
+    getCompletion.mockResolvedValue(completion());
+
+    render(
+      await CompletionPage({
+        params: Promise.resolve({ id: COMPLETION_ID }),
+        searchParams: Promise.resolve({ from: "today", date: "2026-08-12" }),
+      }),
+    );
+
+    expect(
+      screen.getByRole("link", { name: "Back to Today" }).getAttribute("href"),
+    ).toBe("/home/today?date=2026-08-12");
+    // Beside Edit log, and asks first (owner, 20 Oct 2026; ADR-031).
+    fireEvent.click(screen.getByRole("button", { name: "Delete log" }));
+    const dialog = screen.getByRole("alertdialog", {
+      name: "Delete this log?",
+    });
+    expect(
+      dialog.querySelector<HTMLInputElement>('input[name="leaveTo"]')?.value,
+    ).toBe("/home/today?date=2026-08-12");
+  });
+
+  it("goes back to the Plan it was opened from, and deletes to the session", async () => {
+    getCompletion.mockResolvedValue(completion());
+
+    render(
+      await CompletionPage({
+        params: Promise.resolve({ id: COMPLETION_ID }),
+        searchParams: Promise.resolve({ from: "plan" }),
+      }),
+    );
+
+    expect(
+      screen.getByRole("link", { name: "Back to Plan" }).getAttribute("href"),
+    ).toBe("/home/plan");
+    fireEvent.click(screen.getByRole("button", { name: "Delete log" }));
+    expect(
+      document.querySelector<HTMLInputElement>('input[name="leaveTo"]')?.value,
+    ).toMatch(/^\/home\/plan\/session\/[0-9a-f-]{36}$/);
   });
 
   it("refuses an id that is not a UUID before it reads anything", async () => {
