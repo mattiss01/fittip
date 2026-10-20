@@ -118,6 +118,108 @@ describe("PostgresRollingPlanAdapter", () => {
     });
   });
 
+  it("reads the Plan's cards in one request, under the owner's plan", async () => {
+    const calls: [string, unknown[]][] = [];
+    const maybeSingle = vi.fn().mockResolvedValue({
+      data: {
+        id: "76000000-0000-4000-8000-000000000004",
+        revision: 3,
+        rolling_plan_sessions: [
+          {
+            id: SESSION_ID,
+            local_date: "2026-08-16",
+            position: 0,
+            title: "Run",
+            sport: "Running",
+            expected_duration_minutes: null,
+            status: "cancelled",
+            cancelled_at: "2026-08-15T10:00:00.000Z",
+            series_id: null,
+            occurrence_date: null,
+            has_diverged: false,
+          },
+        ],
+        rolling_plan_recovery_days: [{ local_date: "2026-08-17" }],
+      },
+      error: null,
+    });
+    const builder: Record<string, unknown> = { maybeSingle };
+    for (const method of ["select", "eq", "gte", "lte", "order"]) {
+      builder[method] = (...args: unknown[]) => {
+        calls.push([method, args]);
+        return builder;
+      };
+    }
+    const from = vi.fn().mockReturnValue(builder);
+    const rpc = vi.fn();
+    const plan = new RollingPlan(
+      new PostgresRollingPlanAdapter(client({ from, rpc })),
+    );
+
+    await expect(
+      plan.getPlanCards("2026-08-16", "2026-08-17"),
+    ).resolves.toEqual({
+      planId: "76000000-0000-4000-8000-000000000004",
+      revision: 3,
+      sessions: [
+        {
+          id: SESSION_ID,
+          localDate: "2026-08-16",
+          position: 0,
+          title: "Run",
+          sport: "Running",
+          status: "cancelled",
+          cancelledAt: "2026-08-15T10:00:00.000Z",
+          seriesId: null,
+          occurrenceDate: null,
+          hasDiverged: false,
+        },
+      ],
+      recoveryDates: ["2026-08-17"],
+    });
+    expect(from).toHaveBeenCalledOnce();
+    expect(from).toHaveBeenCalledWith("rolling_plans");
+    expect(rpc).not.toHaveBeenCalled();
+    expect(calls).toContainEqual(["eq", ["user_id", USER_ID]]);
+    for (const table of [
+      "rolling_plan_sessions",
+      "rolling_plan_recovery_days",
+    ]) {
+      expect(calls).toContainEqual([
+        "gte",
+        [`${table}.local_date`, "2026-08-16"],
+      ]);
+      expect(calls).toContainEqual([
+        "lte",
+        [`${table}.local_date`, "2026-08-17"],
+      ]);
+    }
+    const columns = String(
+      calls.find(([method]) => method === "select")![1][0],
+    );
+    expect(columns).not.toMatch(/activities|intent|note/);
+  });
+
+  it("reads no cards for an owner who has never planned", async () => {
+    const builder: Record<string, unknown> = {
+      maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+    };
+    for (const method of ["select", "eq", "gte", "lte", "order"]) {
+      builder[method] = () => builder;
+    }
+    const adapter = new PostgresRollingPlanAdapter(
+      client({ from: vi.fn().mockReturnValue(builder) }),
+    );
+    await expect(
+      adapter.getPlanCards({ startDate: "2026-08-16", endDate: "2026-08-17" }),
+    ).resolves.toEqual({
+      planId: null,
+      revision: 0,
+      sessions: [],
+      recoveryDates: [],
+    });
+  });
+
   it("lists series with an explicit owner predicate and parsed templates", async () => {
     const secondOrder = vi.fn().mockResolvedValue({
       data: [

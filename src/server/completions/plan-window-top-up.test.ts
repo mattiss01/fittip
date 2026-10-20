@@ -32,6 +32,10 @@ class LosingTopUpAdapter implements RollingPlanAdapter {
     return this.inner.getPlanSlice(input);
   }
 
+  getPlanCards(input: ParsedPlanSlice) {
+    return this.inner.getPlanCards(input);
+  }
+
   listSeries() {
     return this.inner.listSeries();
   }
@@ -132,6 +136,7 @@ describe("plan window top-up before a non-Plan read", () => {
     let calls = 0;
     const secondPassLoses = new RollingPlan({
       getPlanSlice: (input) => adapter.getPlanSlice(input),
+      getPlanCards: (input) => adapter.getPlanCards(input),
       listSeries: () => adapter.listSeries(),
       applyChangeSet: (changeSet, revision) =>
         adapter.applyChangeSet(changeSet, revision),

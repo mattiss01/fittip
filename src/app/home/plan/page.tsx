@@ -6,8 +6,6 @@ import {
 } from "./activities/actions";
 import { readLibraryOptions } from "./activities/library-options";
 import { readMeasurementHistory } from "./activities/measurement-history";
-import type { FillProposal } from "./fill/fill-state";
-import { toFillProposal } from "./fill/open-proposals";
 import { readSavedSessionOptions } from "./saved/session-options";
 import { PlanManager, type PlanSessionLog } from "./plan-manager";
 import { planHistoryStart, type PlanPhase } from "./plan-weeks";
@@ -15,7 +13,7 @@ import { planWindowFor } from "./plan-window";
 import {
   readReplacedByCoach,
   redirectOnAuthError,
-  toSessionView,
+  toCardView,
 } from "./plan-read";
 import styles from "./plan.module.css";
 import w from "./plan-week.module.css";
@@ -40,7 +38,6 @@ import {
   readRoadmapAttention,
   type RoadmapAttention,
 } from "@/server/roadmap/roadmap-phases";
-import { readOpenSessionActivityProposals } from "@/server/session-detail/open-session-activity-proposals";
 
 export const dynamic = "force-dynamic";
 
@@ -146,7 +143,6 @@ async function PlanWindow({
   let savedSessions: SavedSessionOption[];
   let phases: PlanPhase[];
   const logged = new Map<string, PlanSessionLog>();
-  const openFills = new Map<string, FillProposal>();
   let replacedByCoach = new Set<string>();
   try {
     const [plan, log] = await Promise.all([
@@ -155,8 +151,10 @@ async function PlanWindow({
     ]);
     [slice, series, library, modes, savedSessions, phases] = await Promise.all([
       // Through the last date a single session may sit on (R3b-3). Recurring
-      // sessions stop at `lastDate`, so the far weeks hold few rows.
-      plan.getPlanSlice(firstDate, lastPlaceableDate),
+      // sessions stop at `lastDate`, so the far weeks hold few rows. Only what
+      // the week cards show (owner, 20 Oct 2026): a session's activities,
+      // intent, note and open coach suggestion are read by its own page.
+      plan.getPlanCards(firstDate, lastPlaceableDate),
       plan.listSeries(),
       readLibraryOptions(),
       readMeasurementHistory(),
@@ -168,17 +166,11 @@ async function PlanWindow({
     // Thursday. A log's own date can be any day before its session's, so the
     // logs are found by session rather than by window, in one read.
     const sessionIds = slice.sessions.map((session) => session.id);
-    const [found, open, replaced] = await Promise.all([
+    const [found, replaced] = await Promise.all([
       log.findByPlanSessions(sessionIds),
-      readOpenSessionActivityProposals(sessionIds),
       readReplacedByCoach(slice.sessions),
     ]);
     replacedByCoach = replaced;
-    for (const proposal of open) {
-      if (proposal.sessionId) {
-        openFills.set(proposal.sessionId, toFillProposal(proposal));
-      }
-    }
     for (const completion of found) {
       if (completion.planSessionId) {
         logged.set(completion.planSessionId, {
@@ -226,11 +218,9 @@ async function PlanWindow({
             )
             .map((session) => {
               const log = logged.get(session.id);
-              const openFill = openFills.get(session.id);
               return {
-                ...toSessionView(session),
+                ...toCardView(session),
                 ...(log === undefined ? {} : { log }),
-                ...(openFill === undefined ? {} : { openFill }),
               };
             })}
           recoveryDates={slice.recoveryDates}

@@ -60,11 +60,7 @@ import {
   type PlanWeek,
   type PlanWeekDay,
 } from "./plan-weeks";
-import {
-  readsAsLogged,
-  sessionHref,
-  type PlanSessionView,
-} from "./session-view";
+import { readsAsLogged, sessionHref, type PlanCardView } from "./session-view";
 
 import type { SavedSessionOption } from "@/components/training/saved-session-picker";
 import {
@@ -73,7 +69,7 @@ import {
   useSeriesRecoveredReload,
 } from "./series-transition-watch";
 
-export type { PlanSessionLog, PlanSessionView } from "./session-view";
+export type { PlanCardView, PlanSessionLog } from "./session-view";
 
 type Props = {
   today: string;
@@ -88,7 +84,7 @@ type Props = {
   /** The day to open on, e.g. the one a session page returns to. */
   initialDate?: string | null;
   expectedRevision: number;
-  sessions: PlanSessionView[];
+  sessions: PlanCardView[];
   recoveryDates: string[];
   /** What a day's sheet may start a session from. */
   savedSessions?: SavedSessionOption[];
@@ -192,7 +188,7 @@ export function PlanManager({
     id: string;
     side: SwipeSide;
   } | null>(null);
-  const [deleting, setDeleting] = useState<PlanSessionView | null>(null);
+  const [deleting, setDeleting] = useState<PlanCardView | null>(null);
   const sendSessionChange = (operation: "cancel" | "delete", id: string) => {
     const formData = new FormData();
     formData.set("operation", operation);
@@ -207,7 +203,7 @@ export function PlanManager({
     onOpen: (id: string, side: SwipeSide) => setSwiped({ id, side }),
     onClose: () => setSwiped(null),
     onCancel: (id: string) => sendSessionChange("cancel", id),
-    onDelete: (session: PlanSessionView) => {
+    onDelete: (session: PlanCardView) => {
       setSwiped(null);
       setDeleting(session);
     },
@@ -645,7 +641,7 @@ function PlanDay({
   day: PlanWeekDay;
   today: string;
   isRecoveryDay: boolean;
-  sessions: PlanSessionView[];
+  sessions: PlanCardView[];
   tones: Map<string, number>;
   onAdd: () => void;
 }) {
@@ -752,7 +748,7 @@ function PlanSessionCard({
   drag?: object | null;
   /** Swiping it open to Cancel and Delete; none in the past or once logged. */
   swipe?: SwipeControls | null;
-  session: PlanSessionView;
+  session: PlanCardView;
   /** Before today: the session's page finds it by its day, not the window. */
   past: boolean;
   tone: number;
@@ -876,10 +872,10 @@ type SwipeControls = {
   onOpen: (sessionId: string, side: SwipeSide) => void;
   onClose: () => void;
   onCancel: (sessionId: string) => void;
-  onDelete: (session: PlanSessionView) => void;
+  onDelete: (session: PlanCardView) => void;
 };
 
-function cardDetail(session: PlanSessionView, cancelled: boolean): string {
+function cardDetail(session: PlanCardView, cancelled: boolean): string {
   if (cancelled) return "Cancelled";
   const planned =
     session.expectedDurationMinutes === null
@@ -1017,7 +1013,7 @@ function DaySheet({
 }
 
 /** What the month calendar marks: a day holds a session the week would show. */
-function sessionCounts(sessions: PlanSessionView[]) {
+function sessionCounts(sessions: PlanCardView[]) {
   const counts = new Map<string, number>();
   for (const session of sessions) {
     if (session.status !== "active" && !session.log) continue;
@@ -1046,11 +1042,11 @@ function CalendarIcon() {
   );
 }
 
-function activeOn(sessions: PlanSessionView[]) {
+function activeOn(sessions: PlanCardView[]) {
   return sessions.filter((session) => session.status === "active");
 }
 
-function plannedMinutes(week: PlanWeek, sessions: PlanSessionView[]) {
+function plannedMinutes(week: PlanWeek, sessions: PlanCardView[]) {
   return activeOn(
     sessions.filter(
       (session) =>
@@ -1060,7 +1056,7 @@ function plannedMinutes(week: PlanWeek, sessions: PlanSessionView[]) {
 }
 
 /** Week totals say "planned", never done. */
-function weekTotals(week: PlanWeek, sessions: PlanSessionView[]) {
+function weekTotals(week: PlanWeek, sessions: PlanCardView[]) {
   const count = activeOn(
     sessions.filter(
       (session) =>

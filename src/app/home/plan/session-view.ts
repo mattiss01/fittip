@@ -7,7 +7,7 @@ import {
 
 import type { ActivityValue } from "@/components/training/activity-editor";
 
-/** One planned session as the Plan and its own page render it. */
+/** One planned session as its own page renders it. */
 export type PlanSessionView = {
   id: string;
   localDate: string;
@@ -34,6 +34,24 @@ export type PlanSessionView = {
   openFill?: FillProposal;
 };
 
+/**
+ * A session as a week card on the Plan shows it (owner, 20 Oct 2026): what
+ * the card prints and links by. The rest is read by the session's own page,
+ * so forty weeks of it are not sent to draw the cards.
+ */
+export type PlanCardView = Pick<
+  PlanSessionView,
+  | "id"
+  | "localDate"
+  | "position"
+  | "title"
+  | "sport"
+  | "expectedDurationMinutes"
+  | "status"
+  | "seriesId"
+  | "log"
+>;
+
 export type PlanSessionLog = {
   completionId: string;
   outcome: CompletionOutcome;
@@ -51,9 +69,9 @@ export type PlanSessionLog = {
  * Not the test for plan controls: since 3 Oct 2026 (owner) any log settles
  * the session, and its page offers Edit log instead (`session-page.tsx`).
  */
-export function readsAsLogged(
-  session: PlanSessionView,
-): session is PlanSessionView & { log: PlanSessionLog } {
+export function readsAsLogged<
+  T extends Pick<PlanSessionView, "localDate" | "status" | "log">,
+>(session: T): session is T & { log: PlanSessionLog } {
   return (
     session.log !== undefined &&
     (session.status === "cancelled" ||
