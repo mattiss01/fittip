@@ -21,6 +21,12 @@ that reset untouched.
 
 Ordered by dependency. A lane is named where it is not the build lane.
 
+- [~] **Delete roadmap** (careful lane, ADR-036). Owner, 19 Oct 2026: "Delete Roadmap" in
+      the ⋯ beside the title erases it completely — head, versions, proposals, requests,
+      sources, decisions, ticks and reviews — with a question first and no undo. One definer
+      function, `delete_roadmap`, answering to the head under the roadmap lock; with nothing
+      in force it reports a replay. Spend, memory and goal suggestions, plans and logs stay.
+      Shipped apart from the menu, on its own branch.
 - [ ] **A7-5 — Size the fill before its first live run.** Measure output tokens on a
       twelve-activity answer: the grammar pads each target with fourteen nullable keys
       against an 11,500-token ceiling. Needs a provider key, so it waits for one; each run
