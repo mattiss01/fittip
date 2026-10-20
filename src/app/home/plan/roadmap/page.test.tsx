@@ -288,6 +288,23 @@ describe("Roadmap", () => {
     expect(screen.queryByText(/^Reached/)).toBeNull();
   });
 
+  it("says once why the page reloaded after a tick's reply did not appear", async () => {
+    listVersions.mockResolvedValue([version(3)]);
+    window.sessionStorage.setItem("fittip.roadmap.recovered:v1", "1");
+    try {
+      render(await RoadmapPage());
+      const notices = document.querySelectorAll(
+        '[data-roadmap-current] [data-roadmap-notice="recovered"]',
+      );
+      expect(notices).toHaveLength(1);
+      expect(notices[0].textContent).toBe(
+        "Your last roadmap step did not appear, so this page was reloaded. What you see below is what is saved.",
+      );
+    } finally {
+      window.sessionStorage.clear();
+    }
+  });
+
   it("shows the day a milestone was marked reached, and the way to take it back", async () => {
     listVersions.mockResolvedValue([version(3)]);
     listMilestoneMarks.mockResolvedValue([
