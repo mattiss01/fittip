@@ -23,7 +23,15 @@ export type FillResult =
    * same key replays it rather than paying twice.
    */
   | { status: "pending"; message: string }
-  | { status: "refused"; message: string };
+  | {
+      status: "refused";
+      message: string;
+      /**
+       * Past the deadline the provider call may still be running, so the
+       * next ask keeps this key and replays it rather than paying again.
+       */
+      mayStillRun?: true;
+    };
 
 export type DismissResult = {
   status: "dismissed" | "refused";
