@@ -149,6 +149,8 @@ test.describe("M3-19 delete a planned session", () => {
       const sessionId = await sessionIdOf(page, tomorrow, "Logged run");
       await logCompletion(request, account, sessionId, today, "skipped");
 
+      // Written behind the page's back, so the Plan is read again first.
+      await page.reload();
       await openSession(page, tomorrow, "Logged run");
       await expect(page).toHaveURL(
         /\/home\/progress\/[0-9a-f-]+\?from=plan&date=[\d-]+$/,
