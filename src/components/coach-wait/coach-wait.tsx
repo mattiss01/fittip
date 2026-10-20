@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 
 import styles from "./coach-wait.module.css";
+import { lockPage } from "@/components/page-lock";
 import {
   captionAt,
   type CoachWaitKind,
@@ -31,9 +32,11 @@ const readReduced = () => window.matchMedia?.(REDUCE).matches ?? false;
  * the time waited, and after 30 s that it can take up to a minute. Nothing
  * in it says how far the coach has got, because the app cannot know.
  *
- * It is only the waiting state: the form that shows it keeps the request,
- * its errors and its cancel, and nothing behind it can be used while it
- * shows (every control there is disabled while the request runs anyway).
+ * It is only the waiting state: the form that shows it keeps the request
+ * and its errors. Nothing behind it can be used while it shows, not the
+ * navigation and not Escape on a sheet: the owner chose a wait that is the
+ * whole screen, and every cancel there is disabled while the request runs.
+ * When it goes, focus returns to what asked.
  * One animation frame loop drives the drawing and stops when this goes.
  * Under reduced motion the athlete stands still in one sport's pose, and
  * the pose changes to the next sport every few seconds.
@@ -42,6 +45,8 @@ export function CoachWait({ kind }: { kind: CoachWaitKind }) {
   const screen = useRef<HTMLDivElement>(null);
   const svg = useRef<SVGSVGElement>(null);
   const started = useRef<number | null>(null);
+  // Read while rendering, before the layer takes focus: what asked.
+  const [opener] = useState(() => document.activeElement);
   const [elapsed, setElapsed] = useState(0);
   const reduced = useSyncExternalStore(
     subscribeReduced,
@@ -54,18 +59,19 @@ export function CoachWait({ kind }: { kind: CoachWaitKind }) {
   useEffect(() => {
     const layer = screen.current;
     if (layer === null) return;
-    const behind = Array.from(document.body.children).filter(
-      (child) => child !== layer && !child.hasAttribute("inert"),
-    );
-    behind.forEach((child) => child.setAttribute("inert", ""));
-    const overflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const release = lockPage(layer);
+    // Caught before a sheet underneath hears it and closes.
+    const holdEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") event.stopPropagation();
+    };
+    window.addEventListener("keydown", holdEscape, true);
     layer.focus();
     return () => {
-      behind.forEach((child) => child.removeAttribute("inert"));
-      document.body.style.overflow = overflow;
+      window.removeEventListener("keydown", holdEscape, true);
+      release();
+      if (opener instanceof HTMLElement && opener.isConnected) opener.focus();
     };
-  }, []);
+  }, [opener]);
 
   useEffect(() => {
     const element = svg.current;

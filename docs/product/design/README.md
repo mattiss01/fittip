@@ -13,7 +13,9 @@ unless a line below says so; the app is the source of truth once a direction shi
 - **Owner's choice, 20 Oct 2026:** W1 (one athlete, a new sport every 4 s, a jump and a
   flip between them) with the "Working on it" captions, and **without** the sport name
   label. The captions describe coaching work the app cannot observe; the owner accepted
-  that over the backlog item's no-invented-steps constraint.
+  that over the backlog item's no-invented-steps constraint. Later the same day: the wait
+  is the whole screen, and a roadmap and a session fill get caption sets of their own
+  (shipped in `src/components/coach-wait/`).
 
 ## Logo
 

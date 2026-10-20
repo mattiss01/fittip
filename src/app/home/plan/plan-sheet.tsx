@@ -13,6 +13,7 @@ import {
 import { createPortal } from "react-dom";
 
 import w from "./plan-week.module.css";
+import { lockPage } from "@/components/page-lock";
 
 /** How long a sheet takes to leave; the CSS's sheet-out runs the same. */
 const CLOSE_MS = 180;
@@ -122,22 +123,14 @@ export function SheetLayer({
     return () => window.clearTimeout(timer);
   }, [closing]);
   useEffect(() => {
-    const layer = layerRef.current;
-    const background = Array.from(document.body.children).filter(
-      (element): element is HTMLElement =>
-        element instanceof HTMLElement && element !== layer && !element.inert,
-    );
-    for (const element of background) element.inert = true;
-    const overflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const release = lockPage(layerRef.current);
     function onKey(event: KeyboardEvent) {
       if (event.key === "Escape") requestClose();
     }
     document.addEventListener("keydown", onKey);
     return () => {
       document.removeEventListener("keydown", onKey);
-      for (const element of background) element.inert = false;
-      document.body.style.overflow = overflow;
+      release();
       if (opener instanceof HTMLElement && opener.isConnected) opener.focus();
     };
   }, [opener, requestClose]);

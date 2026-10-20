@@ -57,13 +57,34 @@ describe("CoachWait", () => {
     // Over everything, not inside the form that asked.
     expect(layer.parentElement).toBe(document.body);
     expect(container.contains(layer)).toBe(false);
-    expect(container.hasAttribute("inert")).toBe(true);
+    expect(container.inert).toBe(true);
     expect(document.body.style.overflow).toBe("hidden");
     expect(document.activeElement).toBe(layer);
 
     unmount();
-    expect(container.hasAttribute("inert")).toBe(false);
+    expect(container.inert).toBe(false);
     expect(document.body.style.overflow).toBe("");
+  });
+
+  it("holds Escape from a sheet underneath, and gives focus back after", () => {
+    const asked = document.createElement("button");
+    document.body.appendChild(asked);
+    asked.focus();
+    const sheetHeard = vi.fn();
+    document.addEventListener("keydown", sheetHeard);
+
+    const { unmount } = render(<CoachWait kind="fill" />);
+    act(() => {
+      document.activeElement?.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+      );
+    });
+    expect(sheetHeard).not.toHaveBeenCalled();
+
+    unmount();
+    expect(document.activeElement).toBe(asked);
+    document.removeEventListener("keydown", sheetHeard);
+    asked.remove();
   });
 
   it("draws the athlete, and stops its loop when it goes", () => {
