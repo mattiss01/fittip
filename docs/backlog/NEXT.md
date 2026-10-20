@@ -95,11 +95,6 @@ Ordered by dependency. A lane is named where it is not the build lane.
 
 Not worth their own slot; do them when work lands nearby.
 
-- **For the owner to delete; the agent cannot.** What the Roadmap page left behind on
-  13 and 14 Oct 2026 and nothing renders: `src/components/roadmap/roadmap-proposal-record.tsx`,
-  `roadmap-editor.tsx` and both their tests. With them go the `.historyItem` and
-  `.recordTitle` styles in `roadmap.module.css` and the `proposalExpired` and
-  `proposalSuperseded` wordings in `roadmap-records.ts`, which only those files use.
 - **For the owner to look at.** The date fields' width fix (13 Oct 2026) has not been seen
   on a phone or in a desktop browser's calendar mark. And with this week at the week
   strip's left edge, a sliver of last week's tile shows in the page inset: a hint that the
