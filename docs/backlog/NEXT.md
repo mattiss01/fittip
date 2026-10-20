@@ -95,10 +95,6 @@ Ordered by dependency. A lane is named where it is not the build lane.
 
 Not worth their own slot; do them when work lands nearby.
 
-- **`plan-month-sheet.test.tsx` times out under a full local run.** Three times on
-  16 Oct 2026 ("steps between the months…", over 5,000 ms), passing alone each time;
-  `onboarding-manager.test.tsx` once. CI has not shown it. Likely a slow render under
-  load rather than a fault; a longer timeout on that one test, or less work in it.
 - **For the owner to delete; the agent cannot.** What the Roadmap page left behind on
   13 and 14 Oct 2026 and nothing renders: `src/components/roadmap/roadmap-proposal-record.tsx`,
   `roadmap-editor.tsx` and both their tests. With them go the `.historyItem` and
@@ -112,9 +108,6 @@ Not worth their own slot; do them when work lands nearby.
   is placed before paint and the server's HTML asks for this week's tile with
   `scroll-initial-target`, which Chrome honours and Safari does not, so there the strip
   shows its oldest week until the page is interactive.
-- **After a milestone tick's recovery reload, nothing says why.** The tick passes no
-  recovered notice; the explanation appears only when "New roadmap" is next opened. Rarer
-  since 15 Oct 2026, when ticks stopped taking each other's replies for their own.
 
 ## Later
 
