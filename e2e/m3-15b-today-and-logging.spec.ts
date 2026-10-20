@@ -449,8 +449,14 @@ test.describe("M3-15B today and logging", () => {
       ).toBeVisible();
 
       // ADR-031: a log can be deleted, after a dialog that says what goes.
-      // "Keep it" deletes nothing; "Delete log" removes it for good.
-      await unplanned.getByRole("link", { name: "Edit log" }).click();
+      // "Keep it" deletes nothing; "Delete log" removes it for good. It sits
+      // beside Edit log on the log's record, which the card opens (owner,
+      // 20 Oct 2026).
+      await unplanned.locator("h4 a").click();
+      await expect(page).toHaveURL(/\/home\/progress\/[0-9a-f-]+\?from=today/);
+      await expect(
+        page.getByRole("link", { name: "Back to Today" }),
+      ).toBeVisible();
       await page.locator("[data-log-delete]").click();
       const dialog = page.getByRole("alertdialog", {
         name: "Delete this log?",
@@ -473,7 +479,7 @@ test.describe("M3-15B today and logging", () => {
       await page
         .locator("[data-today-completion]")
         .filter({ hasText: "Hill ride" })
-        .getByRole("link", { name: "Edit log" })
+        .locator("h4 a")
         .click();
       await page.locator("[data-log-delete]").click();
       const replacedNote = dialog.locator("[data-log-delete-replaces]");
@@ -547,25 +553,23 @@ test.describe("M3-15B today and logging", () => {
       ).toBeVisible();
 
       // Owner, 3 Oct 2026: once logged, its log is what changes, not its
-      // plan. The page offers Edit log and the copy actions, nothing more.
+      // plan. Since 20 Oct 2026 the card opens the log's record, logged
+      // beside planned, with Edit log and Delete log and no plan verb.
       await page.goto("/home/today");
       await todayCard(page, "Aerobic base")
         .getByRole("link", { name: "Aerobic base", exact: true })
         .click();
+      await expect(page).toHaveURL(/\/home\/progress\/[0-9a-f-]+\?from=today/);
+      await expect(page.getByRole("link", { name: "Edit log" })).toBeVisible();
       await expect(
-        page
-          .locator("[data-session-actions]")
-          .getByRole("link", { name: "Edit log" }),
+        page.getByRole("button", { name: "Delete log" }),
       ).toBeVisible();
       await expect(
         page.getByRole("link", { name: "Edit", exact: true }),
       ).toHaveCount(0);
-      // The menu holds what a Progress record offers, and no plan verb.
-      await page.getByRole("button", { name: "More actions" }).click();
-      const menu = page.locator("[data-session-actions] li");
-      await expect(menu.getByText("Save to library")).toBeVisible();
-      await expect(menu.getByText("Delete")).toHaveCount(0);
-      await page.keyboard.press("Escape");
+      await expect(
+        page.getByRole("button", { name: "More actions" }),
+      ).toHaveCount(0);
 
       // Tomorrow's occurrence is not logged, so the series ends from there,
       // and today's logged one is kept.

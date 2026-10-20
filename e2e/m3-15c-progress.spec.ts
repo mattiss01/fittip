@@ -190,11 +190,11 @@ test.describe("M3-15C progress", () => {
       await (await planCard(page, today, "Tempo run"))
         .getByRole("link", { name: "Tempo run", exact: true })
         .click();
-      await expect(
-        page
-          .locator("[data-session-actions]")
-          .getByRole("link", { name: "Edit log" }),
-      ).toBeVisible();
+      // The card opens the log's record (owner, 20 Oct 2026).
+      await expect(page).toHaveURL(
+        /\/home\/progress\/[0-9a-f-]+\?from=plan&date=[\d-]+$/,
+      );
+      await expect(page.getByRole("link", { name: "Edit log" })).toBeVisible();
       await expect(
         page.getByRole("link", { name: "Edit", exact: true }),
       ).toHaveCount(0);

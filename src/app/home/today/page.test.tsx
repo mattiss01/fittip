@@ -184,6 +184,14 @@ describe("Today", () => {
     expect(
       within(card).getByRole("link", { name: "Edit log" }).getAttribute("href"),
     ).toBe(`/home/log?completion=${COMPLETION_ID}`);
+    // Its title opens the log's record, and comes back to this day (owner,
+    // 20 Oct 2026).
+    expect(
+      within(card)
+        .getByRole("heading", { level: 4 })
+        .querySelector("a")
+        ?.getAttribute("href"),
+    ).toBe(`/home/progress/${COMPLETION_ID}?from=today&date=${today()}`);
     expect(within(card).queryByRole("link", { name: "Log this session" })).toBe(
       null,
     );

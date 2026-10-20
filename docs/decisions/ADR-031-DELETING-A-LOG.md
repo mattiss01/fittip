@@ -57,7 +57,10 @@ The owner asked on 7 October 2026 for a log to be deletable, which frees its ses
   no coach call reads it.
 - A deletion cannot be undone, by the owner or by us. The confirmation is the only guard,
   so it names every log that goes.
-- The names are those read when the edit page opened. Linking another planned session to
+- "Delete log" sits beside "Edit log" on the log's Progress record, which a logged
+  card on Today or the Plan opens (owner, 20 October 2026); until then it was on the
+  edit page. A delete leaves for where the record was opened from.
+- The names are those read when the record page opened. Linking another planned session to
   the same training does not change that log's revision, so a Replaced log linked in a
   second tab after the dialog was read is deleted with it unnamed. It needs the same owner
   in two tabs at once; making the link bump the revision would close it, at the cost of

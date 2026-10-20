@@ -144,15 +144,20 @@ test.describe("M3-19 delete a planned session", () => {
       // a logged session is settled, and its log is what changes). The
       // database's own refusal of that delete is pgTAP m3_19's. The log is
       // written through M3-15A's owner-derived function: a skip written
-      // ahead, which records no training, so the page offers Edit log alone.
+      // ahead. Its card opens the log's record (owner, 20 Oct 2026), which
+      // offers Edit log and Delete log and nothing of the plan's.
       const sessionId = await sessionIdOf(page, tomorrow, "Logged run");
       await logCompletion(request, account, sessionId, today, "skipped");
 
+      // Written behind the page's back, so the Plan is read again first.
+      await page.reload();
       await openSession(page, tomorrow, "Logged run");
+      await expect(page).toHaveURL(
+        /\/home\/progress\/[0-9a-f-]+\?from=plan&date=[\d-]+$/,
+      );
+      await expect(page.getByRole("link", { name: "Edit log" })).toBeVisible();
       await expect(
-        page
-          .locator("[data-session-actions]")
-          .getByRole("link", { name: "Edit log" }),
+        page.getByRole("button", { name: "Delete log" }),
       ).toBeVisible();
       await expect(
         page.getByRole("button", { name: "More actions" }),

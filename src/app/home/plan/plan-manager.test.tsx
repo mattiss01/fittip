@@ -403,7 +403,8 @@ describe("PlanManager", () => {
         .getByRole("link", { name: "Tempo run" })
         .getAttribute("href"),
     ).toBe(
-      "/home/plan/session/7f000000-0000-4000-8000-0000000000a1?date=2026-08-12",
+      // A logged session opens its log's record (owner, 20 Oct 2026).
+      "/home/progress/7f000000-0000-4000-8000-0000000000c9?from=plan&date=2026-08-12",
     );
     // No day of a past week can be added to.
     expect(screen.queryByRole("button", { name: /^Add to / })).toBeNull();
@@ -767,7 +768,7 @@ describe("PlanManager", () => {
       /Completed on \w{3} \d{1,2} \w{3}/,
     );
     expect(planned.querySelector("[data-logged] a")?.getAttribute("href")).toBe(
-      `/home/plan/session/${session().id}`,
+      `/home/progress/7f000000-0000-4000-8000-0000000000c2?from=plan&date=${DATES[3]}`,
     );
     expect(planned.querySelector("[data-session-card]")).toBeNull();
   });

@@ -7,11 +7,18 @@ import {
 } from "../completion-record";
 import { formatMonth, monthOf } from "../month";
 import { describeTarget } from "../planned-target";
+import {
+  originQuery,
+  readRecordOrigin,
+  type RecordOrigin,
+} from "../record-href";
 import type { ProgressCompletionView } from "../progress-record";
 import styles from "../progress.module.css";
 
 import homeStyles from "../../home.module.css";
 import { BackLink } from "../../you/back-link";
+import { DeleteLog } from "../../log/delete-log";
+import { deleteLogTarget } from "../../log/delete-log-target";
 import { recordsTraining } from "../../log/log-action-state";
 import { SaveToLibrary } from "../../plan/saved/save-to-library";
 import {
@@ -28,6 +35,10 @@ export const dynamic = "force-dynamic";
 
 type Props = {
   params: Promise<{ id: string }>;
+  searchParams?: Promise<{
+    from?: string | string[];
+    date?: string | string[];
+  }>;
 };
 
 const UUID =
@@ -43,8 +54,10 @@ const UUID =
  * and returns nothing in both cases, so both render this state after the same
  * single read. Nothing distinguishes them in status, wording, or timing.
  */
-export default async function CompletionPage({ params }: Props) {
+export default async function CompletionPage({ params, searchParams }: Props) {
   const id = (await params).id;
+  const query = (await searchParams) ?? {};
+  const origin = readRecordOrigin(query.from, query.date);
 
   let completion: Completion | null = null;
   // An id that is not a UUID cannot name a record, so it is refused before any
@@ -62,18 +75,7 @@ export default async function CompletionPage({ params }: Props) {
     <main className={`${homeStyles.shell} ${styles.page}`} id="main-content">
       {/* The way back is at the top, as on a planned session's page (R3);
           the session's own name is the page's heading. */}
-      <BackLink
-        href={
-          completion === null
-            ? "/home/progress"
-            : `/home/progress?month=${monthOf(completion.actualLocalDate)}`
-        }
-        label={
-          completion === null
-            ? "Progress"
-            : formatMonth(monthOf(completion.actualLocalDate))
-        }
-      />
+      <BackLink {...backTo(completion, origin)} />
 
       {completion === null ? (
         <section
@@ -95,13 +97,21 @@ export default async function CompletionPage({ params }: Props) {
             planned={toPlannedView(completion)}
           />
           {/* The one log editor, opened from here and returning here, so a
-              correction does not go by way of Today. */}
-          <Link
-            className={styles.mainAction}
-            href={`/home/log?completion=${completion.id}&from=progress`}
-          >
-            Edit log
-          </Link>
+              correction does not go by way of Today; where this record was
+              opened from goes with it, to come back to. */}
+          <div className={styles.logActions}>
+            <Link
+              className={styles.mainAction}
+              href={`/home/log?completion=${completion.id}&from=progress${originQuery(origin, "&", "via")}`}
+            >
+              Edit log
+            </Link>
+            {/* Beside Edit log, not inside the form (owner, 20 Oct 2026). */}
+            <DeleteLog
+              {...deleteLogTarget(completion)}
+              leaveTo={backTo(completion, origin).afterDelete}
+            />
+          </div>
           {/* Training that happened can become a saved session; a skip or a
               replacement records none, so it offers nothing to save. */}
           {!recordsTraining(completion.status) ? null : (
@@ -159,6 +169,45 @@ function toPlannedView(completion: Completion): PlannedSnapshotView | null {
       instructions: activity.instructions ?? null,
       target: describeTarget(activity.target ?? null),
     })),
+  };
+}
+
+/**
+ * Back where the record was opened from (owner, 20 Oct 2026): a log on Today
+ * or the Plan opens here, and its way back, and where a delete leaves for,
+ * is that page. From the Plan a delete leaves for the session, which is free
+ * again; `deleteLogAction` admits only these shapes.
+ */
+function backTo(
+  completion: Completion | null,
+  origin: RecordOrigin | null,
+): { href: string; label: string; afterDelete: string } {
+  if (completion === null) {
+    return {
+      href: "/home/progress",
+      label: "Progress",
+      afterDelete: "/home/progress",
+    };
+  }
+  if (origin?.from === "today") {
+    const today = `/home/today?date=${origin.date}`;
+    return { href: today, label: "Today", afterDelete: today };
+  }
+  if (origin?.from === "plan") {
+    return {
+      // The week it was opened in, not this one.
+      href: `/home/plan?day=${origin.date}`,
+      label: "Plan",
+      afterDelete:
+        completion.planSessionId === null
+          ? "/home/progress"
+          : `/home/plan/session/${completion.planSessionId}`,
+    };
+  }
+  return {
+    href: `/home/progress?month=${monthOf(completion.actualLocalDate)}`,
+    label: formatMonth(monthOf(completion.actualLocalDate)),
+    afterDelete: "/home/progress",
   };
 }
 
