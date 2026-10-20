@@ -9,6 +9,7 @@ import {
   RollingPlanRuleError,
   RollingPlanTimezoneRequiredError,
   RollingPlanValidationError,
+  toSessionCard,
 } from "./rolling-plan";
 
 export type RollingPlanContractSubject = {
@@ -62,14 +63,7 @@ export function registerRollingPlanContract(
       const cards = await plan.getPlanCards(day(1), day(1));
       expect(cards).toEqual({
         ...added,
-        sessions: added.sessions.map(
-          ({ activities, intent, note, ...card }) => {
-            void activities;
-            void intent;
-            void note;
-            return card;
-          },
-        ),
+        sessions: added.sessions.map(toSessionCard),
       });
       expect(added).toMatchObject({
         revision: 1,

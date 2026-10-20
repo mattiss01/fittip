@@ -25,6 +25,7 @@ import {
   type RollingPlanSession,
   type RollingPlanSkippedOccurrence,
   type RollingPlanSlice,
+  toSessionCard,
 } from "./rolling-plan";
 
 export type InMemoryRollingPlanOptions = {
@@ -112,12 +113,7 @@ export class InMemoryRollingPlanAdapter implements RollingPlanAdapter {
     const slice = await this.getPlanSlice(input);
     return {
       ...slice,
-      sessions: slice.sessions.map(({ activities, intent, note, ...card }) => {
-        void activities;
-        void intent;
-        void note;
-        return card;
-      }),
+      sessions: slice.sessions.map(toSessionCard),
     };
   }
 
