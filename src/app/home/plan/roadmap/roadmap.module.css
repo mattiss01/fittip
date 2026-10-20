@@ -459,15 +459,6 @@
 
 /* ---- Records ------------------------------------------------------------ */
 
-.historyItem {
-  padding: 0.75rem 0;
-  border-top: 1px solid var(--border);
-}
-
-.historyItem:first-child {
-  border-top: 0;
-}
-
 /* The state a record ended in, as a word rather than a status light. Nothing
    here ranks one outcome above another: a declined proposal is a decision the
    owner made, not a failure. */
@@ -487,20 +478,6 @@
 
 .state[data-state="accepted"] {
   color: var(--pine);
-}
-
-.recordTitle {
-  margin: 0.25rem 0 0;
-  font-size: 1.05rem;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  line-height: 1.25;
-}
-
-.recordBody {
-  margin: 0.35rem 0 0;
-  font-size: 0.92rem;
-  line-height: 1.5;
 }
 
 /* What can and cannot be done with this record. Set apart from the record's
@@ -833,13 +810,6 @@
   color: var(--pine);
   font-size: 0.95rem;
   font-weight: 800;
-}
-
-.editRow {
-  display: grid;
-  gap: 0.7rem;
-  padding-left: 0.8rem;
-  border-left: 2px solid var(--fern);
 }
 
 /* "Write it yourself" under the coach's form, while there is no roadmap. */
