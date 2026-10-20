@@ -25,12 +25,16 @@ the roadmap completely rather than archiving it.
    them, their sources and decisions, and the milestone ticks and done reviews. Nothing is
    kept: no hidden row, no tombstone, no undo. Afterwards the Roadmap page reads as it did
    before the first roadmap.
-2. **It is one definer function, `delete_roadmap(expected_head_revision)`**, executable by
+2. **It is one definer function, `delete_roadmap(version_id)`**, executable by
    `authenticated` only, held to `auth.uid()` in every statement. `authenticated` still
    holds no `DELETE` on any roadmap table.
-3. **It answers to the head the owner read**, under the per-owner roadmap lock every
-   roadmap write takes, so it cannot interleave with an acceptance, an edit, or a coach
-   result being stored. A different head is `PT409`, "Your roadmap changed".
+3. **It answers to the version the owner was shown**, by id, under the per-owner roadmap
+   lock every roadmap write takes, so it cannot interleave with an acceptance, an edit, or
+   a coach result being stored. Any other version in force is `PT409`, "Your roadmap
+   changed". Not the head revision, which every other roadmap write answers to: it starts
+   again from 0 after a delete, so a question left open from before one could match a new
+   roadmap's revision and erase it (found in review, 20 Oct 2026). A version id is never
+   reused.
 4. **With no roadmap in force it does nothing and reports `replayed`.** The roadmap
    repository keeps the client's transport retry (ADR-015), so a retry of a delete that
    landed must be harmless, and it must not erase a proposal the owner asked for after
@@ -53,11 +57,14 @@ the roadmap completely rather than archiving it.
   reads it back as content. Accepted plans and logs are unchanged: the plan is a separate
   record (product invariant).
 - **A coach request still running when the roadmap goes** has nothing to finish into. Its
-  result is refused as an unknown request and the owner sees the general error; the spend
-  for it was already settled in the ledger.
-- **The head revision starts again from 0.** A form left open from before the delete names
-  a revision that a new roadmap may reach again; an edit from that stale form would then be
-  compared against the new roadmap. That needs the old form kept open through a delete and
+  result is refused as an unknown request and the owner sees the general error. The
+  service settles its spend before storing the result, so it is normally in the ledger
+  already; where that settle failed, the reservation stays open and counts at its full
+  hold (ADR-019), which overcounts the cap and never undercounts it.
+- **The head revision starts again from 0.** The delete is immune (decision 3), but an
+  edit form left open from before a delete names a revision a new roadmap may reach again,
+  and would then be compared against the new roadmap. `edit_roadmap` still refuses a
+  changed start or ended phase, and it needs the old form kept open through a delete and
   as many new versions; it is accepted rather than adding a counter that survives the
   delete.
 - A deletion cannot be undone, by the owner or by us. The question is the only guard.
