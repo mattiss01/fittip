@@ -178,8 +178,13 @@ test.describe("M3-15F roadmap generation", () => {
         .click();
 
       const regenerated = page.locator("[data-roadmap-open-proposal]");
-      await expect(regenerated.getByText("Regenerated")).toBeVisible();
+      // A proposal names no origin (owner, 21 Oct 2026): the regenerated one
+      // is told by the edit it replaced being gone.
       await expectOutcome(page, "A proposal is ready below.");
+      await expect(regenerated).toBeVisible();
+      await expect(
+        regenerated.getByRole("heading", { name: "My own wording" }),
+      ).toHaveCount(0);
 
       // ---- Accept: it becomes the roadmap. ----
       await regenerated.getByRole("button", { name: "Accept roadmap" }).click();
