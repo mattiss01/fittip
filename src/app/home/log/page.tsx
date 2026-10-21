@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import {
   LogForm,
   type LogExistingView,
+  type LogFromWorkout,
   type LogPlannedView,
   type LogUnplannedOption,
 } from "./log-form";
@@ -19,12 +20,20 @@ import { readMeasurementHistory } from "../plan/activities/measurement-history";
 import { readSavedSessionOptions } from "../plan/saved/session-options";
 import { readRecordOrigin, recordHref } from "../progress/record-href";
 import { isoDateInTimezone, shiftIsoDate } from "@/lib/date/local-date";
+import {
+  activeMilliseconds,
+  toLoggedActivities,
+} from "@/lib/training/live-workout";
 import type { LogPlannedActivityView } from "./actual-activities";
 import { type Completion } from "@/server/completions/completion-log";
 import {
   CompletionAuthenticationError,
   createCompletionLog,
 } from "@/server/repositories/completion-log-repository";
+import {
+  createLiveWorkouts,
+  LiveWorkoutAuthenticationError,
+} from "@/server/repositories/live-workout-repository";
 import { PersonalActivityAuthenticationError } from "@/server/repositories/personal-activity-repository";
 import {
   createProfileRepository,
@@ -42,6 +51,8 @@ type Props = {
   searchParams: Promise<{
     completion?: string | string[];
     plannedSession?: string | string[];
+    /** A workout logged live, which the new log starts from (ADR-037). */
+    workout?: string | string[];
     date?: string | string[];
     /** Where the editor was opened from, from a fixed list: never a URL. */
     from?: string | string[];
@@ -115,6 +126,7 @@ async function renderForm(
     date?: string | string[];
     from?: string | string[];
     via?: string | string[];
+    workout?: string | string[];
   },
 ) {
   const today = isoDateInTimezone(new Date(), timezoneName);
@@ -202,6 +214,11 @@ async function renderForm(
           />
         </>
       );
+    }
+
+    const workoutId = readUuid(params.workout);
+    if (workoutId !== null) {
+      return await renderFromWorkout(workoutId, today);
     }
 
     if (plannedSessionId !== null) {
@@ -316,6 +333,130 @@ async function renderForm(
     redirectOnAuthError(error);
     throw error;
   }
+}
+
+/**
+ * Finishing a workout logged live (ADR-037): the ordinary log steps, started
+ * from what the workout recorded — its time, less pauses, and the activities
+ * done — so "How did it go?" and "Anything off?" are still asked. A workout
+ * started from a planned session logs that session; one whose session was
+ * since deleted or moved off its week is logged as unplanned training.
+ */
+async function renderFromWorkout(workoutId: string, today: string) {
+  const workout = await (await createLiveWorkouts()).current();
+  if (workout === null || workout.id !== workoutId) {
+    return (
+      <Unavailable
+        label="No workout running"
+        heading="That workout is not running"
+        body="It was logged or discarded already. Nothing was changed."
+        href="/home/today"
+        action="Back to Today"
+        state="no-workout"
+      />
+    );
+  }
+  const fromWorkout: LogFromWorkout = {
+    id: workout.id,
+    title: workout.title,
+    sport: workout.sport,
+    // Within the bound a log's duration holds (a week), so a workout left
+    // running for days still opens a log that can be corrected and saved.
+    durationMinutes: Math.min(
+      10080,
+      Math.max(1, Math.round(activeMilliseconds(workout, Date.now()) / 60000)),
+    ),
+    activities: toLoggedActivities(workout.state),
+  };
+  const session =
+    workout.planSessionId === null
+      ? undefined
+      : (
+          await (
+            await createRollingPlan()
+          ).getPlanSlice(shiftIsoDate(today, -7), today)
+        ).sessions.find((candidate) => candidate.id === workout.planSessionId);
+  const [library, modes] = await Promise.all([
+    readLibraryOptions(),
+    readMeasurementHistory(),
+  ]);
+
+  if (session === undefined) {
+    return (
+      <>
+        <SourceCard
+          label="Logging a live workout"
+          title={workout.title}
+          meta={[workout.sport, `${fromWorkout.durationMinutes} min`]}
+        />
+        <LogForm
+          planned={null}
+          existing={null}
+          fromWorkout={{
+            ...fromWorkout,
+            // Unplanned training answers no planned activity.
+            activities: fromWorkout.activities.map((activity) => ({
+              ...activity,
+              plannedPosition: null,
+            })),
+          }}
+          library={library}
+          modes={modes}
+          saveActivityToLibrary={saveActivityToLibraryAction}
+          updateActivityInLibrary={updateActivityInLibraryAction}
+          defaultDate={today}
+          today={today}
+          returnDate={today}
+        />
+      </>
+    );
+  }
+
+  const logged = await (
+    await createCompletionLog()
+  ).findByPlanSession(session.id);
+  const planned: LogPlannedView = {
+    id: session.id,
+    localDate: session.localDate,
+    dayLabel: shortDay(session.localDate),
+    title: session.title,
+    sport: session.sport,
+    expectedDurationMinutes: session.expectedDurationMinutes ?? null,
+    activities: session.activities
+      .toSorted((left, right) => left.position - right.position)
+      .map(toPlannedActivityView),
+  };
+  return (
+    <>
+      <SourceCard
+        label="Logging a live workout"
+        title={planned.title}
+        meta={[
+          planned.sport,
+          `${fromWorkout.durationMinutes} min trained`,
+          longDay(planned.localDate),
+        ]}
+      />
+      <LogForm
+        planned={planned}
+        existing={null}
+        fromWorkout={fromWorkout}
+        library={library}
+        modes={modes}
+        saveActivityToLibrary={saveActivityToLibraryAction}
+        updateActivityInLibrary={updateActivityInLibraryAction}
+        unplannedOptions={await unplannedOptions(planned.localDate, today)}
+        alreadyLogged={
+          logged === null
+            ? null
+            : { id: logged.id, dayLabel: longDay(logged.actualLocalDate) }
+        }
+        defaultDate={today}
+        today={today}
+        returnDate={today}
+      />
+    </>
+  );
 }
 
 /**
@@ -511,7 +652,8 @@ function redirectOnAuthError(error: unknown): void {
     error instanceof RollingPlanAuthenticationError ||
     error instanceof CompletionAuthenticationError ||
     error instanceof SavedSessionAuthenticationError ||
-    error instanceof PersonalActivityAuthenticationError
+    error instanceof PersonalActivityAuthenticationError ||
+    error instanceof LiveWorkoutAuthenticationError
       ? error.accessError
       : undefined;
   if (accessError?.reason === "not-owner") redirect("/auth/denied");
@@ -520,7 +662,8 @@ function redirectOnAuthError(error: unknown): void {
     error instanceof RollingPlanAuthenticationError ||
     error instanceof CompletionAuthenticationError ||
     error instanceof SavedSessionAuthenticationError ||
-    error instanceof PersonalActivityAuthenticationError
+    error instanceof PersonalActivityAuthenticationError ||
+    error instanceof LiveWorkoutAuthenticationError
   ) {
     redirect("/");
   }

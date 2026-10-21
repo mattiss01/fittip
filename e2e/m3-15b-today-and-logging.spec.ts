@@ -166,7 +166,7 @@ test.describe("M3-15B today and logging", () => {
       // ---- Log a planned session. ----
       await page.goto("/home/today");
       await todayCard(page, "Tempo run")
-        .getByRole("link", { name: "Log this session" })
+        .getByRole("link", { name: "Log results" })
         .click();
       await expect(page.locator("[data-log-source]")).toContainText(
         "Tempo run",
@@ -224,14 +224,14 @@ test.describe("M3-15B today and logging", () => {
       await expect(logged.getByText("7 of 10")).toBeVisible();
       await expect(logged.getByText(/You reported: Pain/)).toBeVisible();
       await expect(
-        logged.getByRole("link", { name: "Log this session" }),
+        logged.getByRole("link", { name: "Log results" }),
       ).toHaveCount(0);
 
       // ---- A4bc: per-activity actuals, the log's own name, a correction. ----
       // The row is unmeasured, which every activity validator refused until
       // A4bc: nothing in this flow logged a session carrying one before.
       await todayCard(page, "Serve and volley")
-        .getByRole("link", { name: "Log this session" })
+        .getByRole("link", { name: "Log results" })
         .click();
       const serves = () =>
         page
@@ -287,7 +287,7 @@ test.describe("M3-15B today and logging", () => {
       // ---- A4d: replaced points at what replaced it. ----
       // Logged inline: one save writes the replaced log and the ride.
       await todayCard(page, "Core circuit")
-        .getByRole("link", { name: "Log this session" })
+        .getByRole("link", { name: "Log results" })
         .click();
       await logInSteps(page, {
         outcome: "Replaced",
@@ -309,7 +309,7 @@ test.describe("M3-15B today and logging", () => {
 
       // Picked: the same ride stands for a second session.
       await todayCard(page, "Easy jog")
-        .getByRole("link", { name: "Log this session" })
+        .getByRole("link", { name: "Log results" })
         .click();
       await logInSteps(page, {
         outcome: "Replaced",
@@ -331,7 +331,7 @@ test.describe("M3-15B today and logging", () => {
 
       // ---- Skip is a completion status, written the same way. ----
       await todayCard(page, "Easy spin")
-        .getByRole("link", { name: "Log this session" })
+        .getByRole("link", { name: "Log results" })
         .click();
       // How it went is asked first (owner, 3 Oct 2026), so a skip is not
       // asked what was done.
@@ -496,7 +496,7 @@ test.describe("M3-15B today and logging", () => {
       for (const session of ["Core circuit", "Easy jog"]) {
         await expect(
           todayCard(page, session).getByRole("link", {
-            name: "Log this session",
+            name: "Log results",
           }),
         ).toBeVisible();
       }
@@ -545,7 +545,7 @@ test.describe("M3-15B today and logging", () => {
 
       // ---- A logged occurrence is settled; its series ends from the next. ----
       await todayCard(page, "Aerobic base")
-        .getByRole("link", { name: "Log this session" })
+        .getByRole("link", { name: "Log results" })
         .click();
       await logInSteps(page, { outcome: "Completed" });
       await expect(

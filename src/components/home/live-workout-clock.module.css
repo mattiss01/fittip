@@ -1,0 +1,89 @@
+/* A running workout's way back, just above the navigation on every page
+   under /home (owner, 21 Oct 2026), where the save dock would sit. Above
+   ordinary content and the navigation, below a dialog. */
+.pill {
+  position: fixed;
+  z-index: 35;
+  bottom: calc(5.4rem + env(safe-area-inset-bottom));
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  max-width: calc(100vw - 2rem);
+  min-height: 2.75rem;
+  padding: 0 1rem;
+  border-radius: var(--radius-pill);
+  background: var(--pine);
+  box-shadow: var(--shadow-raised);
+  color: white;
+  font: 600 0.9rem var(--font-sans);
+  text-decoration: none;
+  transform: translateX(-50%);
+}
+
+.pill:focus-visible {
+  outline: 3px solid var(--ember);
+  outline-offset: 2px;
+}
+
+.dot,
+.dotPaused {
+  flex: none;
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+}
+
+.dot {
+  background: var(--ember);
+  animation: live-pulse 1.6s ease-in-out infinite;
+}
+
+.dotPaused {
+  background: var(--rule);
+}
+
+.title {
+  overflow: hidden;
+  max-width: 12rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.time {
+  font: 700 1rem var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes live-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dot {
+    animation: none;
+  }
+}
+
+/* Room below the page, so its last content scrolls clear of the pill. */
+.room {
+  height: 3.5rem;
+}
+
+/* A page with a save dock is mid-edit, and the dock owns that place: the
+   pill steps aside until the edit is saved or left. */
+:global(body:has(.save-dock)) .pill,
+:global(body:has(.save-dock)) .room {
+  display: none;
+}
+
+@media (min-width: 900px) {
+  /* The navigation floats at the right there; the pill keeps the left. */
+  .pill {
+    bottom: 1.25rem;
+    left: 1.25rem;
+    transform: none;
+  }
+}

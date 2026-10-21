@@ -86,9 +86,22 @@ export type LogExistingView = {
   severeFatigue: boolean;
 };
 
+/**
+ * A workout logged live (ADR-037), which a new log starts from: its time, its
+ * name, and what was done. Saving the log removes the workout with it.
+ */
+export type LogFromWorkout = {
+  id: string;
+  title: string;
+  sport: string;
+  durationMinutes: number;
+  activities: LogRecordedActivityView[];
+};
+
 type Props = {
   planned: LogPlannedView | null;
   existing: LogExistingView | null;
+  fromWorkout?: LogFromWorkout | null;
   /** The date the form starts on: the planned day, or the day it was opened. */
   defaultDate: string;
   /**
@@ -197,6 +210,7 @@ const STEP_QUESTIONS: Record<Step, string> = {
 export function LogForm({
   planned,
   existing,
+  fromWorkout = null,
   alreadyLogged = null,
   defaultDate,
   today,
@@ -214,13 +228,16 @@ export function LogForm({
     INITIAL_LOG_ACTION_STATE,
   );
   const choices = planned === null ? [UNPLANNED_OUTCOME] : PLANNED_OUTCOMES;
+  // A workout tracked live happened (owner, 21 Oct 2026): it is logged as
+  // completed without being asked, and the summary's Change still reaches it.
+  const asksOutcome = choices.length > 1 && fromWorkout === null;
   const [outcome, setOutcome] = useState<CompletionOutcome>(
     existing?.outcome ?? choices[0].value,
   );
   // A new planned log has not been told how it went yet; the outcome step is
   // answered by a tap, not by a default the owner never chose.
   const [outcomeChosen, setOutcomeChosen] = useState(
-    existing !== null || choices.length === 1,
+    existing !== null || !asksOutcome,
   );
   const [actualDate, setActualDate] = useState(
     existing?.actualLocalDate ?? defaultDate,
@@ -235,14 +252,20 @@ export function LogForm({
     planned === null && existing === null
       ? savedSessions.find((session) => session.id === startFrom)
       : undefined;
-  const [title, setTitle] = useState(existing?.title ?? planned?.title ?? "");
-  const [sport, setSport] = useState(existing?.sport ?? planned?.sport ?? "");
+  const [title, setTitle] = useState(
+    existing?.title ?? planned?.title ?? fromWorkout?.title ?? "",
+  );
+  const [sport, setSport] = useState(
+    existing?.sport ?? planned?.sport ?? fromWorkout?.sport ?? "",
+  );
   // A new log starts at what the plan expected, or at 0 (owner, 3 Oct 2026);
   // a correction at what was recorded.
   const [minutes, setMinutes] = useState<string>(
     String(
       existing === null
-        ? (planned?.expectedDurationMinutes ?? 0)
+        ? (fromWorkout?.durationMinutes ??
+            planned?.expectedDurationMinutes ??
+            0)
         : (existing.durationMinutes ?? ""),
     ),
   );
@@ -262,7 +285,7 @@ export function LogForm({
   const [signalsAnswered, setSignalsAnswered] = useState(existing !== null);
 
   const [step, setStep] = useState<Step>(
-    existing !== null ? "summary" : choices.length > 1 ? "outcome" : "what",
+    existing !== null ? "summary" : asksOutcome ? "outcome" : "what",
   );
   // The date is asked only when the owner taps its Change, and returns to
   // the question it was opened from.
@@ -285,7 +308,9 @@ export function LogForm({
   // Two answers live inside their own components; the summary reads them
   // from the form once it has rendered, never during a render.
   const [observed, setObserved] = useState(() => ({
-    activities: countPhrase(existing?.activities.length ?? 0),
+    activities: countPhrase(
+      existing?.activities.length ?? fromWorkout?.activities.length ?? 0,
+    ),
     replacement: "Not said yet",
   }));
   const saved = state.status === "saved";
@@ -351,7 +376,7 @@ export function LogForm({
     // is not asked what was done, and keeps the plan's name for the log.
     const happened = forOutcome !== "skipped" && forOutcome !== "replaced";
     return [
-      ...(choices.length > 1 && !(whichDay && forDay === "extra")
+      ...(asksOutcome && !(whichDay && forDay === "extra")
         ? (["outcome"] as const)
         : []),
       ...(happened ? (["what"] as const) : []),
@@ -402,7 +427,8 @@ export function LogForm({
     const listed = form.querySelector<HTMLInputElement>(
       'input[name="activities"]',
     );
-    let count = existing?.activities.length ?? 0;
+    let count =
+      existing?.activities.length ?? fromWorkout?.activities.length ?? 0;
     try {
       const rows: unknown = JSON.parse(listed?.value ?? "");
       if (Array.isArray(rows)) count = rows.length;
@@ -423,7 +449,7 @@ export function LogForm({
           ? named
           : "Not said yet",
     });
-  }, [step, outcome, existing]);
+  }, [step, outcome, existing, fromWorkout]);
 
   if (alreadyLogged !== null && !saved) {
     return (
@@ -620,6 +646,9 @@ export function LogForm({
           <input type="hidden" name="plannedSessionId" value={planned.id} />
           <input type="hidden" name="plannedDate" value={planned.localDate} />
         </>
+      )}
+      {fromWorkout === null || existing !== null ? null : (
+        <input type="hidden" name="liveWorkoutId" value={fromWorkout.id} />
       )}
       <input type="hidden" name="status" value={status} />
       <input type="hidden" name="actualLocalDate" value={actualDate} />
@@ -987,7 +1016,7 @@ export function LogForm({
         <ActualActivities
           key={`activities-${startFrom}`}
           activities={planned?.activities ?? []}
-          recorded={existing?.activities}
+          recorded={existing?.activities ?? fromWorkout?.activities}
           starting={startingSession?.activities}
           library={library}
           modes={modes}

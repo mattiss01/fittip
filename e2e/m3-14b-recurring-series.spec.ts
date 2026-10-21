@@ -72,7 +72,9 @@ test.describe("M3-14B recurring series surface", () => {
       ).toBeVisible();
       await page.getByRole("button", { name: "More actions" }).click();
       await expect(page.locator("[data-session-actions] li")).toHaveText([
-        "Log this session",
+        "Log results",
+        // Today's session can be tracked live (ADR-037).
+        "Track live",
         "Duplicate",
         "Save to library",
         "Cancel session",

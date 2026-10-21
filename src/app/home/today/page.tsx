@@ -32,6 +32,7 @@ import {
   RollingPlanAuthenticationError,
 } from "@/server/repositories/rolling-plan-repository";
 import { CoachCancellationAuthenticationError } from "@/server/repositories/coach-cancellation-repository";
+import { createLiveWorkouts } from "@/server/repositories/live-workout-repository";
 import type { RollingPlanSession } from "@/server/rolling-plan/rolling-plan";
 
 export const dynamic = "force-dynamic";
@@ -100,6 +101,7 @@ async function renderDay(timezoneName: string, requested: string | null) {
 
   let window;
   let completions;
+  let running;
   try {
     const [plan, log] = await Promise.all([
       createRollingPlan(),
@@ -108,9 +110,14 @@ async function renderDay(timezoneName: string, requested: string | null) {
     // ADR-017 consequence 3: a consumer that is not the Plan has to top the
     // window up before reading it, or knowingly read an incomplete plan. Both
     // reads are bounded by the one day this view shows.
-    [window, completions] = await Promise.all([
+    [window, completions, running] = await Promise.all([
       readPlanWindowToppedUp(plan, date, date),
       log.list(date, date),
+      // A workout already running is offered to continue, not a new one to
+      // start (ADR-037). Only an offer: a failed read offers starting.
+      createLiveWorkouts()
+        .then((workouts) => workouts.current())
+        .catch(() => null),
     ]);
   } catch (error) {
     redirectOnAuthError(error);
@@ -169,6 +176,11 @@ async function renderDay(timezoneName: string, requested: string | null) {
       lastPlaceableDate={lastPlaceableDate}
       isRecoveryDay={window.slice.recoveryDates.includes(date)}
       toppedUp={window.toppedUp}
+      runningWorkout={
+        running == null
+          ? null
+          : { title: running.title, planSessionId: running.planSessionId }
+      }
       sessions={sessions}
       unattached={completions
         .filter((completion) => !carried.has(completion.id))

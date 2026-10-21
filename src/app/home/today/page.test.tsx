@@ -192,7 +192,7 @@ describe("Today", () => {
         .querySelector("a")
         ?.getAttribute("href"),
     ).toBe(`/home/progress/${COMPLETION_ID}?from=today&date=${today()}`);
-    expect(within(card).queryByRole("link", { name: "Log this session" })).toBe(
+    expect(within(card).queryByRole("link", { name: "Log results" })).toBe(
       null,
     );
     expect(
@@ -262,7 +262,7 @@ describe("Today", () => {
       `[data-today-session="${SESSION_ID}"]`,
     ) as HTMLElement;
     expect(within(card).getByRole("link", { name: "Edit log" })).toBeTruthy();
-    expect(within(card).queryByRole("link", { name: "Log this session" })).toBe(
+    expect(within(card).queryByRole("link", { name: "Log results" })).toBe(
       null,
     );
   });
@@ -401,7 +401,7 @@ describe("Today", () => {
     ).toBeTruthy();
     // Small (owner, 19 Oct 2026): nothing to log and no planned list.
     expect(
-      within(unlogged).queryByRole("link", { name: /Log this session/ }),
+      within(unlogged).queryByRole("link", { name: /Log results/ }),
     ).toBeNull();
     expect(unlogged.querySelector("[data-activity-list]")).toBeNull();
   });
@@ -428,9 +428,7 @@ describe("Today", () => {
     render(await TodayPage({ searchParams: Promise.resolve({}) }));
 
     expect(
-      screen
-        .getByRole("link", { name: "Log this session" })
-        .getAttribute("href"),
+      screen.getByRole("link", { name: "Log results" }).getAttribute("href"),
     ).toBe(`/home/log?plannedSession=${SESSION_ID}&date=${today()}`);
   });
 

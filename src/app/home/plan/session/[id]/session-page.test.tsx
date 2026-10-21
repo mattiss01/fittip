@@ -193,15 +193,15 @@ describe("SessionPage", () => {
         ),
       ).map((item) => item.textContent),
     ).toEqual([
-      "Log this session",
+      "Log results",
+      // On its own day it can be tracked live (ADR-037).
+      "Track live",
       "Duplicate",
       "Save to library",
       "Cancel session",
       "Delete",
     ]);
-    expect(
-      screen.getByRole("link", { name: "Log this session" }),
-    ).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Log results" })).toHaveAttribute(
       "href",
       `/home/log?plannedSession=${session().id}&date=${TODAY}`,
     );
@@ -697,9 +697,7 @@ describe("SessionPage", () => {
     render(page(session({ localDate: "2026-08-10" }), undefined, "today"));
 
     expect(screen.getByText(/can no longer change it/)).toBeVisible();
-    expect(
-      screen.getByRole("link", { name: "Log this session" }),
-    ).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Log results" })).toHaveAttribute(
       "href",
       `/home/log?plannedSession=${session().id}&date=2026-08-10`,
     );

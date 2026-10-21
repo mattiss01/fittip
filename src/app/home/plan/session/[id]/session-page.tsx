@@ -15,6 +15,7 @@ import {
 import { INITIAL_PLAN_ACTION_STATE } from "../../action-state";
 import { PlanDateInput, type PlanDateRange } from "../../plan-date-field";
 import { changePlanAction } from "../../actions";
+import { startLiveWorkoutAction } from "../../../log/live/actions";
 import { CancelReasonFields } from "../../cancel-reason-fields";
 import { MenuItem, MenuLink, MoreMenu } from "@/components/home/more-menu";
 import { SheetCloseButton, SheetLayer } from "../../plan-sheet";
@@ -576,7 +577,7 @@ export function SessionPage({
             </button>
           ) : (
             <Link className={page.main} href={logHref}>
-              {session.log ? "Edit log" : "Log this session"}
+              {session.log ? "Edit log" : "Log results"}
             </Link>
           )}
 
@@ -584,7 +585,20 @@ export function SessionPage({
             <MoreMenu>
               {(close) => (
                 <>
-                  <MenuLink href={logHref}>Log this session</MenuLink>
+                  <MenuLink href={logHref}>Log results</MenuLink>
+                  {session.localDate === today ? (
+                    // Tracked while it happens (ADR-037), on its own day.
+                    <MenuItem
+                      onSelect={() => {
+                        close();
+                        const formData = new FormData();
+                        formData.set("plannedSessionId", session.id);
+                        startTransition(() => startLiveWorkoutAction(formData));
+                      }}
+                    >
+                      Track live
+                    </MenuItem>
+                  ) : null}
                   <MenuItem
                     onSelect={() => {
                       close();

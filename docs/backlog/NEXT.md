@@ -46,6 +46,15 @@ Ordered by dependency. A lane is named where it is not the build lane.
       the owner calling the database directly gets past it, on their own data.
       The owner's to decide; a small migration, so it can ride with the next one.
 
+- [~] **Log a session live.** Owner, 21 Oct 2026, from the prototype at
+      `prototype/live-workout` (variant A, "one list"). One clock for the whole workout,
+      no rest or per-activity timers; every activity's measurement can be changed while
+      training; a running workout is stored in the database (one per owner, a draft and
+      never a log) and a clock on every page leads back to it. Started from a planned
+      session or from scratch; Finish opens the log steps already filled in, so "Anything
+      off?" is still asked, and saving the log removes the workout in the same
+      transaction. Careful lane: a new table, RLS and a log RPC.
+
 **Coach and records.**
 
 - [ ] **A fill's sources are recorded and never checked.** A suggestion names the
@@ -106,13 +115,9 @@ Not worth their own slot; do them when work lands nearby.
   "Nothing to set yet." Meant for it: account details, subscription, language, and light
   or dark mode. None is decided or listed there; Sign out stays on You. Account details
   touch auth and a subscription touches spend, so both are careful lane.
-- **Log a session live — idea.** Owner, 1 Oct 2026. Track a session while doing it, set by
-  set and activity by activity, instead of filling the log in afterwards. To think
-  through: what is saved if it is abandoned halfway (a partial log, or nothing), whether
-  a phone that sleeps or goes offline mid-session loses anything, how it sits beside the
-  after-the-fact log in steps, and where the pain, illness and fatigue question goes so
-  it is never skipped (in steps it is its own question, answered or "Nothing was off"). The log's records stay separate from the
-  plan either way.
+- **GPS for runs — idea, for a native app.** Owner, 21 Oct 2026: a browser loses the
+  phone's position once the screen locks, so a run's distance is typed for now. Worth
+  revisiting if FitTip becomes a real app.
 - **Create and fill with Coach — idea.** Owner, 1 Oct 2026. Fill with Coach is offered only
   when editing, because the coach reads a saved session and its suggestion is stored
   against one. The idea: a second button on the create form that saves the session, then
