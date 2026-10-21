@@ -585,8 +585,14 @@
 /* The coach's goal suggestions waiting on the owner (ADR-034). */
 .suggestions {
   display: grid;
-  gap: 0.6rem;
+  gap: 0.7rem;
   margin-bottom: 1.2rem;
+  /* A panel, so its tinted cards are not lost on the page (owner, 21 Oct
+     2026). */
+  padding: 1rem 1rem 0.9rem;
+  border-radius: var(--radius-card);
+  background: var(--paper);
+  box-shadow: var(--shadow-card);
 }
 
 .suggestions > h2 {

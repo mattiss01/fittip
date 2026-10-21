@@ -122,9 +122,12 @@ describe("useRoadmapWrite lost-render recovery", () => {
     await submitWrite();
     clock = 20_100;
     await deliver([{ name: actionUrl, responseEnd: clock }]);
-    // One tick, 800 ms after that reply: past the render grace, and the reload
-    // it arms is still half a second away.
+    // 800 ms after that reply is not lost on this surface: a proposal's code
+    // may still be loading (owner, 21 Oct 2026).
     await tick(800);
+    expect(screen.getByTestId("watch").textContent).toBe("watching");
+    // Five seconds after it is, and the reload it arms is half a second away.
+    await tick(4_300);
 
     expect(screen.getByTestId("watch").textContent).toBe("lost");
     expect(window.sessionStorage.getItem(RECOVERY_FLAG)).toBe("1");

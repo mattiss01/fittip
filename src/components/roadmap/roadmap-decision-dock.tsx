@@ -200,13 +200,6 @@ export function RoadmapDecisionDock({
     <>
       {children}
       <div className={styles.dock} data-roadmap-dock={proposalId}>
-        <h3 className={styles.sectionHeading}>
-          {ROADMAP_CONTROL_COPY.decideTitle}
-        </h3>
-        <p className={styles.emptyState}>
-          {ROADMAP_CONTROL_COPY.decideSupport}
-        </p>
-
         <RoadmapWatchNotice lostRender={lostRender} recovered={recovered} />
 
         {latest === undefined ? null : (
@@ -282,7 +275,10 @@ export function RoadmapDecisionDock({
             ) : null}
           </form>
         ) : (
-          <div className={styles.actions}>
+          // Accept and Edit side by side, Ask for another and Decline as
+          // quiet text under them (owner, 21 Oct 2026: four full-width
+          // buttons took the screen).
+          <div className={styles.decision}>
             <form
               action={accept.submit}
               ref={acceptForm}
@@ -320,7 +316,7 @@ export function RoadmapDecisionDock({
 
             {regenerationsRemaining > 0 ? (
               <button
-                className={styles.secondaryAction}
+                className={styles.textAction}
                 type="button"
                 data-roadmap-ask-again-open
                 onClick={() => setAskOpen(true)}
@@ -331,7 +327,10 @@ export function RoadmapDecisionDock({
               </button>
             ) : (
               // Said, not just gone: the three asks on these dates are used.
-              <p className={styles.helper} data-roadmap-ask-again-used>
+              <p
+                className={`${styles.helper} ${styles.decisionNote}`}
+                data-roadmap-ask-again-used
+              >
                 {ROADMAP_CONTROL_COPY.outcomes.askAgainUsedUp}
               </p>
             )}
@@ -353,7 +352,7 @@ export function RoadmapDecisionDock({
             >
               <input type="hidden" name="proposalId" value={proposalId} />
               <button
-                className={styles.quietAction}
+                className={`${styles.textAction} ${styles.declineAction}`}
                 type="submit"
                 disabled={busy}
               >

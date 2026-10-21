@@ -159,7 +159,7 @@ describe("what the dock shows (owner, 14 Oct 2026)", () => {
     expect(
       screen.getByRole("heading", { name: ROADMAP_CONTROL_COPY.editTitle }),
     ).toBeTruthy();
-    expect(screen.queryByText("A proposal is waiting")).toBeNull();
+    expect(screen.queryByText("Base and build.")).toBeNull();
     expect(
       screen.queryByRole("button", { name: ROADMAP_CONTROL_COPY.acceptAction }),
     ).toBeNull();

@@ -120,7 +120,7 @@ test.describe("M3-15F roadmap generation", () => {
         .locator("[data-roadmap-example] ~ h2")
         .first()
         .innerText();
-      await review.getByRole("button", { name: "Edit proposal" }).click();
+      await review.getByRole("button", { name: "Edit", exact: true }).click();
       // The form and nothing of the proposal beside it (owner, 14 Oct 2026).
       const editor = page.locator('[data-roadmap-write="edit"]');
       await expect(editor).toBeVisible();
@@ -178,8 +178,13 @@ test.describe("M3-15F roadmap generation", () => {
         .click();
 
       const regenerated = page.locator("[data-roadmap-open-proposal]");
-      await expect(regenerated.getByText("Regenerated")).toBeVisible();
+      // A proposal names no origin (owner, 21 Oct 2026): the regenerated one
+      // is told by the edit it replaced being gone.
       await expectOutcome(page, "A proposal is ready below.");
+      await expect(regenerated).toBeVisible();
+      await expect(
+        regenerated.getByRole("heading", { name: "My own wording" }),
+      ).toHaveCount(0);
 
       // ---- Accept: it becomes the roadmap. ----
       await regenerated.getByRole("button", { name: "Accept roadmap" }).click();
@@ -276,7 +281,7 @@ test.describe("M3-15F roadmap generation", () => {
       // asked afresh (owner, 14 Oct 2026).
       await page
         .locator("[data-roadmap-open-proposal]")
-        .getByRole("button", { name: "Decline proposal" })
+        .getByRole("button", { name: "Decline", exact: true })
         .click();
       await expect(page.locator("[data-roadmap-open-proposal]")).toHaveCount(0);
       await createNew("fresh");

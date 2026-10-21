@@ -45,6 +45,14 @@ export type SpineGoalAttention = {
   level: "primary" | "secondary" | "maintenance" | "deferred";
 };
 
+/** The goals a phase works on: primary or secondary, not kept up or put off. */
+function workedOn(phase: SpinePhase): SpineGoalAttention[] {
+  return phase.goalAttention.filter(
+    (attention) =>
+      attention.level === "primary" || attention.level === "secondary",
+  );
+}
+
 export type SpineMilestone = {
   title: string;
   /** "Details", which may be left out (owner, 14 Oct 2026). */
@@ -133,15 +141,19 @@ function PhaseAndItsReview({
           </p>
           <p className={styles.phaseFocus}>{phase.focus}</p>
 
-          <ul className={styles.attentionList}>
-            {phase.goalAttention.map((attention) => (
-              // The goal and no level (owner, 14 Oct 2026). The coach still
-              // writes and reads one; the roadmap does not show it.
-              <li key={attention.goalId} className={styles.attention}>
-                {goalTitles[attention.goalId] ?? "Goal"}
-              </li>
-            ))}
-          </ul>
+          {/* The goal and no level (owner, 14 Oct 2026). The coach still
+              writes and reads one; the roadmap shows only the goals a phase
+              works on, not those it keeps up or puts off (owner, 21 Oct 2026:
+              otherwise every goal is in every phase). */}
+          {workedOn(phase).length > 0 ? (
+            <ul className={styles.attentionList}>
+              {workedOn(phase).map((attention) => (
+                <li key={attention.goalId} className={styles.attention}>
+                  {goalTitles[attention.goalId] ?? "Goal"}
+                </li>
+              ))}
+            </ul>
+          ) : null}
 
           {/* A phase may have no milestone since v3, and an empty list is
               not something to announce. */}

@@ -4,6 +4,7 @@ import { useActionState } from "react";
 
 import styles from "./memory-suggestions.module.css";
 
+import { CoachSpark } from "@/components/home/coach-spark";
 import { INITIAL_MEMORY_ACTION_STATE } from "@/app/home/you/memory/action-state";
 import { changeMemoryAction } from "@/app/home/you/memory/actions";
 
@@ -66,7 +67,10 @@ export function MemorySuggestions({
             className={styles.item}
             data-memory-suggestion={suggestion.id}
           >
-            <p className={styles.type}>{TYPE_LABELS[suggestion.memoryType]}</p>
+            <p className={styles.type}>
+              <CoachSpark size={12} />
+              {TYPE_LABELS[suggestion.memoryType]}
+            </p>
             <p className={styles.content}>{suggestion.content}</p>
             <form className={styles.choices} action={action}>
               <input type="hidden" name="itemId" value={suggestion.id} />

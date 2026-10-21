@@ -88,15 +88,18 @@ export function watchTransition({
   respondedAt,
   consumedAt,
   now,
+  renderGraceMs = RENDER_GRACE_MS,
 }: {
   submittedAt: number;
   respondedAt: number | null;
   consumedAt: number | null;
   now: number;
+  /** How long an arrived reply may take to render; see `RENDER_GRACE_MS`. */
+  renderGraceMs?: number;
 }): TransitionWatch {
   const unaccountedFor =
     respondedAt !== null && (consumedAt === null || respondedAt > consumedAt);
-  if (unaccountedFor && now - respondedAt >= RENDER_GRACE_MS) {
+  if (unaccountedFor && now - respondedAt >= renderGraceMs) {
     return "lost-render";
   }
   if (now - submittedAt >= CONFIRMATION_BUDGET_MS) return "unconfirmed";

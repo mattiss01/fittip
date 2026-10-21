@@ -481,10 +481,6 @@ export const ROADMAP_COPY = {
     // the owner asked for none on a roadmap they wrote (ADR-029).
     owner_written: "Your roadmap",
   } satisfies Record<RoadmapProposalOrigin, string>,
-  /** The open proposal, shown in full above the roadmap it would replace. */
-  openProposalHeading: "A proposal is waiting",
-  openProposalSupport:
-    "Read it, change it, or turn it down. Your current roadmap stays exactly as it is until you accept.",
   /** Every wording a Client Component renders; see that module for why. */
   ...ROADMAP_CONTROL_COPY,
   /** `error.tsx` and `loading.tsx`; see that module for why it lives apart. */
