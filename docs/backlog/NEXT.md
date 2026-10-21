@@ -61,11 +61,6 @@ Ordered by dependency. A lane is named where it is not the build lane.
       stores, and so which kinds can be compared; and the owner's to say, whether a
       stale suggestion warns or loses Accept, where asking again is a paid call.
       Careful lane: a migration.
-- [ ] **A changed setup can replay an earlier answer.** The coach service's
-      repeat-protection fingerprint covers the goal and memory revisions, not the
-      profile. Changing the setup and resubmitting the same open form may return the
-      earlier proposal. Found in the review of ADR-023's first merge; staleness, not a
-      leak. Careful lane (the fingerprint is part of the spend guard).
 - [ ] **An account with logs cannot be deleted.** Found seeding the test athletes,
       16 Oct 2026: deleting the auth user fails, because a log restricts the deletion of
       its planned session (`completions` → `rolling_plan_sessions`) and plan,
@@ -193,6 +188,12 @@ Not worth their own slot; do them when work lands nearby.
 - **A due review cannot be shown in a browser flow.** The coach starts a roadmap today,
   so no phase has ended; the card and the Plan's dot are proved in unit and database
   tests and were looked at on a local database with a phase moved into the past.
+- **A changed setup is not noticed by a resend of the same open plan form.** The
+  repeat-protection fingerprint covers the goal and memory revisions, not the profile, so
+  a setup changed in another tab while the form stays open replays the earlier proposal;
+  reloading the page asks afresh. Owner, 21 Oct 2026: kept, since it costs nothing and
+  changes nothing, and a fix needs a profile revision (migration) and a key renewal that
+  must not undo the 17 Oct 2026 replay protection.
 - **The roadmap coach is not told which dates of a series differ.** A rule is sent as the
   series stands (ADR-013, amended 2 Oct 2026): a cancelled or deleted occurrence is not
   listed, and an edited or moved one appears both as its own dated entry and
