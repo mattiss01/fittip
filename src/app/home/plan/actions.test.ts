@@ -242,8 +242,18 @@ describe("plan actions", () => {
         title: "Strength",
         sport: "Strength",
         activities: JSON.stringify([
-          { name: "A", sport: "S", measurementMode: "custom", target: null },
-          { name: "B", sport: "S", measurementMode: "custom", target: null },
+          {
+            name: "A",
+            sport: "S",
+            measurementMode: "unmeasured",
+            target: null,
+          },
+          {
+            name: "B",
+            sport: "S",
+            measurementMode: "unmeasured",
+            target: null,
+          },
         ]),
       }),
     );
@@ -282,7 +292,7 @@ describe("plan actions", () => {
             {
               name: "A",
               sport: "S",
-              measurementMode: "custom",
+              measurementMode: "unmeasured",
               target: null,
               ...extra,
             },
@@ -318,7 +328,7 @@ describe("plan actions", () => {
     [
       "a blank name",
       JSON.stringify([
-        { name: "  ", sport: "S", measurementMode: "custom", target: null },
+        { name: "  ", sport: "S", measurementMode: "unmeasured", target: null },
       ]),
     ],
   ])("refuses %s", async (_label, activities) => {

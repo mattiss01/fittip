@@ -326,7 +326,7 @@ select throws_ok(
   $$insert into public.completion_activities (
       user_id, completion_id, position, name, sport, measurement_mode)
     values ('7f000000-0000-4000-8000-000000000001',
-      '7f000000-0000-4000-8000-0000000000ff', 0, 'Direct', 'Running', 'custom')$$,
+      '7f000000-0000-4000-8000-0000000000ff', 0, 'Direct', 'Running', 'unmeasured')$$,
   '42501', 'permission denied for table completion_activities',
   'direct authenticated insertion of a completed activity is denied'
 );

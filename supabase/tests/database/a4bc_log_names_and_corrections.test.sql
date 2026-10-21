@@ -199,7 +199,7 @@ select lives_ok(
     jsonb_build_object('status', 'unplanned', 'actualLocalDate', %L,
       'activities', jsonb_build_array(
         jsonb_build_object('position', 0, 'name', 'Evening walk',
-          'sport', 'Walking', 'measurementMode', 'custom'))))$$,
+          'sport', 'Walking', 'measurementMode', 'unmeasured'))))$$,
     pg_temp.owner_day(0)),
   'the previous app''s unplanned create, naming only an activity, still lands'
 );

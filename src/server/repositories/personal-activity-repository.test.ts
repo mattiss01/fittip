@@ -140,7 +140,11 @@ describe("PostgresPersonalActivityAdapter", () => {
   it("maps a check violation to validation and anything else to persistence", async () => {
     const change = {
       operation: "create",
-      activity: { name: "Squat", sport: "Strength", measurementMode: "custom" },
+      activity: {
+        name: "Squat",
+        sport: "Strength",
+        measurementMode: "unmeasured",
+      },
     };
     await expect(
       createLibrary(

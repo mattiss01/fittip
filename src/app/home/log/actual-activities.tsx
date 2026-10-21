@@ -530,6 +530,9 @@ function ActualRow({
           onGroupsChange={(groups) =>
             onChange({ draft: { ...row.draft, groups } })
           }
+          onBlocksChange={(blocks) =>
+            onChange({ draft: { ...row.draft, blocks } })
+          }
         />
         {unnamed ? null : (
           <LibraryRowActions

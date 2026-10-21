@@ -4,7 +4,7 @@
  * same reason.
  *
  * The mode labels are the owner's words, not the database's. `sets_reps_load`
- * is what the column stores; "Sets, reps and load" is what a person picking
+ * is what the column stores; "Sets" is what a person picking
  * one from a list needs to read. The hints below each say what the mode is
  * *for*, because the difference between "Duration and intensity" and "Time,
  * distance and pace" is not obvious from the names alone and picking the wrong
@@ -28,8 +28,8 @@ export const MEASUREMENT_MODE_COPY: Record<
     hint: "A drill you just want on the list, with no numbers.",
   },
   sets_reps_load: {
-    label: "Sets, reps and load",
-    hint: "One line per block. Three of the same, then a heavier single.",
+    label: "Sets",
+    hint: "Reps or a time per set, with a weight if there is one. One line per block.",
   },
   time_distance_pace: {
     label: "Time, distance and pace",
@@ -39,13 +39,9 @@ export const MEASUREMENT_MODE_COPY: Record<
     label: "Duration and intensity",
     hint: "How long and how hard, with no distance to record.",
   },
-  skill_repetitions: {
-    label: "Repetitions",
-    hint: "A count of something you name yourself.",
-  },
-  custom: {
-    label: "Custom",
-    hint: "Anything the other four do not fit.",
+  intervals: {
+    label: "Intervals",
+    hint: "Repeats of a distance or a time, with rest between. One line per block.",
   },
 };
 

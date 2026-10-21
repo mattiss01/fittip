@@ -426,7 +426,7 @@ select throws_ok(
   $$insert into public.rolling_plan_series_activities (
       user_id, series_id, position, name, sport, measurement_mode)
     values ('7d000000-0000-4000-8000-000000000001',
-      '7d000000-0000-4000-8000-0000000000d1', 0, 'X', 'Running', 'custom')$$,
+      '7d000000-0000-4000-8000-0000000000d1', 0, 'X', 'Running', 'unmeasured')$$,
   '42501', 'permission denied for table rolling_plan_series_activities',
   'direct authenticated insertion of a template activity is denied'
 );

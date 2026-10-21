@@ -37,7 +37,7 @@ export const COACH_AI_SCHEMA_VERSIONS = {
 export const COACH_AI_PROMPT_VERSIONS = {
   create_roadmap: "roadmap-v4.2-2026-10-13",
   create_seven_day_plan: "seven-day-plan-v2-2026-08-12",
-  fill_session_activities: "session-activities-v1-2026-09-28",
+  fill_session_activities: "session-activities-v1.1-2026-10-21",
 } as const satisfies Record<CoachAIOperation, string>;
 
 /** The two runtimes ADR-006 and M0-06A permit. Nothing else may ever call out. */

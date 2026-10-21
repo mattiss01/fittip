@@ -279,7 +279,7 @@ select throws_ok(
   $$insert into public.saved_session_activities (
       user_id, saved_session_id, position, name, sport, measurement_mode)
     values ('7e000000-0000-4000-8000-000000000001',
-      '7e000000-0000-4000-8000-0000000000b1', 0, 'Direct', 'Running', 'custom')$$,
+      '7e000000-0000-4000-8000-0000000000b1', 0, 'Direct', 'Running', 'unmeasured')$$,
   '42501', 'permission denied for table saved_session_activities',
   'direct authenticated insertion of a saved activity is denied'
 );
@@ -289,7 +289,7 @@ select is(
     'create', null, null, 'Tuesday tempo', 'Tempo run', 'Running',
     'Threshold work', 60, 'Shoes with the orange laces',
     '[{"position":0,"name":"Easy running","sport":"Running","measurementMode":"duration_intensity","target":{"duration_minutes":15,"intensity":"easy"},"personalActivityId":"7e000000-0000-4000-8000-0000000000a1"},
-      {"position":1,"name":"Tempo blocks","sport":"Running","instructions":"3 x 8 minutes","measurementMode":"custom"}]'::jsonb
+      {"position":1,"name":"Tempo blocks","sport":"Running","instructions":"3 x 8 minutes","measurementMode":"unmeasured"}]'::jsonb
   )),
   'created',
   'the owner saves a session into the library'
@@ -324,7 +324,7 @@ select ok(
 select throws_ok(
   $$select public.apply_saved_session_change(
     'create', null, null, 'Borrowed', 'Borrowed', 'Running', null, null, null,
-    '[{"position":0,"name":"Someone else","sport":"Running","measurementMode":"custom","personalActivityId":"7e000000-0000-4000-8000-0000000000ff"}]'::jsonb
+    '[{"position":0,"name":"Someone else","sport":"Running","measurementMode":"unmeasured","personalActivityId":"7e000000-0000-4000-8000-0000000000ff"}]'::jsonb
   )$$,
   '22023', 'Invalid saved session activity.',
   'a saved activity cannot reference a personal activity the owner does not hold'
@@ -332,8 +332,8 @@ select throws_ok(
 select throws_ok(
   $$select public.apply_saved_session_change(
     'create', null, null, 'Collision', 'Collision', 'Running', null, null, null,
-    '[{"position":0,"name":"First","sport":"Running","measurementMode":"custom"},
-      {"position":0,"name":"Second","sport":"Running","measurementMode":"custom"}]'::jsonb
+    '[{"position":0,"name":"First","sport":"Running","measurementMode":"unmeasured"},
+      {"position":0,"name":"Second","sport":"Running","measurementMode":"unmeasured"}]'::jsonb
   )$$,
   '22023', 'Invalid saved session change.',
   'two activities cannot claim the same position'

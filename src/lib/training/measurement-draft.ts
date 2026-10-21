@@ -32,20 +32,41 @@
 
 import {
   type DistanceUnit,
+  type IntervalBlock,
   type PaceUnit,
   type SetGroup,
   type TrainingMeasurement,
   type TrainingMeasurementMode,
 } from "@/lib/training/measurement";
 
-/** One set-group row as the form holds it. */
-export type SetGroupDraft = { sets: string; reps: string; load: string };
+/**
+ * One set-group row as the form holds it. A set is counted in reps or held
+ * for a time (ADR-038): `by` says which, and only that one is built. The time
+ * reads as a clock, `0:45` or a bare `45`.
+ */
+export type SetGroupDraft = {
+  sets: string;
+  reps: string;
+  time: string;
+  load: string;
+  by: "reps" | "time";
+};
+
+/** One interval block as the form holds it; times read as clocks. */
+export type IntervalBlockDraft = {
+  repeats: string;
+  distance: string;
+  time: string;
+  rest: string;
+};
 
 export type MeasurementDraft = {
   /** The flat fields, for the modes that have them. */
   fields: Record<string, string>;
   /** `sets_reps_load` only, in the order the editor draws them. */
   groups: SetGroupDraft[];
+  /** `intervals` only, in order. Absent wherever the mode is not intervals. */
+  blocks?: IntervalBlockDraft[];
 };
 
 export type MeasurementBuild =
@@ -64,14 +85,24 @@ export const MEASUREMENT_FIELDS: Record<TrainingMeasurementMode, string[]> = {
     "pace_unit",
   ],
   duration_intensity: ["duration_minutes", "intensity"],
-  skill_repetitions: ["repetitions", "unit"],
-  custom: ["label", "value", "unit"],
+  intervals: ["distance_unit"],
 };
 
-export const emptySetGroup = (): SetGroupDraft => ({
+export const emptySetGroup = (
+  by: SetGroupDraft["by"] = "reps",
+): SetGroupDraft => ({
   sets: "",
   reps: "",
+  time: "",
   load: "",
+  by,
+});
+
+export const emptyIntervalBlock = (): IntervalBlockDraft => ({
+  repeats: "",
+  distance: "",
+  time: "",
+  rest: "",
 });
 
 export function emptyDraft(mode: TrainingMeasurementMode): MeasurementDraft {
@@ -85,9 +116,12 @@ export function emptyDraft(mode: TrainingMeasurementMode): MeasurementDraft {
     fields.distance_unit = "km";
     fields.pace_unit = "sec/km";
   }
+  // Intervals are most often track or pool repeats, measured in metres.
+  if (mode === "intervals") fields.distance_unit = "m";
   return {
     fields,
     groups: mode === "sets_reps_load" ? [emptySetGroup()] : [],
+    ...(mode === "intervals" ? { blocks: [emptyIntervalBlock()] } : {}),
   };
 }
 
@@ -115,16 +149,18 @@ export function draftFromMeasurement(
       }),
     ];
     fields.load_unit = measurement.load_unit ?? "kg";
+  } else if ("blocks" in measurement) {
+    draft.blocks = measurement.blocks.map((block) => ({
+      repeats: String(block.repeats),
+      distance: block.distance === undefined ? "" : String(block.distance),
+      time: block.seconds === undefined ? "" : writeClock(block.seconds),
+      rest:
+        block.rest_seconds === undefined ? "" : writeClock(block.rest_seconds),
+    }));
+    fields.distance_unit = measurement.distance_unit ?? "m";
   } else if ("duration_minutes" in measurement) {
     fields.duration_minutes = String(measurement.duration_minutes);
     fields.intensity = measurement.intensity ?? "";
-  } else if ("repetitions" in measurement) {
-    fields.repetitions = String(measurement.repetitions);
-    fields.unit = measurement.unit;
-  } else if ("label" in measurement) {
-    fields.label = measurement.label;
-    fields.value = String(measurement.value);
-    fields.unit = measurement.unit;
   } else {
     if (measurement.duration_seconds !== undefined)
       fields.duration = writeClock(measurement.duration_seconds);
@@ -144,7 +180,9 @@ function groupToDraft(group: SetGroup): SetGroupDraft {
   return {
     sets: group.sets === undefined ? "" : String(group.sets),
     reps: group.reps === undefined ? "" : String(group.reps),
+    time: group.seconds === undefined ? "" : writeClock(group.seconds),
     load: group.load === undefined ? "" : String(group.load),
+    by: group.seconds === undefined ? "reps" : "time",
   };
 }
 
@@ -159,6 +197,7 @@ export function buildMeasurement(
   if (mode === "unmeasured") return { ok: true, measurement: null };
 
   if (mode === "sets_reps_load") return buildSetGroups(draft);
+  if (mode === "intervals") return buildIntervals(draft);
 
   // An untouched row is an activity with no target, which is legal everywhere
   // a target is. Only the fields that carry a value count: the unit selects
@@ -233,36 +272,6 @@ export function buildMeasurement(
       };
     }
 
-    case "skill_repetitions": {
-      const repetitions = readInteger(fields.repetitions, 1, 1000000);
-      const unit = (fields.unit ?? "").trim();
-      if (repetitions === null)
-        return { ok: false, message: "A count is needed." };
-      if (unit === "" || unit.length > 32)
-        return { ok: false, message: "Name what is being counted." };
-      return { ok: true, measurement: { repetitions, unit } };
-    }
-
-    case "custom": {
-      const label = (fields.label ?? "").trim();
-      const value = (fields.value ?? "").trim();
-      const unit = (fields.unit ?? "").trim();
-      if (label === "" || label.length > 80)
-        return { ok: false, message: "A label is needed." };
-      if (value === "" || value.length > 500)
-        return { ok: false, message: "A value is needed." };
-      if (unit === "" || unit.length > 32)
-        return { ok: false, message: "A unit is needed." };
-      // Kept as the owner typed it unless it is plainly a number. Storing "12"
-      // as a string would print the same and sort differently.
-      const asNumber = Number(value);
-      const numeric = value !== "" && Number.isFinite(asNumber);
-      return {
-        ok: true,
-        measurement: { label, value: numeric ? asNumber : value, unit },
-      };
-    }
-
     default:
       return { ok: true, measurement: null };
   }
@@ -281,22 +290,29 @@ function buildSetGroups(draft: MeasurementDraft): MeasurementBuild {
   let loaded = false;
 
   for (const row of draft.groups) {
-    const filled = [row.sets, row.reps, row.load].some(
-      (value) => value.trim() !== "",
+    // Only the answer the row is set to counts: a row switched from reps to
+    // time keeps what was typed, but does not send it (ADR-038).
+    const repsText = row.by === "time" ? "" : row.reps.trim();
+    const timeText = row.by === "time" ? row.time.trim() : "";
+    const filled = [row.sets.trim(), repsText, timeText, row.load.trim()].some(
+      (value) => value !== "",
     );
     if (!filled) continue;
 
     const sets = row.sets.trim() === "" ? null : readInteger(row.sets, 1, 100);
-    const reps =
-      row.reps.trim() === "" ? null : readInteger(row.reps, 1, 10000);
+    const reps = repsText === "" ? null : readInteger(repsText, 1, 10000);
+    const seconds = timeText === "" ? null : readWholeClock(timeText, 86400);
     const load =
       row.load.trim() === "" ? null : readNumber(row.load, 0, 100000);
 
     if (row.sets.trim() !== "" && sets === null) {
       return { ok: false, message: "Sets is a whole number from 1 to 100." };
     }
-    if (row.reps.trim() !== "" && reps === null) {
+    if (repsText !== "" && reps === null) {
       return { ok: false, message: "Reps is a whole number." };
+    }
+    if (timeText !== "" && seconds === null) {
+      return { ok: false, message: "A set's time reads as 45 or 1:30." };
     }
     if (row.load.trim() !== "" && load === null) {
       return { ok: false, message: "Load is not a number." };
@@ -306,6 +322,7 @@ function buildSetGroups(draft: MeasurementDraft): MeasurementBuild {
     groups.push({
       ...(sets === null ? {} : { sets }),
       ...(reps === null ? {} : { reps }),
+      ...(seconds === null ? {} : { seconds }),
       ...(load === null ? {} : { load }),
     });
   }
@@ -324,6 +341,87 @@ function buildSetGroups(draft: MeasurementDraft): MeasurementBuild {
       load_unit: draft.fields.load_unit === "lb" ? "lb" : "kg",
     },
   };
+}
+
+/**
+ * Mirrors the `intervals` branch of `is_valid_training_measurement`
+ * (ADR-038). As with set groups, a blank block is dropped rather than refused:
+ * the editor always shows one.
+ */
+function buildIntervals(draft: MeasurementDraft): MeasurementBuild {
+  const blocks: IntervalBlock[] = [];
+  let measured = false;
+
+  for (const row of draft.blocks ?? []) {
+    const repeatsText = row.repeats.trim();
+    const distanceText = row.distance.trim();
+    const timeText = row.time.trim();
+    const restText = row.rest.trim();
+    if (
+      [repeatsText, distanceText, timeText, restText].every((v) => v === "")
+    ) {
+      continue;
+    }
+
+    const repeats = readInteger(repeatsText, 1, 100);
+    if (repeats === null) {
+      return { ok: false, message: "Repeats is a whole number from 1 to 100." };
+    }
+    const distance =
+      distanceText === ""
+        ? null
+        : readNumber(distanceText, Number.MIN_VALUE, 1000000);
+    if (distanceText !== "" && distance === null) {
+      return { ok: false, message: "Distance is not a number." };
+    }
+    const seconds = timeText === "" ? null : readWholeClock(timeText, 86400);
+    if (timeText !== "" && seconds === null) {
+      return { ok: false, message: "A repeat's time reads as 90 or 1:30." };
+    }
+    if (distance === null && seconds === null) {
+      return { ok: false, message: "Each block needs a distance or a time." };
+    }
+    // Rest may be none at all, so a typed 0 or 0:00 is kept as "no rest
+    // between".
+    const rest =
+      restText === ""
+        ? null
+        : /^0+(:0+){0,2}$/.test(restText)
+          ? 0
+          : readWholeClock(restText, 3600);
+    if (restText !== "" && rest === null) {
+      return { ok: false, message: "Rest reads as 90 or 1:30, up to an hour." };
+    }
+
+    if (distance !== null) measured = true;
+    blocks.push({
+      repeats,
+      ...(distance === null ? {} : { distance }),
+      ...(seconds === null ? {} : { seconds }),
+      ...(rest === null ? {} : { rest_seconds: rest }),
+    });
+  }
+
+  if (blocks.length === 0) return { ok: true, measurement: null };
+  if (blocks.length > 20) {
+    return { ok: false, message: "Twenty interval blocks is the limit." };
+  }
+  if (!measured) return { ok: true, measurement: { blocks } };
+  return {
+    ok: true,
+    measurement: {
+      blocks,
+      distance_unit: readDistanceUnit(draft.fields.distance_unit),
+    },
+  };
+}
+
+/** A clock read to whole seconds, as the database stores a set or a repeat. */
+function readWholeClock(value: string, max: number): number | null {
+  const seconds = readClock(value, max);
+  return seconds === null || !Number.isInteger(seconds) || seconds < 1
+    ? null
+    : seconds;
 }
 
 /**

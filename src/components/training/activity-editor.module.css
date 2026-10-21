@@ -443,3 +443,64 @@
   color: var(--ledger-muted);
   font: 0.85rem/1.4 var(--font-sans);
 }
+
+/* A set group's amount: reps or a time, switched in place (ADR-038). */
+.amount {
+  position: relative;
+  display: block;
+  min-width: 0;
+}
+
+.amount input {
+  width: 100%;
+  padding-right: 2.6rem;
+}
+
+.amountSwitch {
+  position: absolute;
+  top: 50%;
+  right: 0.25rem;
+  min-height: 0;
+  margin: 0;
+  padding: 0.2rem 0.4rem;
+  border: 1px solid var(--ledger-rule);
+  border-radius: var(--radius-pill);
+  background: var(--ledger-paper);
+  color: var(--ledger-muted);
+  font: 700 0.62rem var(--font-mono);
+  transform: translateY(-50%);
+  cursor: pointer;
+}
+
+.amountSwitch:hover {
+  background: var(--ledger-wash);
+}
+
+.amountSwitch:focus-visible {
+  outline: 3px solid var(--ledger-ink);
+  outline-offset: 1px;
+}
+
+/* Interval blocks (ADR-038): four short inputs and a remove. */
+.blockHeadings,
+.blockRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr 2.75rem;
+  gap: 0.35rem;
+  align-items: center;
+  min-width: 0;
+}
+
+.blockHeadings span {
+  color: var(--ledger-muted);
+  font: 700 0.8rem var(--font-sans);
+}
+
+.blockRow input {
+  min-width: 0;
+}
+
+.blockRow input {
+  padding-inline: 0.35rem;
+  text-align: center;
+}

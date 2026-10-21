@@ -320,7 +320,7 @@ export type CoachAIContextLimits = {
  *
  *   roadmap  prefix 7,800 + wrapper 64 + context 63,700 = 71,564  17,891 tokens
  *   plan     prefix 8,700 + wrapper 64 + context 52,100 = 60,864  15,216 tokens
- *   fill     prefix 8,200 + wrapper 64 + context 51,450 = 59,714  14,929 tokens
+ *   fill     prefix 8,300 + wrapper 64 + context 51,450 = 59,814  14,954 tokens
  *
  * Each line includes that call's own part of ADR-023. Every `total` holds the
  * sum of its parts and the envelope; the plan's did not before, and the
@@ -554,8 +554,9 @@ export const COACH_AI_CONTEXT_LIMITS = {
       sessionDetail: 22_100,
       // The sum of the parts (50,402) and about 1,000 for the envelope:
       //
-      //   prefix 8,200 + wrapper 64 + context 51,450 = 59,714 characters
-      //   ceil(59,714 / 4) = 14,929  against the 15,000 this was sized to;
+      //   prefix 8,300 + wrapper 64 + context 51,450 = 59,814 characters
+      //   ceil(59,814 / 4) = 14,954  against the 15,000 this was sized to
+      //   (the prefix grew 100 with ADR-038's mode lines);
       //   maxInputTokens is 18,000 since ADR-028, for the roadmap call.
       total: 51_450,
     },

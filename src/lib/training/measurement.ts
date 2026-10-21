@@ -28,8 +28,12 @@ export const TRAINING_MEASUREMENT_MODES = [
   "sets_reps_load",
   "time_distance_pace",
   "duration_intensity",
-  "skill_repetitions",
-  "custom",
+  /**
+   * Repeats of a distance or a time with rest between (ADR-038). Repetitions
+   * and Custom were removed the same day: a count is one set of reps, and a
+   * free label could never be read back as a number.
+   */
+  "intervals",
 ] as const;
 
 export type TrainingMeasurementMode =
@@ -39,12 +43,25 @@ export type TrainingMeasurementMode =
  * One block of a `sets_reps_load` prescription: some number of sets of the
  * same thing. Every field is optional with at least one present, which is the
  * rule `time_distance_pace` has followed since M1-01, and is what makes
- * "3 sets" with no reps sayable.
+ * "3 sets" with no reps sayable. A set is counted in reps or held for
+ * seconds (a plank, a hang), never both (ADR-038).
  */
 export type SetGroup = {
   sets?: number;
   reps?: number;
+  seconds?: number;
   load?: number;
+};
+
+/**
+ * One block of intervals (ADR-038): repeats of a distance or a time, or both
+ * ("400 m in 90 s"), with rest between them.
+ */
+export type IntervalBlock = {
+  repeats: number;
+  distance?: number;
+  seconds?: number;
+  rest_seconds?: number;
 };
 
 export type TrainingMeasurement =
@@ -84,8 +101,14 @@ export type TrainingMeasurement =
       intensity?: Intensity;
       perceived_effort?: number;
     }
-  | { repetitions: number; unit: string }
-  | { label: string; value: string | number | boolean; unit: string };
+  /**
+   * Intervals: several blocks, as sets have groups — a pyramid is one
+   * activity. The distance unit sits once at the top, as the load unit does.
+   */
+  | {
+      blocks: IntervalBlock[];
+      distance_unit?: DistanceUnit;
+    };
 
 export const LOAD_UNITS = ["kg", "lb"] as const;
 export type LoadUnit = (typeof LOAD_UNITS)[number];

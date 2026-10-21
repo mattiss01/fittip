@@ -25,8 +25,10 @@ import {
 import {
   buildMeasurement,
   derivePace,
+  emptyIntervalBlock,
   emptySetGroup,
   writeClock,
+  type IntervalBlockDraft,
   type MeasurementDraft,
   type SetGroupDraft,
 } from "@/lib/training/measurement-draft";
@@ -78,6 +80,7 @@ export function MeasurementFields({
   validityRef,
   onDraftChange,
   onGroupsChange,
+  onBlocksChange,
 }: {
   idPrefix: string;
   mode: TrainingMeasurementMode;
@@ -85,6 +88,8 @@ export function MeasurementFields({
   validityRef: React.RefObject<HTMLInputElement | null>;
   onDraftChange: (field: string, value: string) => void;
   onGroupsChange: (groups: SetGroupDraft[]) => void;
+  /** Intervals' blocks; a caller that offers intervals passes it. */
+  onBlocksChange?: (blocks: IntervalBlockDraft[]) => void;
 }) {
   const groupListRef = useRef<HTMLOListElement>(null);
   const bind = (field: string) => ({
@@ -144,7 +149,7 @@ export function MeasurementFields({
         <div className={styles.groupHeadings} aria-hidden="true">
           <span />
           <span>Sets</span>
-          <span>Reps</span>
+          <span>Reps / time</span>
           <span>Load</span>
           <span />
         </div>
@@ -168,16 +173,49 @@ export function MeasurementFields({
                   setGroup(index, { sets: event.target.value })
                 }
               />
-              <input
-                aria-label={`Reps, group ${index + 1}`}
-                id={`${idPrefix}-group-${index}-reps`}
-                value={group.reps}
-                inputMode="numeric"
-                placeholder="5"
-                onChange={(event) =>
-                  setGroup(index, { reps: event.target.value })
-                }
-              />
+              {/* Counted in reps or held for a time (ADR-038), per group: a
+                  circuit can mix the two. */}
+              <span className={styles.amount}>
+                {group.by === "time" ? (
+                  <input
+                    aria-label={`Time per set, group ${index + 1}`}
+                    id={`${idPrefix}-group-${index}-time`}
+                    value={group.time}
+                    inputMode="text"
+                    placeholder="0:45"
+                    onChange={(event) =>
+                      setGroup(index, { time: event.target.value })
+                    }
+                  />
+                ) : (
+                  <input
+                    aria-label={`Reps, group ${index + 1}`}
+                    id={`${idPrefix}-group-${index}-reps`}
+                    value={group.reps}
+                    inputMode="numeric"
+                    placeholder="5"
+                    onChange={(event) =>
+                      setGroup(index, { reps: event.target.value })
+                    }
+                  />
+                )}
+                <button
+                  className={styles.amountSwitch}
+                  type="button"
+                  aria-label={
+                    group.by === "time"
+                      ? `Group ${index + 1} is held for a time. Count reps instead`
+                      : `Group ${index + 1} counts reps. Hold for a time instead`
+                  }
+                  onClick={() =>
+                    setGroup(index, {
+                      by: group.by === "time" ? "reps" : "time",
+                    })
+                  }
+                >
+                  {group.by === "time" ? "time" : "reps"}
+                </button>
+              </span>
               <input
                 aria-label={`Load, group ${index + 1}`}
                 id={`${idPrefix}-group-${index}-load`}
@@ -323,44 +361,101 @@ export function MeasurementFields({
     );
   }
 
-  if (mode === "skill_repetitions") {
-    return (
-      <div className={styles.targetGrid}>
-        <div className={styles.field}>
-          <label htmlFor={`${idPrefix}-repetitions`}>Count</label>
-          <input
-            {...bind("repetitions")}
-            ref={validityRef}
-            inputMode="numeric"
-            placeholder="20"
-          />
-        </div>
-        <div className={styles.field}>
-          <label htmlFor={`${idPrefix}-unit`}>Of what</label>
-          <input {...bind("unit")} maxLength={32} placeholder="throws" />
-        </div>
-      </div>
+  // Intervals (ADR-038): blocks of repeats, each of a distance or a time with
+  // rest between, laid out as set groups are so a pyramid reads top down.
+  const blocks = draft.blocks ?? [emptyIntervalBlock()];
+  const setBlock = (index: number, change: Partial<IntervalBlockDraft>) =>
+    onBlocksChange?.(
+      blocks.map((block, position) =>
+        position === index ? { ...block, ...change } : block,
+      ),
     );
-  }
-
   return (
-    <div className={styles.targetGrid}>
-      <div className={styles.field}>
-        <label htmlFor={`${idPrefix}-label`}>Label</label>
-        <input
-          {...bind("label")}
-          ref={validityRef}
-          maxLength={80}
-          placeholder="Depth"
-        />
+    <div className={styles.groupBox}>
+      <div className={styles.blockHeadings} aria-hidden="true">
+        <span>Repeats</span>
+        <span>Distance</span>
+        <span>Time</span>
+        <span>Rest</span>
+        <span />
       </div>
-      <div className={styles.field}>
-        <label htmlFor={`${idPrefix}-value`}>Value</label>
-        <input {...bind("value")} maxLength={500} placeholder="12" />
-      </div>
-      <div className={styles.fieldWide}>
-        <label htmlFor={`${idPrefix}-unit`}>Unit</label>
-        <input {...bind("unit")} maxLength={32} placeholder="m" />
+      <ol className={styles.groupRows}>
+        {blocks.map((block, index) => (
+          <li className={styles.blockRow} key={index}>
+            <input
+              aria-label={`Repeats, block ${index + 1}`}
+              id={`${idPrefix}-block-${index}-repeats`}
+              ref={index === 0 ? validityRef : undefined}
+              value={block.repeats}
+              inputMode="numeric"
+              placeholder="6"
+              onChange={(event) =>
+                setBlock(index, { repeats: event.target.value })
+              }
+            />
+            <input
+              aria-label={`Distance, block ${index + 1}`}
+              id={`${idPrefix}-block-${index}-distance`}
+              value={block.distance}
+              inputMode="decimal"
+              placeholder="400"
+              onChange={(event) =>
+                setBlock(index, { distance: event.target.value })
+              }
+            />
+            <input
+              aria-label={`Time, block ${index + 1}`}
+              id={`${idPrefix}-block-${index}-time`}
+              value={block.time}
+              inputMode="text"
+              placeholder="1:30"
+              onChange={(event) =>
+                setBlock(index, { time: event.target.value })
+              }
+            />
+            <input
+              aria-label={`Rest, block ${index + 1}`}
+              id={`${idPrefix}-block-${index}-rest`}
+              value={block.rest}
+              inputMode="text"
+              placeholder="1:30"
+              onChange={(event) =>
+                setBlock(index, { rest: event.target.value })
+              }
+            />
+            <button
+              className={styles.groupRemove}
+              type="button"
+              aria-label={`Remove block ${index + 1}`}
+              disabled={blocks.length === 1}
+              onClick={() =>
+                onBlocksChange?.(blocks.filter((_, at) => at !== index))
+              }
+            >
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </li>
+        ))}
+      </ol>
+      <div className={styles.groupFoot}>
+        <button
+          className={styles.groupAdd}
+          type="button"
+          disabled={blocks.length >= 20}
+          onClick={() => onBlocksChange?.([...blocks, emptyIntervalBlock()])}
+        >
+          Add block
+        </button>
+        <div className={styles.field}>
+          <label htmlFor={`${idPrefix}-distance_unit`}>Unit</label>
+          <select {...bind("distance_unit")}>
+            {DISTANCE_UNITS.map((unit) => (
+              <option key={unit} value={unit}>
+                {DISTANCE_UNIT_COPY[unit]}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
     </div>
   );

@@ -578,8 +578,7 @@ function toMode(kind) {
     run: "time_distance_pace",
     lift: "sets_reps_load",
     effort: "duration_intensity",
-    skill: "skill_repetitions",
-    custom: "custom",
+    intervals: "intervals",
     none: "unmeasured",
   }[kind];
 }

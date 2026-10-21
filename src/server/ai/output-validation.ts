@@ -35,7 +35,6 @@ import {
 import { MEMORY_TYPES, type MemoryType } from "@/server/memory/memory-records";
 import {
   parseTrainingMeasurement,
-  TARGET_TEXT_MAX,
   TRAINING_MEASUREMENT_MODES,
   type TrainingMeasurement,
   type TrainingMeasurementMode,
@@ -336,8 +335,6 @@ export function validateSessionActivitiesCandidate(input: {
         activity.sport,
         activity.rationale,
         ...(activity.instructions === null ? [] : [activity.instructions]),
-        // A custom target's label, value and unit are free text too.
-        ...targetStrings(activity.target),
       ]),
     ])
   ) {
@@ -451,7 +448,8 @@ function validateProposedActivity(
 
 /**
  * The grammar's all-fields-nullable target, reduced to the mode's own shape.
- * Nulls are dropped, including inside set groups; nothing left means no target.
+ * Nulls are dropped, including inside set groups and interval blocks; nothing
+ * left means no target.
  * `undefined` means refused.
  */
 function readTarget(
@@ -464,23 +462,19 @@ function readTarget(
   const present: Record<string, unknown> = {};
   for (const [key, field] of Object.entries(value)) {
     if (field === null) continue;
-    if (key === "groups" && Array.isArray(field)) {
-      present.groups = field.map((group) =>
-        isRecord(group)
+    // An empty list says what null says: nothing in that shape.
+    if (Array.isArray(field) && field.length === 0) continue;
+    if ((key === "groups" || key === "blocks") && Array.isArray(field)) {
+      present[key] = field.map((part) =>
+        isRecord(part)
           ? Object.fromEntries(
-              Object.entries(group).filter(([, part]) => part !== null),
+              Object.entries(part).filter(([, inner]) => inner !== null),
             )
-          : group,
+          : part,
       );
       continue;
     }
-    // A target's own words are cut to the editor's limits, as the coach's
-    // other text is, rather than refusing the list.
-    const textMax = (TARGET_TEXT_MAX as Readonly<Record<string, number>>)[key];
-    present[key] =
-      typeof field === "string" && textMax !== undefined
-        ? fitText(field, textMax)
-        : field;
+    present[key] = field;
   }
   if (Object.keys(present).length === 0) return null;
   // The flat form is readable history, not something to write; the grammar
@@ -492,14 +486,6 @@ function readTarget(
   } catch {
     return undefined;
   }
-}
-
-/** The free text a target can carry, for the content check. */
-function targetStrings(target: TrainingMeasurement | null): string[] {
-  if (target === null) return [];
-  return Object.values(target).filter(
-    (value): value is string => typeof value === "string",
-  );
 }
 
 function isMeasurementMode(value: unknown): value is TrainingMeasurementMode {

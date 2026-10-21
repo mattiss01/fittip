@@ -3,7 +3,18 @@
 // several logs and the most recent one two days ago. The coach's cautious
 // path: nothing should add intensity or impact after a flag.
 
-import { act, effort, lift, MON, run, SAT, SUN, THU, TUE } from "../lib.mjs";
+import {
+  act,
+  effort,
+  intervals,
+  lift,
+  MON,
+  run,
+  SAT,
+  SUN,
+  THU,
+  TUE,
+} from "../lib.mjs";
 
 const calfRaises = (sets, reps, kg) =>
   act("Single-leg calf raises", "Strength", "lift", lift(sets, reps, kg), {
@@ -138,8 +149,8 @@ const athlete = {
       name: "Sweet spot intervals",
       sport: "Cycling",
       description: "88–93% FTP.",
-      kind: "custom",
-      value: { label: "Power", value: 235, unit: "W" },
+      kind: "intervals",
+      value: intervals([[3, { sec: 720, rest: 300 }]]),
     },
     {
       key: "split",
@@ -235,8 +246,8 @@ const athlete = {
         act(
           "Sweet spot intervals",
           "Cycling",
-          "custom",
-          { label: "Power", value: 235, unit: "W" },
+          "intervals",
+          intervals([[3, { sec: 720, rest: 300 }]]),
           { lib: "sweetspot" },
         ),
         act("Split squat", "Strength", "lift", lift(3, 10, 12), {

@@ -2834,6 +2834,10 @@ export type Database = {
         Returns: boolean;
       };
       is_iana_timezone_name: { Args: { p_value: string }; Returns: boolean };
+      is_training_measurement_mode: {
+        Args: { p_mode: string };
+        Returns: boolean;
+      };
       is_valid_training_measurement: {
         Args: { p_mode: string; p_value: Json };
         Returns: boolean;

@@ -12,8 +12,8 @@ describe("MeasurementFields", () => {
     const draft = {
       ...emptyDraft("sets_reps_load"),
       groups: [
-        { sets: "1", reps: "5", load: "60" },
-        { sets: "3", reps: "3", load: "80" },
+        { sets: "1", reps: "5", time: "", load: "60", by: "reps" as const },
+        { sets: "3", reps: "3", time: "", load: "80", by: "reps" as const },
       ],
     };
     render(
@@ -32,8 +32,8 @@ describe("MeasurementFields", () => {
       { key: "ArrowDown" },
     );
     expect(onGroupsChange).toHaveBeenLastCalledWith([
-      { sets: "3", reps: "3", load: "80" },
-      { sets: "1", reps: "5", load: "60" },
+      { sets: "3", reps: "3", time: "", load: "80", by: "reps" },
+      { sets: "1", reps: "5", time: "", load: "60", by: "reps" },
     ]);
     // Focus follows the group to its new row, so a second ArrowDown keeps
     // moving it instead of swapping the pair back.

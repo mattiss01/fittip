@@ -147,11 +147,10 @@ Prefer the athlete's own activities. Where one in "library" fits, copy its "id" 
 Set targets from "recentActuals" where they exist: the numbers the athlete actually did, newest first. Progress in small steps from those, never from nothing. A result more than a few weeks old says where the athlete was, not where they are: start below it. Where there is no history for an activity, choose a conservative target and say so. Fit the whole list inside the session's duration and respect the rest of "week": do not load the same thing hard on consecutive days.
 
 Measurement modes and the "target" fields each uses (every other target field is null):
-- "sets_reps_load": "groups", each with any of "sets", "reps", "load"; "load_unit" ("kg" or "lb") exactly when a group has a load. A ramp is several groups.
+- "sets_reps_load": "groups", each with any of "sets", "reps" or "seconds" (not both), "load"; "load_unit" ("kg" or "lb") exactly when a group has a load. A ramp is several groups.
+- "intervals": "blocks" of "repeats" with "distance" and/or "seconds", optionally "rest_seconds"; "distance_unit" with any distance.
 - "duration_intensity": "duration_minutes", optionally "intensity" and "perceived_effort" (1 to 10).
 - "time_distance_pace": any of "duration_seconds"; "distance" with "distance_unit"; "pace_seconds_per_unit" with "pace_unit".
-- "skill_repetitions": "repetitions" and "unit".
-- "custom": "label", "value" and "unit".
 - "unmeasured": "target" is null.
 "target" may also be null in any mode when a number would be a guess.
 
@@ -568,7 +567,6 @@ const PLAN_SCHEMA = {
 
 const NULLABLE_NUMBER = { type: ["number", "null"] };
 const NULLABLE_INTEGER = { type: ["integer", "null"] };
-const NULLABLE_STRING = { type: ["string", "null"] };
 
 /**
  * One grammar for every measurement mode. Strict mode requires every property
@@ -591,10 +589,7 @@ const MEASUREMENT_TARGET_SCHEMA = {
     "distance_unit",
     "pace_seconds_per_unit",
     "pace_unit",
-    "repetitions",
-    "unit",
-    "label",
-    "value",
+    "blocks",
   ],
   properties: {
     groups: {
@@ -603,11 +598,27 @@ const MEASUREMENT_TARGET_SCHEMA = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["sets", "reps", "load"],
+        required: ["sets", "reps", "seconds", "load"],
         properties: {
           sets: NULLABLE_INTEGER,
           reps: NULLABLE_INTEGER,
+          seconds: NULLABLE_INTEGER,
           load: NULLABLE_NUMBER,
+        },
+      },
+    },
+    blocks: {
+      type: ["array", "null"],
+      description: "One to twenty interval blocks, in order.",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["repeats", "distance", "seconds", "rest_seconds"],
+        properties: {
+          repeats: { type: "integer" },
+          distance: NULLABLE_NUMBER,
+          seconds: NULLABLE_INTEGER,
+          rest_seconds: NULLABLE_INTEGER,
         },
       },
     },
@@ -629,10 +640,6 @@ const MEASUREMENT_TARGET_SCHEMA = {
       type: ["string", "null"],
       enum: ["sec/km", "sec/mi", "sec/100m", "sec/100yd", null],
     },
-    repetitions: NULLABLE_INTEGER,
-    unit: NULLABLE_STRING,
-    label: NULLABLE_STRING,
-    value: { type: ["string", "number", "boolean", "null"] },
   },
 };
 
@@ -685,8 +692,7 @@ const SESSION_ACTIVITIES_SCHEMA = {
               "sets_reps_load",
               "time_distance_pace",
               "duration_intensity",
-              "skill_repetitions",
-              "custom",
+              "intervals",
             ],
           },
           target: MEASUREMENT_TARGET_SCHEMA,

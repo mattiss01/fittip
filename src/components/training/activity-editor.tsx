@@ -631,6 +631,9 @@ export function ActivityFields({
         onGroupsChange={(groups) =>
           onChange({ draft: { ...value.draft, groups } })
         }
+        onBlocksChange={(blocks) =>
+          onChange({ draft: { ...value.draft, blocks } })
+        }
       />
 
       {problem === null ? null : (

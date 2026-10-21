@@ -156,7 +156,7 @@ describe("PostgresSavedSessionAdapter", () => {
               name: "Tempo blocks",
               sport: "Running",
               instructions: "3 x 8 minutes",
-              measurement_mode: "custom",
+              measurement_mode: "unmeasured",
               target: null,
             },
           ],
@@ -187,7 +187,7 @@ describe("PostgresSavedSessionAdapter", () => {
             name: "Tempo blocks",
             sport: "Running",
             instructions: "3 x 8 minutes",
-            measurementMode: "custom",
+            measurementMode: "unmeasured",
           },
           {
             position: 1,

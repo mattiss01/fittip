@@ -148,10 +148,7 @@ const TARGET_FIELDS = [
   "distance_unit",
   "pace_seconds_per_unit",
   "pace_unit",
-  "repetitions",
-  "unit",
-  "label",
-  "value",
+  "blocks",
 ] as const;
 
 /**
@@ -172,9 +169,17 @@ function toGrammarTarget(
         ? value.map((group: Record<string, unknown>) => ({
             sets: group.sets ?? null,
             reps: group.reps ?? null,
+            seconds: group.seconds ?? null,
             load: group.load ?? null,
           }))
-        : (value ?? null);
+        : field === "blocks" && Array.isArray(value)
+          ? value.map((block: Record<string, unknown>) => ({
+              repeats: block.repeats,
+              distance: block.distance ?? null,
+              seconds: block.seconds ?? null,
+              rest_seconds: block.rest_seconds ?? null,
+            }))
+          : (value ?? null);
   }
   return grammar;
 }
