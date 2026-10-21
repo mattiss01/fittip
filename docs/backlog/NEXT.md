@@ -46,15 +46,6 @@ Ordered by dependency. A lane is named where it is not the build lane.
       the owner calling the database directly gets past it, on their own data.
       The owner's to decide; a small migration, so it can ride with the next one.
 
-- [~] **Log a session live.** Owner, 21 Oct 2026, from the prototype at
-      `prototype/live-workout` (variant A, "one list"). One clock for the whole workout,
-      no rest or per-activity timers; every activity's measurement can be changed while
-      training; a running workout is stored in the database (one per owner, a draft and
-      never a log) and a clock on every page leads back to it. Started from a planned
-      session or from scratch; Finish opens the log steps already filled in, so "Anything
-      off?" is still asked, and saving the log removes the workout in the same
-      transaction. Careful lane: a new table, RLS and a log RPC.
-
 **Coach and records.**
 
 - [ ] **A fill's sources are recorded and never checked.** A suggestion names the
