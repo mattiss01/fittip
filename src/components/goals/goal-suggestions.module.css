@@ -89,6 +89,7 @@
 }
 
 .reject {
+  margin-left: auto;
   padding: 0 0.4rem;
   border: 0;
   background: transparent;
@@ -103,10 +104,6 @@
 .reject:hover {
   background: transparent;
   text-decoration: underline;
-}
-
-.reject {
-  margin-left: auto;
 }
 
 .accept + .accept {

@@ -45,9 +45,12 @@ export type SpineGoalAttention = {
   level: "primary" | "secondary" | "maintenance" | "deferred";
 };
 
-/** A goal the phase works on: primary or secondary, not kept up or put off. */
-function isWorkedOn(attention: SpineGoalAttention): boolean {
-  return attention.level === "primary" || attention.level === "secondary";
+/** The goals a phase works on: primary or secondary, not kept up or put off. */
+function workedOn(phase: SpinePhase): SpineGoalAttention[] {
+  return phase.goalAttention.filter(
+    (attention) =>
+      attention.level === "primary" || attention.level === "secondary",
+  );
 }
 
 export type SpineMilestone = {
@@ -142,9 +145,9 @@ function PhaseAndItsReview({
               writes and reads one; the roadmap shows only the goals a phase
               works on, not those it keeps up or puts off (owner, 21 Oct 2026:
               otherwise every goal is in every phase). */}
-          {phase.goalAttention.some(isWorkedOn) ? (
+          {workedOn(phase).length > 0 ? (
             <ul className={styles.attentionList}>
-              {phase.goalAttention.filter(isWorkedOn).map((attention) => (
+              {workedOn(phase).map((attention) => (
                 <li key={attention.goalId} className={styles.attention}>
                   {goalTitles[attention.goalId] ?? "Goal"}
                 </li>

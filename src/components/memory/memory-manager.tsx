@@ -302,7 +302,7 @@ function MemorySection({
   );
 }
 
-const INTERNAL_ID =
+const UUID_PATTERN =
   /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
 
 function MemoryCard({
@@ -347,7 +347,7 @@ function MemoryCard({
           {/* A reference that is an internal id, such as a roadmap
               proposal's, is not something to read (owner, 21 Oct 2026). */}
           {item.sourceReference === null ||
-          INTERNAL_ID.test(item.sourceReference)
+          UUID_PATTERN.test(item.sourceReference)
             ? ""
             : ` · ${item.sourceReference}`}
           {item.userConfirmedAt === null ? "" : " · confirmed by you"}

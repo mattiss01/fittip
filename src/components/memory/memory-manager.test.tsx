@@ -185,6 +185,26 @@ describe("MemoryManager", () => {
     ).toBeInTheDocument();
   });
 
+  // An id is not something to read (owner, 21 Oct 2026); a named source is.
+  it("names a source in words, and leaves an internal id out", () => {
+    renderManager([
+      item({
+        id: "r",
+        status: "proposed",
+        provenance: "inferred_proposed",
+        confidence: 100,
+        sourceReference:
+          "roadmap-proposal:a5c816d6-8490-4f4b-bbfb-075b7c78353b:0",
+        content: "You are pregnant and due in March 2027.",
+      }),
+    ]);
+
+    expect(
+      screen.getByText("Proposed from your records · confidence 100%"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/roadmap-proposal/)).not.toBeInTheDocument();
+  });
+
   it("files a user-written observed pattern as active, like any other class", () => {
     renderManager([
       item({

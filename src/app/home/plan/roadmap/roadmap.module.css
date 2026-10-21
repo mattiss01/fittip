@@ -988,6 +988,12 @@
   list-style: none;
 }
 
+.currentFold > summary:focus-visible {
+  outline: 3px solid var(--accent-dark);
+  outline-offset: 2px;
+  border-radius: 0.4rem;
+}
+
 .currentFold > summary::-webkit-details-marker {
   display: none;
 }

@@ -80,16 +80,6 @@ export function MemorySuggestions({
                 value={expectedRevision}
               />
               <button
-                className={styles.reject}
-                type="submit"
-                name="operation"
-                value="reject"
-                disabled={pending}
-                aria-label={`Reject: ${suggestion.content}`}
-              >
-                Reject
-              </button>
-              <button
                 className={styles.accept}
                 type="submit"
                 name="operation"
@@ -98,6 +88,16 @@ export function MemorySuggestions({
                 aria-label={`Accept: ${suggestion.content}`}
               >
                 Accept
+              </button>
+              <button
+                className={styles.reject}
+                type="submit"
+                name="operation"
+                value="reject"
+                disabled={pending}
+                aria-label={`Reject: ${suggestion.content}`}
+              >
+                Reject
               </button>
             </form>
           </li>
