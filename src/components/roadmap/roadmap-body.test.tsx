@@ -67,6 +67,20 @@ describe("RoadmapBody", () => {
     );
   });
 
+  it("shows a phase only the goals it works on, not those kept up or put off", () => {
+    const content = roadmap();
+    content.phases[1].goalAttention = [
+      { goalId: GOAL_ID, level: "maintenance" },
+    ];
+    content.phases[0].goalAttention = [{ goalId: GOAL_ID, level: "deferred" }];
+    const { container } = renderBody(content);
+
+    expect(screen.queryByText("Half marathon")).toBeNull();
+    // No empty goal list: the first phase keeps its milestones list, the
+    // second, with no milestone, has no list at all.
+    expect(container.querySelectorAll("ol ul")).toHaveLength(1);
+  });
+
   it("shows nothing of what a row stored under an earlier version also holds", () => {
     renderBody(legacyRoadmap());
 
