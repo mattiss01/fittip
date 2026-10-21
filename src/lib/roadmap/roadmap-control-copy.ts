@@ -156,12 +156,13 @@ export const ROADMAP_CONTROL_COPY = {
     "You have used all three regenerations for these dates. Edit the proposal directly, or change the dates to start a fresh request.",
 
   /* ---- Decide ----------------------------------------------------------- */
-  decideTitle: "Your decision",
-  decideSupport:
-    "Accepting makes this your roadmap. Declining changes nothing.",
   acceptAction: "Accept roadmap",
-  editAction: "Edit proposal",
-  declineAction: "Decline proposal",
+  /* Short, so the three fit beside Accept (owner, 21 Oct 2026). */
+  editAction: "Edit",
+  declineAction: "Decline",
+  /* The roadmap in force, folded under a waiting proposal (owner, 21 Oct
+     2026). */
+  currentRoadmapFold: "Your current roadmap",
   declineConfirm: "Decline this proposal? It will not become your roadmap.",
   /* Asked once before a proposal is accepted or declined (owner, 19 Oct
      2026). Leaving one is a choice: it waits in Memory, unused until accepted. */

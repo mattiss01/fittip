@@ -93,14 +93,12 @@ export function RoadmapProposalReview({
         {/* Server-rendered, and handed to the dock so that editing can put
             the form in its place, heading and all (owner, 14 Oct 2026). */}
         <RoadmapLandingFocus />
+        {/* The state is the only label: no heading, no instructions and no
+            origin (owner, 21 Oct 2026); the dock's buttons say the rest. */}
         <p className={styles.state} data-state="open">
           <CoachSpark size={14} />
           {ROADMAP_COPY.proposalStateLabels.open}
         </p>
-        <h2 className={styles.cardHeading}>
-          {ROADMAP_COPY.openProposalHeading}
-        </h2>
-        <p className={styles.emptyState}>{ROADMAP_COPY.openProposalSupport}</p>
 
         {isExampleAuthored(proposal.providerCode) ? (
           <p className={styles.recordNote} data-roadmap-example-notice>
@@ -119,7 +117,6 @@ export function RoadmapProposalReview({
             content={proposal.content}
             startDate={startDate}
             endDate={endDate}
-            note={ROADMAP_COPY.proposalOriginLabels[proposal.origin]}
             providerCode={proposal.providerCode}
             goalTitles={goalTitles}
           />

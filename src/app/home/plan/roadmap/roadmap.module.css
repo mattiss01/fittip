@@ -918,3 +918,100 @@
   font-size: 0.9rem;
   line-height: 1.45;
 }
+
+/* The decision under a waiting proposal (owner, 21 Oct 2026): Accept and Edit
+   side by side, Ask for another and Decline as quiet text below. */
+.decision {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+}
+
+.decision form {
+  display: contents;
+}
+
+.decision .secondaryAction {
+  width: auto;
+  min-width: 5.5rem;
+  min-height: 3.2rem;
+}
+
+.textAction {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 2.75rem;
+  padding: 0.4rem 0.15rem;
+  border: 0;
+  background: transparent;
+  color: var(--pine);
+  font: 700 0.92rem var(--font-sans);
+  cursor: pointer;
+}
+
+.textAction:hover {
+  background: transparent;
+  text-decoration: underline;
+}
+
+.textAction:disabled {
+  cursor: progress;
+  opacity: 0.55;
+}
+
+.textAction:focus-visible {
+  outline: 3px solid var(--accent-dark);
+  outline-offset: 2px;
+}
+
+.declineAction {
+  justify-self: end;
+  color: var(--muted);
+}
+
+.decisionNote {
+  margin: 0;
+}
+
+/* The roadmap in force, folded under a waiting proposal. */
+.currentFold > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 2.75rem;
+  font-weight: 800;
+  color: var(--pine);
+  cursor: pointer;
+  list-style: none;
+}
+
+.currentFold > summary::-webkit-details-marker {
+  display: none;
+}
+
+.currentFold > summary::after {
+  content: "";
+  width: 0.55rem;
+  height: 0.55rem;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg) translate(-2px, -2px);
+  transition: transform 150ms ease;
+}
+
+.currentFold[open] > summary {
+  margin-bottom: 0.8rem;
+}
+
+.currentFold[open] > summary::after {
+  transform: rotate(-135deg) translate(-2px, -2px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .currentFold > summary::after {
+    transition: none;
+  }
+}

@@ -87,6 +87,16 @@ const RECOVERY_FLAG = "fittip.roadmap.recovered:v1";
  * a long visit neither grows them nor carries an old miscount forward.
  */
 const submittedInstants: number[] = [];
+
+/**
+ * How long a roadmap reply may take to render before it counts as lost
+ * (owner, 21 Oct 2026: the reload notice showed after nearly every proposal).
+ * A proposal is the first time its dock, sheets and suggestion cards appear in
+ * the document, so their code is fetched before it can render; on the dev
+ * server it is compiled first, which took longer than the shared 750 ms. A
+ * genuinely stuck render still reloads, five seconds after its reply.
+ */
+const ROADMAP_RENDER_GRACE_MS = 5_000;
 const replies = new Set<number>();
 let waitingWrites = 0;
 
@@ -223,6 +233,7 @@ function useLostRenderRecovery(
         respondedAt: replyForWrite(submittedInstants, replies),
         consumedAt: startedAt,
         now: performance.now(),
+        renderGraceMs: ROADMAP_RENDER_GRACE_MS,
       });
       if (verdict !== "lost-render") return;
       window.clearInterval(interval);

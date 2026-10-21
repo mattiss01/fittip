@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 
 import { RoadmapComposer } from "./roadmap-composer";
 import { RoadmapDelete } from "./roadmap-delete";
@@ -194,74 +195,80 @@ export function RoadmapScreen({ state }: { state: RoadmapScreenState }) {
           <RoadmapLandingFocus />
           {/* A waiting proposal's dock says it there instead. */}
           {canAct ? <RoadmapRecoveredNotice /> : null}
-          <RoadmapDetail
-            version={state.current}
-            reached={state.reached}
-            review={{
-              duePhaseIndex: state.reviewDue?.phaseIndex ?? null,
-              reviewedThrough: state.reviewedThrough,
-            }}
-            goalTitles={goalTitles}
-            titleAction={
-              // Everything that can be done with the roadmap, beside its
-              // title (owner, 19 Oct 2026). Not while a proposal waits, which
-              // was made under this roadmap. Once it has ended there is
-              // nothing left to edit, only a new one to create.
-              canAct ? (
-                <RoadmapNew
-                  opensOn="actions"
-                  titleIds={ACTIONS_SHEET_TITLE_IDS}
-                  {...(ended
-                    ? {}
-                    : {
-                        rewrite: (
-                          <RoadmapWriter
-                            today={state.today}
-                            goals={state.goals.map((goal) => ({
-                              id: goal.id,
-                              title: goal.title,
-                            }))}
-                            expectedHeadRevision={state.head.revision}
-                            replaces
-                            headingId={ACTIONS_SHEET_TITLE_IDS.rewrite}
-                            inForce={{
-                              content: roadmapForEditor(state.current.content),
-                              lockedPhases: lockedPhaseCount(
-                                state.current.content.phases,
-                                state.today,
-                              ),
-                            }}
-                          />
-                        ),
-                        change: (
-                          <RoadmapChangeCompose
-                            state={state}
-                            headingId={ACTIONS_SHEET_TITLE_IDS.change}
-                          />
-                        ),
-                      })}
-                  fresh={
-                    <RoadmapCompose
-                      state={state}
-                      headingId={ACTIONS_SHEET_TITLE_IDS.fresh}
-                    />
-                  }
-                  write={
-                    <RoadmapWrite
-                      state={state}
-                      headingId={ACTIONS_SHEET_TITLE_IDS.write}
-                    />
-                  }
-                  remove={
-                    <RoadmapDelete
-                      versionId={state.current.id}
-                      headingId={ACTIONS_SHEET_TITLE_IDS.delete}
-                    />
-                  }
-                />
-              ) : null
-            }
-          />
+          {/* Under a waiting proposal it is folded away, to be opened for a
+              comparison (owner, 21 Oct 2026): the proposal is what is read. */}
+          <FoldedWhile folded={!canAct}>
+            <RoadmapDetail
+              version={state.current}
+              reached={state.reached}
+              review={{
+                duePhaseIndex: state.reviewDue?.phaseIndex ?? null,
+                reviewedThrough: state.reviewedThrough,
+              }}
+              goalTitles={goalTitles}
+              titleAction={
+                // Everything that can be done with the roadmap, beside its
+                // title (owner, 19 Oct 2026). Not while a proposal waits, which
+                // was made under this roadmap. Once it has ended there is
+                // nothing left to edit, only a new one to create.
+                canAct ? (
+                  <RoadmapNew
+                    opensOn="actions"
+                    titleIds={ACTIONS_SHEET_TITLE_IDS}
+                    {...(ended
+                      ? {}
+                      : {
+                          rewrite: (
+                            <RoadmapWriter
+                              today={state.today}
+                              goals={state.goals.map((goal) => ({
+                                id: goal.id,
+                                title: goal.title,
+                              }))}
+                              expectedHeadRevision={state.head.revision}
+                              replaces
+                              headingId={ACTIONS_SHEET_TITLE_IDS.rewrite}
+                              inForce={{
+                                content: roadmapForEditor(
+                                  state.current.content,
+                                ),
+                                lockedPhases: lockedPhaseCount(
+                                  state.current.content.phases,
+                                  state.today,
+                                ),
+                              }}
+                            />
+                          ),
+                          change: (
+                            <RoadmapChangeCompose
+                              state={state}
+                              headingId={ACTIONS_SHEET_TITLE_IDS.change}
+                            />
+                          ),
+                        })}
+                    fresh={
+                      <RoadmapCompose
+                        state={state}
+                        headingId={ACTIONS_SHEET_TITLE_IDS.fresh}
+                      />
+                    }
+                    write={
+                      <RoadmapWrite
+                        state={state}
+                        headingId={ACTIONS_SHEET_TITLE_IDS.write}
+                      />
+                    }
+                    remove={
+                      <RoadmapDelete
+                        versionId={state.current.id}
+                        headingId={ACTIONS_SHEET_TITLE_IDS.delete}
+                      />
+                    }
+                  />
+                ) : null
+              }
+            />
+          </FoldedWhile>
           {ended && canAct ? (
             <div className={styles.writeOffer}>
               <RoadmapCreate state={state} ids={ENDED_BOTTOM_SHEET_TITLE_IDS} />
@@ -300,6 +307,23 @@ export function RoadmapScreen({ state }: { state: RoadmapScreenState }) {
         </section>
       ) : null}
     </div>
+  );
+}
+
+/** Its children, or the same in a closed disclosure. */
+function FoldedWhile({
+  folded,
+  children,
+}: {
+  folded: boolean;
+  children: ReactNode;
+}) {
+  if (!folded) return <>{children}</>;
+  return (
+    <details className={styles.currentFold}>
+      <summary>{ROADMAP_CONTROL_COPY.currentRoadmapFold}</summary>
+      {children}
+    </details>
   );
 }
 

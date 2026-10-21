@@ -120,7 +120,7 @@ test.describe("M3-15F roadmap generation", () => {
         .locator("[data-roadmap-example] ~ h2")
         .first()
         .innerText();
-      await review.getByRole("button", { name: "Edit proposal" }).click();
+      await review.getByRole("button", { name: "Edit", exact: true }).click();
       // The form and nothing of the proposal beside it (owner, 14 Oct 2026).
       const editor = page.locator('[data-roadmap-write="edit"]');
       await expect(editor).toBeVisible();
@@ -276,7 +276,7 @@ test.describe("M3-15F roadmap generation", () => {
       // asked afresh (owner, 14 Oct 2026).
       await page
         .locator("[data-roadmap-open-proposal]")
-        .getByRole("button", { name: "Decline proposal" })
+        .getByRole("button", { name: "Decline", exact: true })
         .click();
       await expect(page.locator("[data-roadmap-open-proposal]")).toHaveCount(0);
       await createNew("fresh");
