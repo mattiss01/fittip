@@ -176,7 +176,11 @@ async function renderDay(timezoneName: string, requested: string | null) {
       lastPlaceableDate={lastPlaceableDate}
       isRecoveryDay={window.slice.recoveryDates.includes(date)}
       toppedUp={window.toppedUp}
-      runningWorkout={running?.title ?? null}
+      runningWorkout={
+        running == null
+          ? null
+          : { title: running.title, planSessionId: running.planSessionId }
+      }
       sessions={sessions}
       unattached={completions
         .filter((completion) => !carried.has(completion.id))

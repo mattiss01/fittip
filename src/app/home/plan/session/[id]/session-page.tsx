@@ -596,7 +596,7 @@ export function SessionPage({
                         startTransition(() => startLiveWorkoutAction(formData));
                       }}
                     >
-                      Start live
+                      Track live
                     </MenuItem>
                   ) : null}
                   <MenuItem

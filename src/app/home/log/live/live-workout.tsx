@@ -31,6 +31,7 @@ import {
   type LiveWorkoutState,
   type LiveWorkoutView,
 } from "@/lib/training/live-workout";
+import type { TrainingMeasurementMode } from "@/lib/training/measurement";
 import {
   startingMode,
   type ModeBySport,
@@ -247,6 +248,7 @@ export function LiveWorkout({
         onAdd={(added) => change([...activities, added])}
         sessionSport={sessionSport}
         modes={modes}
+        previousMode={activities.at(-1)?.mode ?? null}
       />
 
       <div className={styles.end}>
@@ -481,7 +483,7 @@ function SetRows({
               aria-label={`Set ${index + 1} done`}
               onClick={() => edit(index, { done: !set.done })}
             >
-              ✓
+              <CheckMark />
             </button>
           </li>
         ))}
@@ -512,6 +514,15 @@ function SetRows({
         ) : null}
       </div>
     </>
+  );
+}
+
+/** A drawn check, crisper than a glyph at this size. */
+function CheckMark() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M5 12.5l4.5 4.5L19 7.5" />
+    </svg>
   );
 }
 
@@ -574,6 +585,7 @@ function AddActivity({
   onAdd,
   sessionSport,
   modes,
+  previousMode,
 }: {
   idPrefix: string;
   disabled: boolean;
@@ -581,6 +593,8 @@ function AddActivity({
   onAdd: (activity: LiveActivity) => void;
   sessionSport: string;
   modes: ModeBySport;
+  /** How the activity before it is measured, which a new one starts as. */
+  previousMode: TrainingMeasurementMode | null;
 }) {
   const [picking, setPicking] = useState(false);
   return (
@@ -597,7 +611,10 @@ function AddActivity({
                 personalActivityId: null,
                 name: "",
                 sport: sessionSport,
-                measurementMode: startingMode(sessionSport, modes, null),
+                // Measured as the activity before it (owner, 21 Oct
+                // 2026); the first one as this sport last was.
+                measurementMode:
+                  previousMode ?? startingMode(sessionSport, modes, null),
                 target: null,
               }),
             )

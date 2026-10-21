@@ -180,8 +180,10 @@
   gap: 0.35rem;
 }
 
-.setDone {
-  opacity: 0.55;
+/* A done set's numbers step back; its tick stays bright. */
+.setDone .stepper,
+.setDone .setNumber {
+  opacity: 0.5;
 }
 
 .setNumber {
@@ -238,32 +240,52 @@
   grid-column: 3;
 }
 
+/* A set's tick: a soft square while open, filled once done. */
 .tick,
 .tickOn {
-  width: 2.75rem;
-  height: 2.75rem;
+  display: grid;
+  place-items: center;
+  width: 2.6rem;
+  height: 2.6rem;
   min-height: 0;
   margin: 0;
   padding: 0;
-  border-radius: 50%;
-  font: 800 1.1rem var(--font-sans);
+  border-radius: 0.8rem;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease;
 }
 
-.tick {
-  border: 2px solid var(--rule);
-  background: white;
-  color: var(--rule);
+.tick svg,
+.tickOn svg {
+  width: 1.25rem;
+  height: 1.25rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
+.tick,
 .tick:hover {
-  background: white;
+  border: 1.5px solid var(--fern);
+  background: var(--sage);
+  color: color-mix(in srgb, var(--moss) 45%, transparent);
 }
 
 .tickOn,
 .tickOn:hover {
-  border: 0;
+  border: 1.5px solid var(--pine-soft);
   background: var(--pine-soft);
   color: white;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tick,
+  .tickOn {
+    transition: none;
+  }
 }
 
 .doneButton,

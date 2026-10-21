@@ -228,13 +228,16 @@ export function LogForm({
     INITIAL_LOG_ACTION_STATE,
   );
   const choices = planned === null ? [UNPLANNED_OUTCOME] : PLANNED_OUTCOMES;
+  // A workout tracked live happened (owner, 21 Oct 2026): it is logged as
+  // completed without being asked, and the summary's Change still reaches it.
+  const asksOutcome = choices.length > 1 && fromWorkout === null;
   const [outcome, setOutcome] = useState<CompletionOutcome>(
     existing?.outcome ?? choices[0].value,
   );
   // A new planned log has not been told how it went yet; the outcome step is
   // answered by a tap, not by a default the owner never chose.
   const [outcomeChosen, setOutcomeChosen] = useState(
-    existing !== null || choices.length === 1,
+    existing !== null || !asksOutcome,
   );
   const [actualDate, setActualDate] = useState(
     existing?.actualLocalDate ?? defaultDate,
@@ -282,7 +285,7 @@ export function LogForm({
   const [signalsAnswered, setSignalsAnswered] = useState(existing !== null);
 
   const [step, setStep] = useState<Step>(
-    existing !== null ? "summary" : choices.length > 1 ? "outcome" : "what",
+    existing !== null ? "summary" : asksOutcome ? "outcome" : "what",
   );
   // The date is asked only when the owner taps its Change, and returns to
   // the question it was opened from.
@@ -373,7 +376,7 @@ export function LogForm({
     // is not asked what was done, and keeps the plan's name for the log.
     const happened = forOutcome !== "skipped" && forOutcome !== "replaced";
     return [
-      ...(choices.length > 1 && !(whichDay && forDay === "extra")
+      ...(asksOutcome && !(whichDay && forDay === "extra")
         ? (["outcome"] as const)
         : []),
       ...(happened ? (["what"] as const) : []),

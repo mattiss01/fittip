@@ -81,8 +81,12 @@ type Props = {
   isRecoveryDay: boolean;
   /** False when the ADR-017 top-up could not run for this read. */
   toppedUp: boolean;
-  /** The title of a workout already running (ADR-037), or null. */
-  runningWorkout?: string | null;
+  /**
+   * A workout already running (ADR-037). While it runs no other training
+   * can be started: it is continued where it was started (owner, 21 Oct
+   * 2026), on its session's card or, from scratch, below the day.
+   */
+  runningWorkout?: { title: string; planSessionId: string | null } | null;
   sessions: TodaySessionView[];
   /**
    * Completions logged on this day that no card above carries: training that
@@ -207,7 +211,13 @@ export function TodayDay({
                   key={session.id}
                   date={date}
                   session={session}
-                  isToday={date === today && runningWorkout === null}
+                  live={
+                    runningWorkout?.planSessionId === session.id
+                      ? "running"
+                      : date === today && runningWorkout === null
+                        ? "startable"
+                        : "none"
+                  }
                 />
               ))}
               {unattached.map((completion) => (
@@ -274,17 +284,21 @@ export function TodayDay({
         </div>
       </Slide>
 
-      {runningWorkout !== null ? (
-        // One workout at a time: the one running is the one offered.
+      {runningWorkout !== null &&
+      !sessions.some(
+        (session) => session.id === runningWorkout.planSessionId,
+      ) ? (
+        // One workout at a time: the one running, started from scratch or
+        // from a session on another day, is continued here.
         <Link
           className={styles.addAction}
           href="/home/log/live"
           data-today-continue-workout
         >
           <span aria-hidden="true">▶</span>
-          Continue {runningWorkout}
+          Continue {runningWorkout.title}
         </Link>
-      ) : date === today ? (
+      ) : date === today && runningWorkout === null ? (
         <Link
           className={styles.addAction}
           href="/home/log/live?new=1"
@@ -305,12 +319,15 @@ export function TodayDay({
 function SessionCard({
   date,
   session,
-  isToday,
+  live,
 }: {
   date: string;
   session: TodaySessionView;
-  /** A session is tracked live only on the day it happens (ADR-037). */
-  isToday: boolean;
+  /**
+   * Tracked live only on its own day and while nothing else runs; the one
+   * running is continued here (ADR-037).
+   */
+  live: "startable" | "running" | "none";
 }) {
   const summary = [
     session.sport,
@@ -389,10 +406,18 @@ function SessionCard({
         <ActivityList label="Planned" items={session.activities} />
       ) : null}
       {showsCancelled ? null : session.completion === null ? (
-        <>
-          {isToday ? (
-            // Tracked while it happens (ADR-037); a workout already running
-            // is the one this leads back to.
+        // Track it while it happens, or log it afterwards, side by side
+        // (owner, 21 Oct 2026; ADR-037).
+        <div className={live === "none" ? undefined : styles.logRow}>
+          {live === "running" ? (
+            <Link
+              className={styles.liveAction}
+              href="/home/log/live"
+              data-today-continue-workout
+            >
+              <span aria-hidden="true">▶</span> Continue
+            </Link>
+          ) : live === "startable" ? (
             <form action={startLiveWorkoutAction}>
               <input type="hidden" name="plannedSessionId" value={session.id} />
               <button
@@ -400,7 +425,7 @@ function SessionCard({
                 className={styles.liveAction}
                 data-today-start-live
               >
-                <span aria-hidden="true">▶</span> Start live
+                <span aria-hidden="true">▶</span> Track live
               </button>
             </form>
           ) : null}
@@ -411,7 +436,7 @@ function SessionCard({
             Log this session
             <span aria-hidden="true">→</span>
           </Link>
-        </>
+        </div>
       ) : (
         <>
           <CompletionFacts completion={session.completion} date={date} />

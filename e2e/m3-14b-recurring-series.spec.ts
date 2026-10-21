@@ -74,7 +74,7 @@ test.describe("M3-14B recurring series surface", () => {
       await expect(page.locator("[data-session-actions] li")).toHaveText([
         "Log this session",
         // Today's session can be tracked live (ADR-037).
-        "Start live",
+        "Track live",
         "Duplicate",
         "Save to library",
         "Cancel session",

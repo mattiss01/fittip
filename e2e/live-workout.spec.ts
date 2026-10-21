@@ -41,7 +41,7 @@ test.describe("logging a session live", () => {
       const card = page.locator("[data-today-session]", {
         has: page.getByRole("heading", { name: "Upper body", exact: true }),
       });
-      await card.getByRole("button", { name: /Start live/ }).click();
+      await card.getByRole("button", { name: /Track live/ }).click();
       await expect(page).toHaveURL(/\/home\/log\/live$/);
       await expect(page.locator("[data-live-clock]")).toHaveText(/^\d+:\d\d$/);
 
@@ -66,10 +66,12 @@ test.describe("logging a session live", () => {
 
       // ---- Leave it: Today offers it to continue, not a second start. ----
       await page.goto("/home/today");
-      await expect(page.locator("[data-today-continue-workout]")).toContainText(
-        "Continue Upper body",
+      // Continue is where Track live was; nothing else can be started.
+      await expect(card.locator("[data-today-continue-workout]")).toHaveText(
+        /Continue/,
       );
       await expect(page.locator("[data-today-start-live]")).toHaveCount(0);
+      await expect(page.locator("[data-today-start-workout]")).toHaveCount(0);
 
       // ---- The clock on another page leads back. ----
       await page.goto("/home/plan");
@@ -86,8 +88,12 @@ test.describe("logging a session live", () => {
       await page.getByRole("button", { name: "Finish and log" }).click();
       await expect(page).toHaveURL(/\/home\/log\?workout=/);
       await expect(page.locator("[data-live-pill]")).toHaveCount(0);
+      // Tracked live, it happened: "How did it go?" is not asked.
+      await expect(page.locator("[data-log-form]")).toHaveAttribute(
+        "data-log-step-current",
+        "what",
+      );
       await logInSteps(page, {
-        outcome: "Completed",
         activities: async (activitiesPage) => {
           await expect(
             activitiesPage.getByText("Did: 1 × 6 · 40 kg"),
@@ -99,7 +105,7 @@ test.describe("logging a session live", () => {
       await expect(page).toHaveURL(/\/home\/today\?date=/);
       await expect(page.locator("[data-live-pill]")).toHaveCount(0);
       await expect(
-        card.getByRole("button", { name: /Start live/ }),
+        card.getByRole("button", { name: /Track live/ }),
       ).toHaveCount(0);
 
       // ---- From scratch, then discarded: nothing is logged. ----
