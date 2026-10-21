@@ -42,7 +42,8 @@ export function useLiveClock(source: ClockSource): string {
 }
 
 /**
- * A running workout's clock on every page under /home (owner, 21 Oct 2026):
+ * A running workout's clock at the bottom of every page under /home (owner,
+ * 21 Oct 2026):
  * training goes on while the owner looks something up, and this is the way
  * back to it. Not drawn on the workout's own page, which has the large one.
  */
@@ -65,7 +66,7 @@ export function LiveWorkoutPill({
   const paused = workout.pausedAt !== null;
   return (
     <>
-      {/* Holds the pill's room at the top, so no page starts under it. */}
+      {/* Holds the pill's room below the page, so nothing ends under it. */}
       <div className={styles.room} aria-hidden="true" />
       <Link
         className={styles.pill}

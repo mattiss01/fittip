@@ -1,9 +1,10 @@
-/* A running workout's way back, pinned to the top of every page under /home.
-   Above ordinary content and the navigation, below a dialog. */
+/* A running workout's way back, just above the navigation on every page
+   under /home (owner, 21 Oct 2026), where the save dock would sit. Above
+   ordinary content and the navigation, below a dialog. */
 .pill {
   position: fixed;
   z-index: 35;
-  top: calc(0.5rem + env(safe-area-inset-top));
+  bottom: calc(5.4rem + env(safe-area-inset-bottom));
   left: 50%;
   display: flex;
   align-items: center;
@@ -66,6 +67,23 @@
   }
 }
 
+/* Room below the page, so its last content scrolls clear of the pill. */
 .room {
-  height: calc(3.25rem + env(safe-area-inset-top));
+  height: 3.5rem;
+}
+
+/* A page with a save dock is mid-edit, and the dock owns that place: the
+   pill steps aside until the edit is saved or left. */
+:global(body:has(.save-dock)) .pill,
+:global(body:has(.save-dock)) .room {
+  display: none;
+}
+
+@media (min-width: 900px) {
+  /* The navigation floats at the right there; the pill keeps the left. */
+  .pill {
+    bottom: 1.25rem;
+    left: 1.25rem;
+    transform: none;
+  }
 }

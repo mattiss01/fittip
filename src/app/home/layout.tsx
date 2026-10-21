@@ -36,8 +36,10 @@ export default async function HomeLayout({
         Skip to content
       </a>
       <ConnectionNotice />
-      {liveWorkout === null ? null : <LiveWorkoutPill workout={liveWorkout} />}
       <OwnedSportsProvider sports={sports}>{children}</OwnedSportsProvider>
+      {/* After the page, so its room is below the content (owner, 21 Oct
+          2026: the clock sits at the bottom, above the navigation). */}
+      {liveWorkout === null ? null : <LiveWorkoutPill workout={liveWorkout} />}
       <MobileNavigation
         setupOpen={setupOpen}
         decisionsOpen={decisionsOpen}
