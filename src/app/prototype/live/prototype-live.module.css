@@ -1,0 +1,883 @@
+/* PROTOTYPE — styles for the three live-workout variants, in the app's palette. */
+
+.page {
+  display: grid;
+  align-content: start;
+  gap: 0.85rem;
+  min-height: 100dvh;
+  max-width: 30rem;
+  margin: 0 auto;
+  padding: 4.5rem 1rem 3rem;
+  background: var(--sage);
+  color: var(--pine);
+  font-family: var(--font-sans);
+}
+
+.withBar {
+  padding-bottom: 7rem;
+}
+
+.kicker {
+  margin: 0;
+  color: var(--moss);
+  font: 500 0.7rem var(--font-mono);
+  letter-spacing: 0.04em;
+}
+
+.h1 {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.h2 {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 800;
+}
+
+.h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.section {
+  margin: 0.8rem 0 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.muted {
+  margin: 0;
+  color: var(--moss);
+  font-size: 0.85rem;
+}
+
+.card {
+  display: grid;
+  gap: 0.7rem;
+  padding: 1rem;
+  border-radius: var(--radius-card);
+  background: var(--paper);
+  box-shadow: var(--shadow-card);
+}
+
+.card p {
+  margin: 0;
+}
+
+.cardDone {
+  opacity: 0.7;
+}
+
+.unfinished {
+  border: 2px solid var(--ember);
+}
+
+.cardHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.plainList {
+  display: grid;
+  gap: 0.3rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.88rem;
+}
+
+.plainList span {
+  color: var(--moss);
+}
+
+.primary,
+.secondary,
+.quiet,
+.start,
+.ghost,
+.hugeBtn,
+.thumbBtn {
+  min-height: 2.9rem;
+  padding: 0 1.1rem;
+  border-radius: var(--radius-pill);
+  font: 700 0.95rem var(--font-sans);
+  cursor: pointer;
+}
+
+.primary,
+.start {
+  border: 0;
+  background: var(--ember);
+  color: white;
+}
+
+.secondary {
+  border: 1px solid var(--rule);
+  background: var(--paper);
+  color: var(--pine);
+}
+
+.quiet {
+  border: 0;
+  background: transparent;
+  color: var(--pine-soft);
+  text-decoration: underline;
+}
+
+.start:disabled,
+.secondary:disabled,
+.ghost:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.field {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.field > span {
+  color: var(--moss);
+  font: 500 0.65rem var(--font-mono);
+  text-transform: uppercase;
+}
+
+.field input,
+.field select {
+  min-height: 3rem;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-control);
+  background: white;
+  color: var(--pine);
+  font: 400 1rem var(--font-sans);
+}
+
+.badgeDone,
+.badgeOpen {
+  padding: 0.2rem 0.6rem;
+  border-radius: var(--radius-pill);
+  font: 600 0.7rem var(--font-mono);
+}
+
+.badgeDone {
+  background: var(--fern);
+}
+
+.badgeOpen {
+  background: #fde6dd;
+  color: var(--ember-dark);
+}
+
+.listButton {
+  min-height: 2.75rem;
+  border: 0;
+  border-bottom: 1px solid var(--fern);
+  background: none;
+  color: var(--pine);
+  font: 600 1rem var(--font-sans);
+  text-align: left;
+}
+
+.awake {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--moss);
+  font-size: 0.85rem;
+}
+
+.state {
+  max-width: 30rem;
+  margin: 0 auto 2rem;
+  padding: 0 1rem;
+  color: var(--moss);
+  font-size: 0.75rem;
+}
+
+.state pre {
+  overflow: auto;
+  max-height: 20rem;
+  padding: 0.6rem;
+  border-radius: 0.6rem;
+  background: var(--paper);
+}
+
+/* ---- shared small controls ---- */
+
+.mini {
+  min-width: 2.2rem;
+  min-height: 2.2rem;
+  border: 1px solid var(--fern);
+  border-radius: 0.6rem;
+  background: white;
+  color: var(--pine);
+  font: 700 1rem var(--font-sans);
+}
+
+.tick,
+.tickOn {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  font: 800 1.1rem var(--font-sans);
+}
+
+.tick {
+  border: 2px solid var(--rule);
+  background: white;
+  color: var(--rule);
+}
+
+.tickOn {
+  border: 0;
+  background: var(--pine-soft);
+  color: white;
+}
+
+.bigNum {
+  font: 800 2.2rem var(--font-mono);
+  letter-spacing: -0.03em;
+}
+
+.bigNum small {
+  color: var(--moss);
+  font-size: 1rem;
+}
+
+.runRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.plusBig {
+  min-width: 4rem;
+  min-height: 3.5rem;
+  border: 0;
+  border-radius: 1rem;
+  background: var(--ember);
+  color: white;
+  font: 800 1.3rem var(--font-sans);
+}
+
+/* ---- variant A ---- */
+
+.stickyHead {
+  position: sticky;
+  top: 3.2rem;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.6rem 0.8rem;
+  border-radius: var(--radius-card);
+  background: var(--pine);
+  color: white;
+  box-shadow: var(--shadow-raised);
+}
+
+.link,
+.linkLight {
+  min-height: 2.75rem;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: 600 0.9rem var(--font-sans);
+  cursor: pointer;
+}
+
+.linkLight {
+  color: white;
+}
+
+.headMid {
+  display: grid;
+  justify-items: center;
+}
+
+.headTitle {
+  font-size: 0.75rem;
+  opacity: 0.8;
+}
+
+.headClock {
+  font: 800 1.6rem var(--font-mono);
+}
+
+.finishSmall {
+  min-height: 2.5rem;
+  padding: 0 0.9rem;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--ember);
+  color: white;
+  font: 700 0.85rem var(--font-sans);
+}
+
+.sets {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sets li {
+  display: grid;
+  grid-template-columns: 1.2rem 1fr 1fr auto;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.setDone {
+  opacity: 0.55;
+}
+
+.setNo {
+  color: var(--moss);
+  font: 600 0.8rem var(--font-mono);
+}
+
+.stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font: 700 0.95rem var(--font-mono);
+}
+
+.stepper small {
+  color: var(--moss);
+  font-size: 0.65rem;
+}
+
+.segHard,
+.segEasy {
+  display: grid;
+  justify-items: center;
+  gap: 0.2rem;
+  padding: 0.8rem;
+  border-radius: var(--radius-control);
+}
+
+.segHard {
+  background: var(--ember);
+  color: white;
+}
+
+.segEasy {
+  background: var(--fern);
+}
+
+.restBar {
+  position: fixed;
+  right: 0.75rem;
+  bottom: calc(0.75rem + env(safe-area-inset-bottom));
+  left: 0.75rem;
+  z-index: 10;
+  display: flex;
+  overflow: hidden;
+  align-items: center;
+  gap: 0.4rem;
+  max-width: 29rem;
+  margin: 0 auto;
+  padding: 0.6rem 0.8rem;
+  border-radius: var(--radius-card);
+  background: var(--pine);
+  color: white;
+  box-shadow: var(--shadow-raised);
+}
+
+.restFill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--pine-soft);
+  transition: width 0.25s linear;
+}
+
+.restText {
+  position: relative;
+  flex: 1;
+  font: 800 1.3rem var(--font-mono);
+}
+
+.restText small {
+  display: block;
+  font: 400 0.7rem var(--font-sans);
+  opacity: 0.8;
+}
+
+.restBtn {
+  position: relative;
+  min-height: 2.6rem;
+  padding: 0 0.8rem;
+  border: 1px solid rgb(255 255 255 / 0.4);
+  border-radius: var(--radius-pill);
+  background: none;
+  color: white;
+  font: 700 0.85rem var(--font-sans);
+}
+
+/* ---- variant B ---- */
+
+.focusPage {
+  display: grid;
+  align-content: start;
+  justify-items: center;
+  gap: 0.8rem;
+  min-height: 100dvh;
+  max-width: 30rem;
+  margin: 0 auto;
+  padding: 4rem 1rem 2rem;
+  background: var(--paper);
+  color: var(--pine);
+  font-family: var(--font-sans);
+  text-align: center;
+}
+
+.restPage {
+  background: var(--pine);
+  color: white;
+}
+
+.focusTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.focusClock {
+  font: 700 1.1rem var(--font-mono);
+}
+
+.dots {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.dot {
+  width: 0.8rem;
+  height: 0.8rem;
+  padding: 0;
+  border: 2px solid var(--rule);
+  border-radius: 50%;
+  background: white;
+}
+
+.dotDone {
+  border-color: var(--pine-soft);
+  background: var(--pine-soft);
+}
+
+.dotNow {
+  outline: 3px solid var(--ember);
+  outline-offset: 2px;
+}
+
+.focusLabel {
+  margin: 0;
+  color: inherit;
+  font: 600 0.8rem var(--font-mono);
+  letter-spacing: 0.06em;
+  opacity: 0.75;
+}
+
+.focusName {
+  margin: 0;
+  font-size: 2.2rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.focusSub {
+  margin: 0;
+  color: inherit;
+  font-size: 0.95rem;
+  opacity: 0.75;
+}
+
+.focusBody {
+  display: grid;
+  justify-items: center;
+  gap: 0.9rem;
+  width: 100%;
+  margin: 0.6rem 0;
+}
+
+.giant {
+  font: 800 5rem/1 var(--font-mono);
+  letter-spacing: -0.04em;
+}
+
+.giantText {
+  font-size: 1.8rem;
+}
+
+.bigSteppers {
+  display: flex;
+  gap: 1.2rem;
+}
+
+.bigSteppers div {
+  display: grid;
+  grid-template-columns: 2.75rem auto 2.75rem;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.bigSteppers strong {
+  min-width: 3.5rem;
+  font: 800 2.6rem var(--font-mono);
+}
+
+.bigSteppers span {
+  grid-column: 1 / -1;
+  color: var(--moss);
+  font-size: 0.8rem;
+}
+
+.bigSteppers button {
+  height: 2.75rem;
+  border: 1px solid var(--fern);
+  border-radius: 50%;
+  background: white;
+  font: 700 1.2rem var(--font-sans);
+}
+
+.hugeBtn {
+  width: 100%;
+  min-height: 5rem;
+  border: 0;
+  border-radius: 1.4rem;
+  background: var(--ember);
+  color: white;
+  font-size: 1.4rem;
+}
+
+.ghost {
+  border: 1px solid currentColor;
+  background: none;
+  color: inherit;
+}
+
+.focusHard,
+.focusEasy {
+  display: grid;
+  justify-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 1.5rem 0;
+  border-radius: 1.4rem;
+}
+
+.focusHard {
+  background: var(--ember);
+  color: white;
+}
+
+.focusEasy {
+  background: var(--fern);
+}
+
+.counter {
+  display: grid;
+  place-items: center;
+  width: 14rem;
+  height: 14rem;
+  border: 0;
+  border-radius: 50%;
+  background: var(--ember);
+  color: white;
+}
+
+.counter strong {
+  font: 800 4.5rem/1 var(--font-mono);
+}
+
+.counter span {
+  font-size: 0.85rem;
+}
+
+.focusNav {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+}
+
+/* ---- variant C ---- */
+
+.clockPage {
+  max-width: 30rem;
+  min-height: 100dvh;
+  margin: 0 auto;
+  padding-bottom: 7rem;
+  background: var(--sage);
+  color: var(--pine);
+  font-family: var(--font-sans);
+}
+
+.clockPanel {
+  display: grid;
+  gap: 0.6rem;
+  padding: 3.6rem 1rem 1rem;
+  border-radius: 0 0 2rem 2rem;
+  background: var(--pine);
+  color: white;
+}
+
+.clockTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.85rem;
+}
+
+.dial {
+  position: relative;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  width: 15rem;
+  height: 15rem;
+  margin: 0 auto;
+}
+
+.ring {
+  position: absolute;
+  inset: 0;
+  transform: rotate(-90deg);
+}
+
+.ringBack,
+.ringFront {
+  fill: none;
+  stroke-width: 5;
+}
+
+.ringBack {
+  stroke: rgb(255 255 255 / 0.15);
+}
+
+.ringFront {
+  stroke: var(--ember);
+  stroke-linecap: round;
+  transition: stroke-dasharray 0.25s linear;
+}
+
+.dialCaption {
+  max-width: 12rem;
+  font: 600 0.7rem var(--font-mono);
+  letter-spacing: 0.06em;
+  text-align: center;
+  opacity: 0.8;
+}
+
+.dialBig {
+  font: 800 3.6rem/1.1 var(--font-mono);
+  letter-spacing: -0.04em;
+}
+
+.dialSmall {
+  font: 500 0.8rem var(--font-mono);
+  opacity: 0.7;
+}
+
+.clockButtons {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.chips {
+  display: flex;
+  overflow-x: auto;
+  gap: 0.5rem;
+  padding: 0.9rem 1rem;
+}
+
+.chip {
+  flex: none;
+  min-height: 2.5rem;
+  padding: 0 0.9rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-pill);
+  background: var(--paper);
+  color: var(--pine);
+  font: 600 0.85rem var(--font-sans);
+}
+
+.chipOn {
+  border-color: var(--pine);
+  background: var(--pine);
+  color: white;
+}
+
+.chipDone {
+  opacity: 0.65;
+}
+
+.clockBody {
+  display: grid;
+  gap: 0.7rem;
+  margin: 0 1rem;
+  padding: 1rem;
+  border-radius: var(--radius-card);
+  background: var(--paper);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font: 600 0.95rem var(--font-mono);
+}
+
+.table th {
+  color: var(--moss);
+  font: 500 0.65rem var(--font-mono);
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.table td,
+.table th {
+  padding: 0.35rem 0.2rem;
+  border-bottom: 1px solid var(--fern);
+}
+
+.table td .mini {
+  margin: 0 0.3rem;
+}
+
+.rowDone {
+  opacity: 0.5;
+}
+
+.thumbBar {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 10;
+  max-width: 30rem;
+  margin: 0 auto;
+  padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom));
+  background: linear-gradient(transparent, var(--sage) 35%);
+}
+
+.thumbBtn {
+  width: 100%;
+  min-height: 4rem;
+  border: 0;
+  border-radius: 1.4rem;
+  background: var(--ember);
+  color: white;
+  font-size: 1.15rem;
+  box-shadow: var(--shadow-raised);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .restFill,
+  .ringFront {
+    transition: none;
+  }
+}
+
+/* fixes after the first look at 390px */
+.awake input {
+  width: 1.2rem;
+  height: 1.2rem;
+  min-height: 0;
+  margin: 0;
+}
+
+.dot {
+  flex: none;
+  min-width: 0;
+  min-height: 0;
+}
+
+.table td {
+  white-space: nowrap;
+}
+
+.table td .mini {
+  min-width: 1.9rem;
+  min-height: 1.9rem;
+  margin: 0 0.25rem;
+}
+
+.dial {
+  width: 12rem;
+  height: 12rem;
+}
+
+.bigSteppers button {
+  color: var(--pine);
+}
+
+/* The app's global button style adds a top margin and an ember hover. */
+.page button,
+.focusPage button,
+.clockPage button {
+  margin-top: 0;
+}
+
+.secondary:hover,
+.listButton:hover {
+  background: var(--paper);
+}
+
+.quiet:hover,
+.ghost:hover,
+.link:hover,
+.linkLight:hover,
+.restBtn:hover {
+  background: transparent;
+}
+
+.mini:hover,
+.tick:hover,
+.dot:hover,
+.bigSteppers button:hover {
+  background: white;
+}
+
+.tickOn:hover,
+.dotDone:hover {
+  background: var(--pine-soft);
+}
+
+.chip:hover {
+  background: var(--paper);
+}
+
+.chipOn:hover {
+  background: var(--pine);
+}
+
+.page {
+  justify-items: stretch;
+  text-align: left;
+}
+
+.page > section,
+.clockBody > section {
+  width: 100%;
+  box-sizing: border-box;
+}
