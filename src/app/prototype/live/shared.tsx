@@ -47,6 +47,8 @@ export type Activity = {
   done: boolean;
   /** Typed at Finish for a run. */
   distance: string;
+  /** Typed at Finish when nothing timed the activity. */
+  minutesTyped: string;
 };
 
 export type Workout = {
@@ -233,6 +235,7 @@ function toActivity(seed: Seed): Activity {
     unit: seed.unit ?? "",
     done: false,
     distance: "",
+    minutesTyped: "",
   };
 }
 
@@ -328,13 +331,14 @@ export function status(a: Activity, now: number): string {
     case "time_distance_pace":
       if (a.segments.length > 0) {
         if (a.done) return "done";
-        if (a.segmentStartedAt === null) return "not started";
+        if (a.segmentStartedAt === null) return "to do";
         return a.segments[a.segmentIndex]?.label ?? "";
       }
-      if (a.startedAt === null) return "not started";
+      if (a.startedAt === null) return a.done ? "done" : "to do";
       return `${clock(runMs(a, now))}${a.laps.length ? ` · ${a.laps.length} laps` : ""}${a.done ? " · done" : ""}`;
     case "duration_intensity":
-      if (a.startedAt === null) return `${a.minutes} min`;
+      if (a.startedAt === null)
+        return a.done ? "done" : `${a.minutes} min · to do`;
       return a.done
         ? `done · ${clock(runMs(a, now))}`
         : `${clock(countdownLeftMs(a, now))} left`;
@@ -400,10 +404,9 @@ function useActions(setWorkout: (fn: (w: Workout) => Workout) => void) {
         const act = w.activities[a];
         const set = act.sets[i];
         set.done = !set.done;
+        // Owner, 21 Oct 2026: no rest timer for now — a ticked set starts
+        // nothing.
         if (set.done) {
-          w.restUntil = Date.now() + act.restSeconds * 1000;
-          w.restTotal = act.restSeconds;
-          w.restAfter = `${act.name}, set ${i + 1}`;
           if (nextOpenSet(act) === -1) act.done = true;
         } else {
           act.done = false;
@@ -493,6 +496,10 @@ function useActions(setWorkout: (fn: (w: Workout) => Workout) => void) {
     setDistance: (a: number, value: string) =>
       change((w) => {
         w.activities[a].distance = value;
+      }),
+    setMinutes: (a: number, value: string) =>
+      change((w) => {
+        w.activities[a].minutesTyped = value;
       }),
     addActivity: (seed: Seed) =>
       change((w) => {
@@ -826,14 +833,16 @@ function summary(a: Activity, now: number): string {
     case "sets_reps_load":
       return groups(a);
     case "time_distance_pace": {
-      if (a.startedAt === null) return "not started";
+      if (a.startedAt === null) return a.done ? "done" : "not done";
       const t = runTime(a, now);
       const label = a.segments.length > 0 ? "hard time" : "time";
       return `${label} ${clock(t)}${a.laps.length ? ` · laps ${a.laps.map(clock).join(", ")}` : ""}`;
     }
     case "duration_intensity":
       return a.startedAt === null
-        ? "not started"
+        ? a.done
+          ? `done (${a.minutes} min planned)`
+          : "not done"
         : `${Math.round(runMs(a, now) / 60000)} min`;
     case "skill_repetitions":
       return `${a.count} of ${a.countTarget} ${a.unit}`;
@@ -876,23 +885,46 @@ function FinishScreen({
             </span>
           </div>
           <p>{summary(a, now)}</p>
-          {a.mode === "time_distance_pace" && a.startedAt !== null && (
-            <label className={styles.field}>
-              <span>How far? (km, from your watch or the route)</span>
-              <input
-                inputMode="decimal"
-                value={a.distance}
-                placeholder="e.g. 5.2"
-                onChange={(e) => act.setDistance(i, e.target.value)}
-              />
-              {Number(a.distance.replace(",", ".")) > 0 && (
-                <small className={styles.muted}>
-                  Pace{" "}
-                  {pace(runTime(a, now), Number(a.distance.replace(",", ".")))}
-                </small>
-              )}
-            </label>
-          )}
+          {a.mode === "time_distance_pace" &&
+            a.startedAt === null &&
+            a.done && (
+              <label className={styles.field}>
+                <span>How long? (min)</span>
+                <input
+                  inputMode="numeric"
+                  value={a.minutesTyped}
+                  placeholder={
+                    w.activities.length === 1
+                      ? String(Math.round(activeMs(w, now) / 60000))
+                      : "e.g. 25"
+                  }
+                  onChange={(e) => act.setMinutes(i, e.target.value)}
+                />
+              </label>
+            )}
+          {a.mode === "time_distance_pace" &&
+            (a.startedAt !== null || a.done) && (
+              <label className={styles.field}>
+                <span>How far? (km, from your watch or the route)</span>
+                <input
+                  inputMode="decimal"
+                  value={a.distance}
+                  placeholder="e.g. 5.2"
+                  onChange={(e) => act.setDistance(i, e.target.value)}
+                />
+                {Number(a.distance.replace(",", ".")) > 0 && (
+                  <small className={styles.muted}>
+                    Pace{" "}
+                    {pace(
+                      a.startedAt === null
+                        ? Number(a.minutesTyped) * 60_000
+                        : runTime(a, now),
+                      Number(a.distance.replace(",", ".")),
+                    ) || "— type how long"}
+                  </small>
+                )}
+              </label>
+            )}
         </section>
       ))}
       <button className={styles.primary} onClick={onLog}>

@@ -11,10 +11,6 @@ import {
   KeepAwake,
   activeMs,
   clock,
-  countdownLeftMs,
-  currentLapMs,
-  runMs,
-  segmentLeftMs,
   status,
   type Activity,
   type Actions,
@@ -69,27 +65,6 @@ export function VariantA({ w, now, act, onLeave, onFinish }: LiveProps) {
         </section>
       ))}
       <AddActivity act={act} />
-
-      {w.restUntil !== null && (
-        <div className={styles.restBar}>
-          <div
-            className={styles.restFill}
-            style={{
-              width: `${(100 * (w.restUntil - now)) / (w.restTotal * 1000)}%`,
-            }}
-          />
-          <span className={styles.restText}>
-            Rest {clock(w.restUntil - now)}
-            <small> after {w.restAfter}</small>
-          </span>
-          <button className={styles.restBtn} onClick={() => act.restAdd(15)}>
-            +15 s
-          </button>
-          <button className={styles.restBtn} onClick={act.restSkip}>
-            Skip
-          </button>
-        </div>
-      )}
     </main>
   );
 }
@@ -135,110 +110,14 @@ function Controls({
               </li>
             ))}
           </ol>
-          <div className={styles.row}>
-            <button className={styles.quiet} onClick={() => act.addSet(i)}>
-              + set
-            </button>
-            <span className={styles.muted}>
-              Rest{" "}
-              <button
-                className={styles.mini}
-                onClick={() => act.setRest(i, -15)}
-              >
-                −
-              </button>{" "}
-              {a.restSeconds} s{" "}
-              <button
-                className={styles.mini}
-                onClick={() => act.setRest(i, 15)}
-              >
-                +
-              </button>
-            </span>
-          </div>
+          <button className={styles.quiet} onClick={() => act.addSet(i)}>
+            + set
+          </button>
         </>
       );
-    case "time_distance_pace":
-      if (a.segments.length > 0) {
-        const seg = a.segments[a.segmentIndex];
-        if (a.segmentStartedAt === null)
-          return a.done ? (
-            <p>Hard blocks: {a.laps.map(clock).join(", ")}</p>
-          ) : (
-            <button className={styles.primary} onClick={() => act.runStart(i)}>
-              ▶ Start intervals
-            </button>
-          );
-        return (
-          <div className={seg.hard ? styles.segHard : styles.segEasy}>
-            <span>{seg.label}</span>
-            <strong className={styles.bigNum}>
-              {clock(segmentLeftMs(a, now))}
-            </strong>
-            <button className={styles.quiet} onClick={() => act.skipSegment(i)}>
-              Next block ›
-            </button>
-          </div>
-        );
-      }
-      if (a.startedAt === null)
-        return (
-          <button className={styles.primary} onClick={() => act.runStart(i)}>
-            ▶ Start
-          </button>
-        );
-      return (
-        <>
-          <div className={styles.runRow}>
-            <strong className={styles.bigNum}>{clock(runMs(a, now))}</strong>
-            {!a.done && (
-              <span className={styles.muted}>
-                lap {clock(currentLapMs(a, now))}
-              </span>
-            )}
-          </div>
-          {a.laps.length > 0 && (
-            <p className={styles.muted}>
-              {a.laps.map((l, k) => `${k + 1}: ${clock(l)}`).join(" · ")}
-            </p>
-          )}
-          {!a.done && (
-            <div className={styles.row}>
-              <button className={styles.secondary} onClick={() => act.lap(i)}>
-                Lap
-              </button>
-              <button className={styles.primary} onClick={() => act.runStop(i)}>
-                ■ Stop
-              </button>
-            </div>
-          )}
-        </>
-      );
-    case "duration_intensity":
-      if (a.startedAt === null)
-        return (
-          <button
-            className={styles.primary}
-            onClick={() => act.countdownStart(i)}
-          >
-            ▶ Start {a.minutes} min
-          </button>
-        );
-      return (
-        <div className={styles.runRow}>
-          <strong className={styles.bigNum}>
-            {a.done ? "Done" : clock(countdownLeftMs(a, now))}
-          </strong>
-          {!a.done && (
-            <button
-              className={styles.quiet}
-              onClick={() => act.countdownEnd(i)}
-            >
-              End early
-            </button>
-          )}
-        </div>
-      );
+    // Owner, 21 Oct 2026: one clock for the whole workout and no other
+    // timer, so a run or a timed block is ticked like anything else; its
+    // distance and time are typed at Finish.
     case "skill_repetitions":
       return (
         <div className={styles.runRow}>

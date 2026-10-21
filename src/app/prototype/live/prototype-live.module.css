@@ -881,3 +881,13 @@
   width: 100%;
   box-sizing: border-box;
 }
+
+/* Owner, 21 Oct 2026: one big clock for the whole workout. */
+.stickyHead {
+  padding: 0.8rem 0.9rem;
+}
+
+.headClock {
+  font-size: 2.6rem;
+  line-height: 1.05;
+}
