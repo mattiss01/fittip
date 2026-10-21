@@ -54,6 +54,11 @@ export class LiveWorkoutPersistenceError extends Error {
 const UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+/** A workout's id as a form or a caller hands it in. */
+export function isLiveWorkoutId(value: unknown): value is string {
+  return typeof value === "string" && UUID.test(value);
+}
+
 /** Every flat field any mode binds; a mode change leaves the others behind. */
 const FIELD_NAMES = new Set(Object.values(MEASUREMENT_FIELDS).flat());
 

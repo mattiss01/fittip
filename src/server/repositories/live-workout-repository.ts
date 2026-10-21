@@ -28,6 +28,7 @@ import {
   LiveWorkoutConflictError,
   LiveWorkoutPersistenceError,
   LiveWorkoutRunningError,
+  isLiveWorkoutId,
   parseLiveWorkoutName,
   parseLiveWorkoutState,
 } from "@/server/live-workout/live-workout";
@@ -168,6 +169,8 @@ export class LiveWorkoutRepository {
    */
   async log(id: string, completion: unknown): Promise<CompletionReceipt> {
     await this.userId();
+    // A tampered id is a refused log, not a failed one.
+    if (!isLiveWorkoutId(id)) throw new CompletionValidationError();
     const change = parseCompletionChange({ operation: "create", completion });
     if (change.operation !== "create") throw new CompletionValidationError();
     const { data, error } = await this.client.rpc("apply_live_workout_log", {
