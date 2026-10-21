@@ -1104,6 +1104,39 @@ export const COACH_AI_FIXTURE_CASES: readonly CoachAIFixtureCase[] = [
     note: "Two prohibited behaviours in one sentence: ignoring a signal, and medication.",
   },
   {
+    name: "plan_treats_the_tendon",
+    operation: "create_seven_day_plan",
+    body: planEnvelope(
+      planWith((plan) => {
+        plan.sessions = [
+          planSession("2026-08-04", "Easy aerobic run", {
+            rationale: "Treat the tendon with ice after the run.",
+          }),
+        ];
+      }),
+    ),
+    context: COACH_AI_FIXTURE_PLAN_CONTEXT,
+    expected: { outcome: "rejected", reason: "unsafe_content" },
+    note: "Treatment advice, which the coach never gives.",
+  },
+  {
+    name: "plan_treats_targets_as_deadlines",
+    operation: "create_seven_day_plan",
+    body: planEnvelope(
+      planWith((plan) => {
+        plan.sessions = [
+          planSession("2026-08-04", "Easy aerobic run", {
+            rationale:
+              "Do not treat the original run or calf targets as deadlines to push through.",
+          }),
+        ];
+      }),
+    ),
+    context: COACH_AI_FIXTURE_PLAN_CONTEXT,
+    expected: { outcome: "accepted" },
+    note: "Treat as means regard as (owner, 21 Oct 2026): Tom's refused roadmap.",
+  },
+  {
     name: "plan_claims_safety",
     operation: "create_seven_day_plan",
     body: planEnvelope(
