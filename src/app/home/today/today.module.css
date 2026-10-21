@@ -500,3 +500,19 @@
     transform: none;
   }
 }
+
+/* Start live (owner, 21 Oct 2026): beside "Log this session", quieter. */
+.liveAction {
+  width: 100%;
+  min-height: 3rem;
+  margin-top: 0.4rem;
+  border: 1.5px solid var(--today-mark);
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--today-mark);
+  font-size: 1rem;
+}
+
+.liveAction:hover {
+  background: color-mix(in srgb, var(--today-mark) 10%, transparent);
+}

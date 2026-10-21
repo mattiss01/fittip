@@ -1,0 +1,403 @@
+/* Logging a session live (owner, 21 Oct 2026; the prototype's variant A). */
+
+.page {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.live {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.head {
+  position: sticky;
+  z-index: 20;
+  top: calc(0.5rem + env(safe-area-inset-top));
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.75rem 0.9rem 0.6rem;
+  border-radius: var(--radius-card);
+  background: var(--pine);
+  box-shadow: var(--shadow-raised);
+  color: white;
+}
+
+.headTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.headLink {
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  color: white;
+  font: 600 0.9rem var(--font-sans);
+  text-decoration: none;
+}
+
+.headTitle {
+  overflow: hidden;
+  font-size: 0.85rem;
+  opacity: 0.85;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.finish {
+  min-height: 2.6rem;
+  margin: 0;
+  padding: 0 1rem;
+  border-radius: var(--radius-pill);
+  font-size: 0.9rem;
+}
+
+.clockRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.clock {
+  font: 800 3rem/1.05 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+}
+
+.pause {
+  min-height: 2.75rem;
+  margin: 0;
+  padding: 0 1rem;
+  border: 1px solid rgb(255 255 255 / 0.45);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: white;
+}
+
+.pause:hover {
+  background: rgb(255 255 255 / 0.1);
+}
+
+.saveLine {
+  margin: 0;
+  font-size: 0.75rem;
+  opacity: 0.75;
+}
+
+.saveProblem {
+  margin: 0;
+  color: #ffd9cc;
+  font-size: 0.85rem;
+}
+
+.saveProblem a,
+.saveProblem button {
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+}
+
+.empty {
+  margin: 0;
+  color: var(--moss);
+}
+
+.activities {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card {
+  display: grid;
+  gap: 0.7rem;
+  padding: 1rem;
+  border-radius: var(--radius-card);
+  background: var(--paper);
+  box-shadow: var(--shadow-card);
+}
+
+.cardDone {
+  background: color-mix(in srgb, var(--paper) 70%, var(--fern));
+}
+
+.cardHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.nameInput {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-control);
+  font: 600 1rem var(--font-sans);
+}
+
+.plan {
+  margin: 0.15rem 0 0;
+  color: var(--moss);
+  font-size: 0.85rem;
+}
+
+.progress {
+  flex: none;
+  color: var(--moss);
+  font-size: 0.82rem;
+}
+
+.sets {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sets li {
+  display: grid;
+  grid-template-columns: 1rem 1fr 1fr auto;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.setDone {
+  opacity: 0.55;
+}
+
+.setNumber {
+  color: var(--moss);
+  font: 600 0.8rem var(--font-mono);
+}
+
+.stepper {
+  display: grid;
+  grid-template-columns: 2.2rem minmax(2.2rem, 1fr) 2.2rem;
+  grid-template-rows: auto auto;
+  align-items: center;
+  column-gap: 0.15rem;
+}
+
+.stepper button {
+  width: 2.2rem;
+  min-height: 2.2rem;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--fern);
+  border-radius: 0.6rem;
+  background: white;
+  color: var(--pine);
+  font-size: 1rem;
+}
+
+.stepper button:hover {
+  background: var(--sage);
+}
+
+.stepper input {
+  width: 100%;
+  min-width: 0;
+  min-height: 2.2rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--pine);
+  font: 700 1rem var(--font-mono);
+  text-align: center;
+}
+
+.stepper small {
+  grid-row: 2;
+  grid-column: 2;
+  color: var(--moss);
+  font-size: 0.62rem;
+  text-align: center;
+}
+
+.stepper button:last-of-type {
+  grid-row: 1;
+  grid-column: 3;
+}
+
+.tick,
+.tickOn {
+  width: 2.75rem;
+  height: 2.75rem;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border-radius: 50%;
+  font: 800 1.1rem var(--font-sans);
+}
+
+.tick {
+  border: 2px solid var(--rule);
+  background: white;
+  color: var(--rule);
+}
+
+.tick:hover {
+  background: white;
+}
+
+.tickOn,
+.tickOn:hover {
+  border: 0;
+  background: var(--pine-soft);
+  color: white;
+}
+
+.doneButton,
+.doneOn {
+  margin: 0;
+}
+
+.doneButton {
+  border: 1px solid var(--rule);
+  background: white;
+  color: var(--pine);
+}
+
+.doneButton:hover {
+  background: var(--sage);
+}
+
+.doneOn,
+.doneOn:hover {
+  background: var(--pine-soft);
+  color: white;
+}
+
+.cardFoot,
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.quiet {
+  min-height: 2.75rem;
+  margin: 0;
+  padding: 0 0.4rem;
+  border: 0;
+  background: none;
+  color: var(--pine-soft);
+  font: 600 0.88rem var(--font-sans);
+  text-decoration: underline;
+}
+
+.quiet:hover {
+  background: none;
+  color: var(--pine);
+}
+
+.secondary {
+  margin: 0;
+  padding: 0 1rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-pill);
+  background: var(--paper);
+  color: var(--pine);
+}
+
+.secondary:hover {
+  background: var(--sage);
+}
+
+.add {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.end {
+  display: grid;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+
+.finishWide {
+  width: 100%;
+  margin: 0;
+  border-radius: var(--radius-pill);
+}
+
+.discard {
+  display: grid;
+  gap: 0.4rem;
+  padding: 0.9rem;
+  border: 1px solid var(--danger);
+  border-radius: var(--radius-card);
+}
+
+.discard p {
+  margin: 0;
+}
+
+.danger {
+  margin: 0;
+  padding: 0 1rem;
+  background: var(--danger);
+}
+
+.danger:hover {
+  background: var(--danger-dark);
+}
+
+.startCard {
+  display: grid;
+  gap: 0.7rem;
+  padding: 1.1rem;
+  border-radius: var(--radius-card);
+  background: var(--paper);
+  box-shadow: var(--shadow-card);
+}
+
+.startCard h1,
+.startCard p {
+  margin: 0;
+}
+
+.startForm {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.field > span,
+.field > label {
+  color: var(--moss);
+  font: 500 0.7rem var(--font-mono);
+  text-transform: uppercase;
+}
+
+.field input {
+  min-height: 3rem;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-control);
+  font: 400 1rem var(--font-sans);
+}

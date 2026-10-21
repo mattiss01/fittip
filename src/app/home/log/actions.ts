@@ -19,11 +19,16 @@ import {
   CompletionTimezoneRequiredError,
   CompletionValidationError,
 } from "@/server/completions/completion-log";
+import { LiveWorkoutConflictError } from "@/server/live-workout/live-workout";
 import { keepSports, submittedSports } from "@/server/profile/keep-sports";
 import {
   CompletionAuthenticationError,
   createCompletionLog,
 } from "@/server/repositories/completion-log-repository";
+import {
+  createLiveWorkouts,
+  LiveWorkoutAuthenticationError,
+} from "@/server/repositories/live-workout-repository";
 import {
   createRollingPlan,
   RollingPlanAuthenticationError,
@@ -41,6 +46,25 @@ import {
  * function captures that from the plan row itself, so no caller can forge one.
  */
 export async function logCompletionAction(
+  previous: LogActionState,
+  formData: FormData,
+): Promise<LogActionState> {
+  const state = await writeLog(previous, formData);
+  // A workout logged live (ADR-037) is gone once its log is saved, and the
+  // page it was logged from is about that workout: refreshed by this action,
+  // it would show "not running" in place of the receipt. It ends on Today
+  // instead, where the session now reads as logged. Outside `writeLog`'s
+  // try, which would catch the redirect as a failure.
+  if (
+    state.status === "saved" &&
+    optionalText(formData, "liveWorkoutId") !== undefined
+  ) {
+    redirect(`/home/today?date=${state.returnDate}`);
+  }
+  return state;
+}
+
+async function writeLog(
   previous: LogActionState,
   formData: FormData,
 ): Promise<LogActionState> {
@@ -118,18 +142,24 @@ export async function logCompletionAction(
       );
     }
     const unplanned = plannedSessionId === undefined || extra;
-    const receipt = await log.applyChange({
-      operation: "create",
-      completion: {
-        ...facts,
-        ...(extra ? { status: "unplanned" } : {}),
-        ...(unplanned ? {} : { planSessionId: plannedSessionId }),
-        ...content,
-        ...(extra ? { activities: unlinkFromPlan(content.activities) } : {}),
-      },
-    });
+    const completion = {
+      ...facts,
+      ...(extra ? { status: "unplanned" } : {}),
+      ...(unplanned ? {} : { planSessionId: plannedSessionId }),
+      ...content,
+      ...(extra ? { activities: unlinkFromPlan(content.activities) } : {}),
+    };
+    // A workout logged live (ADR-037) is written by the function that also
+    // removes the workout, so it cannot be logged twice.
+    const liveWorkoutId = optionalText(formData, "liveWorkoutId");
+    const receipt =
+      liveWorkoutId === undefined
+        ? await log.applyChange({ operation: "create", completion })
+        : await (await createLiveWorkouts()).log(liveWorkoutId, completion);
     await keepSports(submittedSports(formData));
     revalidatePath("/home/today");
+    // The workout's clock leaves every page with it.
+    if (liveWorkoutId !== undefined) revalidatePath("/home", "layout");
     return result("saved", "Log saved", {
       result: receipt.result,
       returnDate,
@@ -138,6 +168,13 @@ export async function logCompletionAction(
       reusable: unplanned || recordsTraining(facts.status as CompletionOutcome),
     });
   } catch (error) {
+    if (error instanceof LiveWorkoutConflictError) {
+      return result(
+        "conflict",
+        "That workout was already logged or discarded. Check Today before logging it again.",
+        { conflict: "stale" },
+      );
+    }
     if (error instanceof CompletionConflictError) {
       return result(
         "conflict",
@@ -180,7 +217,8 @@ export async function logCompletionAction(
     }
     if (
       error instanceof CompletionAuthenticationError ||
-      error instanceof RollingPlanAuthenticationError
+      error instanceof RollingPlanAuthenticationError ||
+      error instanceof LiveWorkoutAuthenticationError
     ) {
       return result(
         "session",

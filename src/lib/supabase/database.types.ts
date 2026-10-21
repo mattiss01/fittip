@@ -431,6 +431,60 @@ export type Database = {
           },
         ];
       };
+      live_workouts: {
+        Row: {
+          id: string;
+          paused_at: string | null;
+          paused_seconds: number;
+          plan_session_id: string | null;
+          revision: number;
+          sport: string;
+          started_at: string;
+          state: Json;
+          title: string;
+          user_id: string;
+        };
+        Insert: {
+          id?: string;
+          paused_at?: string | null;
+          paused_seconds?: number;
+          plan_session_id?: string | null;
+          revision?: number;
+          sport: string;
+          started_at?: string;
+          state?: Json;
+          title: string;
+          user_id?: string;
+        };
+        Update: {
+          id?: string;
+          paused_at?: string | null;
+          paused_seconds?: number;
+          plan_session_id?: string | null;
+          revision?: number;
+          sport?: string;
+          started_at?: string;
+          state?: Json;
+          title?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "live_workouts_owner_fkey";
+            columns: ["user_id"];
+            isOneToOne: true;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+          {
+            foreignKeyName: "live_workouts_session_fkey";
+            columns: ["plan_session_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "rolling_plan_sessions";
+            referencedColumns: ["id", "user_id"];
+          },
+        ];
+      };
       memory_collections: {
         Row: {
           revision: number;
@@ -2495,6 +2549,16 @@ export type Database = {
         SetofOptions: {
           from: "*";
           to: "goal_change_receipt";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      apply_live_workout_log: {
+        Args: { p_completion: Json; p_live_workout_id: string };
+        Returns: Database["public"]["CompositeTypes"]["completion_receipt"];
+        SetofOptions: {
+          from: "*";
+          to: "completion_receipt";
           isOneToOne: true;
           isSetofReturn: false;
         };

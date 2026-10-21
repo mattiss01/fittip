@@ -245,6 +245,11 @@ const allowedServerModules = [
   "@/server/profile/keep-sports",
   "@/server/repositories/coach-cancellation-repository",
   "@/server/repositories/completion-log-repository",
+  // ADR-037: a workout in progress, finished through the log. Its module
+  // writes only `live_workouts` and the log's own function; it changes no
+  // plan.
+  "@/server/live-workout/live-workout",
+  "@/server/repositories/live-workout-repository",
   "@/server/repositories/personal-activity-repository",
   "@/server/repositories/profile-repository",
   "@/server/repositories/rolling-plan-repository",

@@ -9,6 +9,7 @@ import {
   type CompletionOutcome,
   recordsTraining,
 } from "../log/log-action-state";
+import { startLiveWorkoutAction } from "../log/live/actions";
 import { SaveToLibrary } from "../plan/saved/save-to-library";
 import { sessionHref } from "../plan/session-view";
 import { recordHref } from "../progress/record-href";
@@ -199,7 +200,12 @@ export function TodayDay({
             // of its own.
             <ol className={styles.sessions}>
               {sessions.map((session) => (
-                <SessionCard key={session.id} date={date} session={session} />
+                <SessionCard
+                  key={session.id}
+                  date={date}
+                  session={session}
+                  isToday={date === today}
+                />
               ))}
               {unattached.map((completion) => (
                 <li
@@ -265,6 +271,16 @@ export function TodayDay({
         </div>
       </Slide>
 
+      {date === today ? (
+        <Link
+          className={styles.addAction}
+          href="/home/log/live?new=1"
+          data-today-start-workout
+        >
+          <span aria-hidden="true">▶</span>
+          Start a workout
+        </Link>
+      ) : null}
       <Link className={styles.addAction} href={`/home/log?date=${date}`}>
         <span aria-hidden="true">+</span>
         Log unplanned training
@@ -276,9 +292,12 @@ export function TodayDay({
 function SessionCard({
   date,
   session,
+  isToday,
 }: {
   date: string;
   session: TodaySessionView;
+  /** A session is tracked live only on the day it happens (ADR-037). */
+  isToday: boolean;
 }) {
   const summary = [
     session.sport,
@@ -357,13 +376,29 @@ function SessionCard({
         <ActivityList label="Planned" items={session.activities} />
       ) : null}
       {showsCancelled ? null : session.completion === null ? (
-        <Link
-          className={styles.logAction}
-          href={`/home/log?plannedSession=${session.id}&date=${date}`}
-        >
-          Log this session
-          <span aria-hidden="true">→</span>
-        </Link>
+        <>
+          {isToday ? (
+            // Tracked while it happens (ADR-037); a workout already running
+            // is the one this leads back to.
+            <form action={startLiveWorkoutAction}>
+              <input type="hidden" name="plannedSessionId" value={session.id} />
+              <button
+                type="submit"
+                className={styles.liveAction}
+                data-today-start-live
+              >
+                <span aria-hidden="true">▶</span> Start live
+              </button>
+            </form>
+          ) : null}
+          <Link
+            className={styles.logAction}
+            href={`/home/log?plannedSession=${session.id}&date=${date}`}
+          >
+            Log this session
+            <span aria-hidden="true">→</span>
+          </Link>
+        </>
       ) : (
         <>
           <CompletionFacts completion={session.completion} date={date} />

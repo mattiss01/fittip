@@ -194,6 +194,8 @@ describe("SessionPage", () => {
       ).map((item) => item.textContent),
     ).toEqual([
       "Log this session",
+      // On its own day it can be tracked live (ADR-037).
+      "Start live",
       "Duplicate",
       "Save to library",
       "Cancel session",
