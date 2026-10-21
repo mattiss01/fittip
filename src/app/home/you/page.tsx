@@ -111,14 +111,19 @@ export default async function YouPage({
             <Link className={styles.place} href={href}>
               <strong>
                 {name}
-                {decisions[decision] ? (
+                {decisions[decision] ||
+                (decision === "goals" && decisions.noGoal) ? (
                   <>
                     <span
                       aria-hidden="true"
                       className={styles.dot}
                       data-decision-open={decision}
                     />
-                    <span className="sr-only">, suggestions wait for you</span>
+                    <span className="sr-only">
+                      {decisions[decision]
+                        ? ", suggestions wait for you"
+                        : ", no active goal yet"}
+                    </span>
                   </>
                 ) : null}
               </strong>

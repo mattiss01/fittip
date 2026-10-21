@@ -22,6 +22,7 @@ const DESTINATIONS = [
 export function MobileNavigation({
   setupOpen = false,
   decisionsOpen = false,
+  noGoal = false,
   roadmapAttention = null,
 }: {
   /** Guided setup is not finished: "You", where it is reached, is marked. */
@@ -31,6 +32,8 @@ export function MobileNavigation({
    * 19 Oct 2026): "You", where Goals and Memory are, is marked too.
    */
   decisionsOpen?: boolean;
+  /** No goal is active (owner, 21 Oct 2026): "You", where Goals is, is marked. */
+  noGoal?: boolean;
   /** The Plan's Roadmap chip has a dot, so "Plan" has one (owner, 19 Oct). */
   roadmapAttention?: keyof typeof ROADMAP_ATTENTION_NOTES | null;
 }) {
@@ -56,6 +59,7 @@ export function MobileNavigation({
                   ...(decisionsOpen
                     ? ["Suggestions from the coach wait for your decision"]
                     : []),
+                  ...(noGoal ? ["No active goal yet"] : []),
                 ]
               : href === "/home/plan" && roadmapAttention !== null
                 ? [ROADMAP_ATTENTION_NOTES[roadmapAttention]]
@@ -80,6 +84,9 @@ export function MobileNavigation({
                       }
                       data-decisions-open={
                         href === "/home/you" && decisionsOpen ? "" : undefined
+                      }
+                      data-no-goal={
+                        href === "/home/you" && noGoal ? "" : undefined
                       }
                       data-roadmap-attention={
                         href === "/home/plan" ? "" : undefined

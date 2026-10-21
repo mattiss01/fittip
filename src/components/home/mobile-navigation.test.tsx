@@ -67,6 +67,15 @@ describe("MobileNavigation", () => {
     );
   });
 
+  it("marks You while no goal is active, and says so", () => {
+    const { container } = render(<MobileNavigation noGoal />);
+
+    expect(container.querySelectorAll("[data-no-goal]")).toHaveLength(1);
+    expect(
+      screen.getByRole("link", { name: "You" }),
+    ).toHaveAccessibleDescription("No active goal yet");
+  });
+
   it("marks Plan whenever the Roadmap chip has a dot", () => {
     const { container, rerender } = render(
       <MobileNavigation roadmapAttention="review_due" />,
