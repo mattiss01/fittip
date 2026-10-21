@@ -3,7 +3,7 @@
 // walk logged in place of a run, and a business trip ahead. No roadmap. The
 // test: does the coach plan around real life instead of "catching up"?
 
-import { act, effort, lift, MON, run, SUN, THU } from "../lib.mjs";
+import { act, effort, lift, MON, run, SUN, THU, timed } from "../lib.mjs";
 
 const homeStrength = [
   act("Kettlebell swings", "Strength", "lift", lift(4, 15, 16), {
@@ -251,13 +251,7 @@ const athlete = {
       minutes: 15,
       effort: 5,
       note: "While the kids played. Pull-ups on the climbing frame: 0, but hung for 20 s.",
-      activities: [
-        act("Dead hang", "Strength", "custom", {
-          label: "Hang",
-          value: 20,
-          unit: "s",
-        }),
-      ],
+      activities: [act("Dead hang", "Strength", "lift", timed(1, 20))],
     },
   ],
   recoveryDays: [1],

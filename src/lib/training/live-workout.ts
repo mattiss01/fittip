@@ -13,7 +13,9 @@
  */
 
 import {
+  DISTANCE_UNITS,
   LOAD_UNITS,
+  type DistanceUnit,
   type LoadUnit,
   type SetGroup,
   type TrainingMeasurement,
@@ -26,8 +28,25 @@ import {
   type MeasurementBuild,
 } from "@/lib/training/measurement-draft";
 
-/** One set, ticked when it is done. A string each, as a form input is. */
-export type LiveSet = { reps: string; load: string; done: boolean };
+/**
+ * One set, ticked when it is done. A string each, as a form input is. A set
+ * is counted in reps or held for a time (ADR-038); `by` says which.
+ */
+export type LiveSet = {
+  reps: string;
+  time: string;
+  load: string;
+  by: "reps" | "time";
+  done: boolean;
+};
+
+/** One repeat of an interval block, ticked when it is done (ADR-038). */
+export type LiveRepeat = {
+  distance: string;
+  time: string;
+  rest: string;
+  done: boolean;
+};
 
 export type LiveActivity = {
   /** Stable across edits, so a row keeps its inputs. */
@@ -45,6 +64,9 @@ export type LiveActivity = {
   /** `sets_reps_load` only: one row per set, in the order they are done. */
   sets: LiveSet[];
   loadUnit: LoadUnit;
+  /** `intervals` only: one row per repeat, blocks expanded in order. */
+  repeats: LiveRepeat[];
+  distanceUnit: DistanceUnit;
   /** Every other mode: the log's own measurement fields. */
   fields: Record<string, string>;
   /** Ticked by the owner; for sets, any set done. */
@@ -70,6 +92,8 @@ export type LiveWorkoutView = {
 export const LIVE_ACTIVITY_LIMIT = 50;
 /** More sets than any one exercise is done for; the bound keeps a row sane. */
 export const LIVE_SET_LIMIT = 30;
+/** Repeats of one interval activity: a long ladder, not a marathon. */
+export const LIVE_REPEAT_LIMIT = 60;
 
 /** Time trained so far: since the start, less every pause. */
 export function activeMilliseconds(
@@ -145,34 +169,86 @@ export function changeMode(
 function measuredAs(
   activity: Pick<LiveActivity, "target" | "targetMode">,
   mode: TrainingMeasurementMode,
-): Pick<LiveActivity, "mode" | "sets" | "loadUnit" | "fields"> {
+): Pick<
+  LiveActivity,
+  "mode" | "sets" | "loadUnit" | "repeats" | "distanceUnit" | "fields"
+> {
   const fromTarget =
     activity.targetMode === mode && activity.target !== null
       ? draftFromMeasurement(mode, activity.target)
       : emptyDraft(mode);
-  if (mode !== "sets_reps_load") {
-    return { mode, sets: [], loadUnit: "kg", fields: fromTarget.fields };
+  const none = {
+    mode,
+    sets: [],
+    loadUnit: "kg" as const,
+    repeats: [],
+    distanceUnit: "m" as const,
+    fields: {},
+  };
+
+  if (mode === "intervals") {
+    // One row per repeat, so each can be ticked (ADR-038).
+    const repeats: LiveRepeat[] = [];
+    for (const block of fromTarget.blocks ?? []) {
+      const count = Math.max(1, Number.parseInt(block.repeats, 10) || 1);
+      for (let i = 0; i < count && repeats.length < LIVE_REPEAT_LIMIT; i += 1) {
+        repeats.push({
+          distance: block.distance,
+          time: block.time,
+          rest: block.rest,
+          done: false,
+        });
+      }
+    }
+    if (repeats.length === 0) repeats.push(emptyRepeat());
+    return {
+      ...none,
+      repeats,
+      distanceUnit: readDistanceUnit(fromTarget.fields.distance_unit),
+    };
   }
+
+  if (mode !== "sets_reps_load") return { ...none, fields: fromTarget.fields };
+
   const sets: LiveSet[] = [];
   for (const group of fromTarget.groups) {
     const count = Math.max(1, Number.parseInt(group.sets, 10) || 1);
     for (let i = 0; i < count && sets.length < LIVE_SET_LIMIT; i += 1) {
-      sets.push({ reps: group.reps, load: group.load, done: false });
+      sets.push({
+        reps: group.reps,
+        time: group.time,
+        load: group.load,
+        by: group.by,
+        done: false,
+      });
     }
   }
-  if (sets.length === 0) sets.push({ reps: "", load: "", done: false });
+  if (sets.length === 0) sets.push(emptySet());
   return {
-    mode,
+    ...none,
     sets,
     loadUnit: readLoadUnit(fromTarget.fields.load_unit),
-    fields: {},
   };
+}
+
+export function emptySet(by: LiveSet["by"] = "reps"): LiveSet {
+  return { reps: "", time: "", load: "", by, done: false };
+}
+
+export function emptyRepeat(): LiveRepeat {
+  return { distance: "", time: "", rest: "", done: false };
 }
 
 function readLoadUnit(value: string | undefined): LoadUnit {
   return (LOAD_UNITS as readonly string[]).includes(value ?? "")
     ? (value as LoadUnit)
     : "kg";
+}
+
+function readDistanceUnit(value: string | undefined): DistanceUnit {
+  return (DISTANCE_UNITS as readonly string[]).includes(value ?? "")
+    ? (value as DistanceUnit)
+    : "m";
 }
 
 /** A sets activity counts as done once any set is. */
@@ -189,26 +265,83 @@ export function withSets(
  * fields. An unticked set is not recorded.
  */
 export function actualMeasurement(activity: LiveActivity): MeasurementBuild {
+  if (activity.mode === "intervals") return actualIntervals(activity);
   if (activity.mode !== "sets_reps_load") {
     return buildMeasurement(activity.mode, {
       fields: activity.fields,
       groups: [],
     });
   }
-  const groups: { sets: number; reps: string; load: string }[] = [];
+  // Consecutive done sets alike in every number make one group, so 3 × 45 s
+  // then 1 × 60 s reads back as it was done.
+  const groups: (Omit<LiveSet, "done"> & { count: number })[] = [];
   for (const set of activity.sets.filter((candidate) => candidate.done)) {
     const last = groups.at(-1);
-    if (last && last.reps === set.reps && last.load === set.load) {
-      last.sets += 1;
+    if (
+      last &&
+      last.by === set.by &&
+      (set.by === "time" ? last.time === set.time : last.reps === set.reps) &&
+      last.load === set.load
+    ) {
+      last.count += 1;
     } else {
-      groups.push({ sets: 1, reps: set.reps, load: set.load });
+      groups.push({
+        reps: set.reps,
+        time: set.time,
+        load: set.load,
+        by: set.by,
+        count: 1,
+      });
     }
   }
   if (groups.length === 0) return { ok: true, measurement: null };
   return buildMeasurement("sets_reps_load", {
     fields: { load_unit: activity.loadUnit },
-    groups: groups.map((group) => ({ ...group, sets: String(group.sets) })),
+    groups: groups.map(({ count, ...group }) => ({
+      ...group,
+      sets: String(count),
+    })),
   });
+}
+
+/** Done repeats collapsed back into blocks, as sets are into groups. */
+function actualIntervals(activity: LiveActivity): MeasurementBuild {
+  const blocks: (Omit<LiveRepeat, "done"> & { count: number })[] = [];
+  for (const repeat of activity.repeats.filter((candidate) => candidate.done)) {
+    const last = blocks.at(-1);
+    if (
+      last &&
+      last.distance === repeat.distance &&
+      last.time === repeat.time &&
+      last.rest === repeat.rest
+    ) {
+      last.count += 1;
+    } else {
+      blocks.push({
+        distance: repeat.distance,
+        time: repeat.time,
+        rest: repeat.rest,
+        count: 1,
+      });
+    }
+  }
+  if (blocks.length === 0) return { ok: true, measurement: null };
+  return buildMeasurement("intervals", {
+    fields: { distance_unit: activity.distanceUnit },
+    groups: [],
+    blocks: blocks.map(({ count, ...block }) => ({
+      ...block,
+      repeats: String(count),
+    })),
+  });
+}
+
+/** An interval activity counts as done once any repeat is. */
+export function withRepeats(
+  activity: LiveActivity,
+  repeats: LiveRepeat[],
+): LiveActivity {
+  return { ...activity, repeats, done: repeats.some((repeat) => repeat.done) };
 }
 
 /** The groups a sets target asks for, for the line beside a live activity. */

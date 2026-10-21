@@ -1253,10 +1253,7 @@ function grammarTarget(
     "distance_unit",
     "pace_seconds_per_unit",
     "pace_unit",
-    "repetitions",
-    "unit",
-    "label",
-    "value",
+    "blocks",
   ];
   return Object.fromEntries(
     fields.map((field) => [
@@ -1265,9 +1262,17 @@ function grammarTarget(
         ? (present.groups as Record<string, unknown>[]).map((group) => ({
             sets: group.sets ?? null,
             reps: group.reps ?? null,
+            seconds: group.seconds ?? null,
             load: group.load ?? null,
           }))
-        : (present[field] ?? null),
+        : field === "blocks" && Array.isArray(present.blocks)
+          ? (present.blocks as Record<string, unknown>[]).map((block) => ({
+              repeats: block.repeats,
+              distance: block.distance ?? null,
+              seconds: block.seconds ?? null,
+              rest_seconds: block.rest_seconds ?? null,
+            }))
+          : (present[field] ?? null),
     ]),
   );
 }

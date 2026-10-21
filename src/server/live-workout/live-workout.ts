@@ -2,11 +2,17 @@ import "server-only";
 
 import {
   LIVE_ACTIVITY_LIMIT,
+  LIVE_REPEAT_LIMIT,
   LIVE_SET_LIMIT,
   type LiveActivity,
   type LiveWorkoutState,
 } from "@/lib/training/live-workout";
-import { LOAD_UNITS, type LoadUnit } from "@/lib/training/measurement";
+import {
+  DISTANCE_UNITS,
+  LOAD_UNITS,
+  type DistanceUnit,
+  type LoadUnit,
+} from "@/lib/training/measurement";
 import { MEASUREMENT_FIELDS } from "@/lib/training/measurement-draft";
 import {
   parseTrainingMeasurement,
@@ -120,6 +126,8 @@ function parseActivity(value: unknown): LiveActivity {
     "targetMode",
     "sets",
     "loadUnit",
+    "repeats",
+    "distanceUnit",
     "fields",
     "done",
   ]);
@@ -161,20 +169,46 @@ function parseActivity(value: unknown): LiveActivity {
   if (!Array.isArray(activity.sets) || activity.sets.length > LIVE_SET_LIMIT) {
     invalid();
   }
+  // `time` and `by` arrived with timed sets (ADR-038); a workout stored
+  // before them reads as counted in reps.
   const sets = activity.sets.map((value) => {
     const set = record(value);
-    onlyKeys(set, ["reps", "load", "done"]);
+    onlyKeys(set, ["reps", "time", "load", "by", "done"]);
     if (typeof set.done !== "boolean") invalid();
+    const by = set.by === undefined ? "reps" : set.by;
+    if (by !== "reps" && by !== "time") invalid();
     return {
       reps: text(set.reps, 12),
+      time: set.time === undefined ? "" : text(set.time, 12),
       load: text(set.load, 12),
+      by: by as "reps" | "time",
       done: set.done,
     };
   });
   if (mode !== "sets_reps_load" && sets.length > 0) invalid();
 
+  // Intervals' repeats (ADR-038), absent from a workout stored before them.
+  const rawRepeats = activity.repeats ?? [];
+  if (!Array.isArray(rawRepeats) || rawRepeats.length > LIVE_REPEAT_LIMIT) {
+    invalid();
+  }
+  const repeats = rawRepeats.map((value) => {
+    const repeat = record(value);
+    onlyKeys(repeat, ["distance", "time", "rest", "done"]);
+    if (typeof repeat.done !== "boolean") invalid();
+    return {
+      distance: text(repeat.distance, 12),
+      time: text(repeat.time, 12),
+      rest: text(repeat.rest, 12),
+      done: repeat.done,
+    };
+  });
+  if (mode !== "intervals" && repeats.length > 0) invalid();
+
   const loadUnit = activity.loadUnit;
   if (!(LOAD_UNITS as readonly unknown[]).includes(loadUnit)) invalid();
+  const distanceUnit = activity.distanceUnit ?? "m";
+  if (!(DISTANCE_UNITS as readonly unknown[]).includes(distanceUnit)) invalid();
 
   const rawFields = record(activity.fields);
   const fields: Record<string, string> = {};
@@ -196,6 +230,8 @@ function parseActivity(value: unknown): LiveActivity {
     targetMode,
     sets,
     loadUnit: loadUnit as LoadUnit,
+    repeats,
+    distanceUnit: distanceUnit as DistanceUnit,
     fields,
     done: activity.done,
   };

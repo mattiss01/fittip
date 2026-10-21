@@ -37,10 +37,13 @@ Ordered by dependency. A lane is named where it is not the build lane.
       its own parts, and progress would add them. The likelier shape is the session (and
       its log) holding the totals and activities holding the parts. Careful lane: schema,
       the AI contracts and what A9 sums.
-- [ ] **More ways to measure — to talk through with the owner first.** Candidates named
-      on 16 Oct 2026: intervals (repeats of distance and time), heart rate or RPE beside
-      time and distance, elevation, laps or lengths. Each is a mode or field in the schema
-      and the AI contracts, so careful lane; only the ones the owner misses.
+- [~] **Measurement categories (ADR-038).** Owner, 21 Oct 2026: Sets hold reps or a
+      time per set (a plank), Intervals arrive as blocks of repeats of a distance or a
+      time with rest, Repetitions folds into Sets (one set of n, the counted word
+      dropped) and Custom goes. Stored rows are converted, Custom emptied: the owner said
+      no stored data needs keeping. Careful lane: the validator, five constraints, five
+      input validators, the coach's grammar and prompt. Heart rate/RPE, elevation and
+      laps stay unasked for.
 - [ ] **The 30-day start limit is the app's alone.** `begin_plan_generation` and
       `begin_roadmap_generation` refuse a past start and have no upper bound. Only
       the owner calling the database directly gets past it, on their own data.

@@ -22,16 +22,22 @@ import { useLiveClock } from "@/components/home/live-workout-clock";
 import { describeMeasurement } from "@/lib/training/describe-measurement";
 import {
   changeMode,
+  emptyRepeat,
+  emptySet,
   LIVE_ACTIVITY_LIMIT,
+  LIVE_REPEAT_LIMIT,
   LIVE_SET_LIMIT,
   liveActivityFrom,
+  withRepeats,
   withSets,
   type LiveActivity,
+  type LiveRepeat,
   type LiveSet,
   type LiveWorkoutState,
   type LiveWorkoutView,
 } from "@/lib/training/live-workout";
 import type { TrainingMeasurementMode } from "@/lib/training/measurement";
+import { writeClock } from "@/lib/training/measurement-draft";
 import {
   startingMode,
   type ModeBySport,
@@ -373,9 +379,11 @@ function ActivityCard({
         <span className={styles.progress}>
           {activity.mode === "sets_reps_load"
             ? `${doneSets} of ${activity.sets.length} sets`
-            : activity.done
-              ? "Done"
-              : ""}
+            : activity.mode === "intervals"
+              ? `${activity.repeats.filter((r) => r.done).length} of ${activity.repeats.length}`
+              : activity.done
+                ? "Done"
+                : ""}
         </span>
       </div>
 
@@ -384,6 +392,12 @@ function ActivityCard({
           idPrefix={idPrefix}
           activity={activity}
           onSets={(sets) => onChange((a) => withSets(a, sets))}
+        />
+      ) : activity.mode === "intervals" ? (
+        <RepeatRows
+          idPrefix={idPrefix}
+          activity={activity}
+          onRepeats={(repeats) => onChange((a) => withRepeats(a, repeats))}
         />
       ) : (
         <>
@@ -460,14 +474,26 @@ function SetRows({
         {sets.map((set, index) => (
           <li key={index} className={set.done ? styles.setDone : undefined}>
             <span className={styles.setNumber}>{index + 1}</span>
-            <Stepper
-              id={`${idPrefix}-reps-${index}`}
-              label={`Set ${index + 1} reps`}
-              unit="reps"
-              value={set.reps}
-              step={1}
-              onChange={(reps) => edit(index, { reps })}
-            />
+            {set.by === "time" ? (
+              <Stepper
+                id={`${idPrefix}-time-${index}`}
+                label={`Set ${index + 1} time`}
+                unit="time"
+                value={set.time}
+                step={5}
+                clock
+                onChange={(time) => edit(index, { time })}
+              />
+            ) : (
+              <Stepper
+                id={`${idPrefix}-reps-${index}`}
+                label={`Set ${index + 1} reps`}
+                unit="reps"
+                value={set.reps}
+                step={1}
+                onChange={(reps) => edit(index, { reps })}
+              />
+            )}
             <Stepper
               id={`${idPrefix}-load-${index}`}
               label={`Set ${index + 1} load`}
@@ -497,11 +523,24 @@ function SetRows({
             const last = sets.at(-1);
             onSets([
               ...sets,
-              { reps: last?.reps ?? "", load: last?.load ?? "", done: false },
+              last === undefined ? emptySet() : { ...last, done: false },
             ]);
           }}
         >
           + set
+        </button>
+        {/* Counted or held (ADR-038): a plank is timed, a squat is not. */}
+        <button
+          type="button"
+          className={styles.quiet}
+          onClick={() => {
+            const by = sets.every((set) => set.by === "time") ? "reps" : "time";
+            onSets(sets.map((set) => ({ ...set, by })));
+          }}
+        >
+          {sets.every((set) => set.by === "time")
+            ? "Count reps instead"
+            : "Time each set instead"}
         </button>
         {sets.length > 1 && !sets.at(-1)?.done ? (
           <button
@@ -510,6 +549,99 @@ function SetRows({
             onClick={() => onSets(sets.slice(0, -1))}
           >
             − set
+          </button>
+        ) : null}
+      </div>
+    </>
+  );
+}
+
+/**
+ * Intervals live (ADR-038): one row per repeat, its distance and time as
+ * planned and adjustable, ticked when done. No timer, by the owner's choice:
+ * a repeat's time is typed or nudged, not run.
+ */
+function RepeatRows({
+  idPrefix,
+  activity,
+  onRepeats,
+}: {
+  idPrefix: string;
+  activity: LiveActivity;
+  onRepeats: (repeats: LiveRepeat[]) => void;
+}) {
+  const { repeats } = activity;
+  const edit = (index: number, change: Partial<LiveRepeat>) =>
+    onRepeats(
+      repeats.map((repeat, i) =>
+        i === index ? { ...repeat, ...change } : repeat,
+      ),
+    );
+  const hasDistance = repeats.some((repeat) => repeat.distance.trim() !== "");
+
+  return (
+    <>
+      <ol className={styles.sets}>
+        {repeats.map((repeat, index) => (
+          <li key={index} className={repeat.done ? styles.setDone : undefined}>
+            <span className={styles.setNumber}>{index + 1}</span>
+            {hasDistance ? (
+              <Stepper
+                id={`${idPrefix}-distance-${index}`}
+                label={`Repeat ${index + 1} distance`}
+                unit={activity.distanceUnit}
+                value={repeat.distance}
+                step={activity.distanceUnit === "km" ? 0.1 : 50}
+                onChange={(distance) => edit(index, { distance })}
+              />
+            ) : (
+              <span className={styles.restNote}>
+                {repeat.rest === "" ? "" : `${repeat.rest} rest`}
+              </span>
+            )}
+            <Stepper
+              id={`${idPrefix}-rtime-${index}`}
+              label={`Repeat ${index + 1} time`}
+              unit="time"
+              value={repeat.time}
+              step={5}
+              clock
+              onChange={(time) => edit(index, { time })}
+            />
+            <button
+              type="button"
+              className={repeat.done ? styles.tickOn : styles.tick}
+              aria-pressed={repeat.done}
+              aria-label={`Repeat ${index + 1} done`}
+              onClick={() => edit(index, { done: !repeat.done })}
+            >
+              <CheckMark />
+            </button>
+          </li>
+        ))}
+      </ol>
+      <div className={styles.row}>
+        <button
+          type="button"
+          className={styles.quiet}
+          disabled={repeats.length >= LIVE_REPEAT_LIMIT}
+          onClick={() => {
+            const last = repeats.at(-1);
+            onRepeats([
+              ...repeats,
+              last === undefined ? emptyRepeat() : { ...last, done: false },
+            ]);
+          }}
+        >
+          + repeat
+        </button>
+        {repeats.length > 1 && !repeats.at(-1)?.done ? (
+          <button
+            type="button"
+            className={styles.quiet}
+            onClick={() => onRepeats(repeats.slice(0, -1))}
+          >
+            − repeat
           </button>
         ) : null}
       </div>
@@ -532,6 +664,7 @@ function Stepper({
   unit,
   value,
   step,
+  clock = false,
   onChange,
 }: {
   id: string;
@@ -539,9 +672,16 @@ function Stepper({
   unit: string;
   value: string;
   step: number;
+  /** A time, read and written as `0:45` / `1:30`; `step` is seconds. */
+  clock?: boolean;
   onChange: (value: string) => void;
 }) {
   const nudge = (direction: 1 | -1) => {
+    if (clock) {
+      const next = Math.max(0, clockSeconds(value) + direction * step);
+      onChange(next === 0 ? "" : writeClock(next));
+      return;
+    }
     const current = Number(value.replace(",", ".")) || 0;
     const next = Math.max(
       0,
@@ -576,6 +716,13 @@ function Stepper({
       </button>
     </span>
   );
+}
+
+/** `1:30` or a bare `45` to seconds; anything else counts as none. */
+function clockSeconds(value: string): number {
+  const parts = value.trim().split(":");
+  if (parts.some((part) => !/^\d+$/.test(part)) || parts.length > 3) return 0;
+  return parts.reduce((total, part) => total * 60 + Number(part), 0);
 }
 
 function AddActivity({

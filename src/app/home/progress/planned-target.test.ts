@@ -44,22 +44,32 @@ describe("a planned target", () => {
     expect(describeTarget({ pace_seconds_per_unit: 300 })).toBe(null);
   });
 
-  it("describes repetitions in the owner's own unit", () => {
-    expect(describeTarget({ repetitions: 20, unit: "throws" })).toBe(
-      "20 throws",
+  it("describes sets held for a time, with a weight or without", () => {
+    expect(describeTarget({ groups: [{ sets: 3, seconds: 45 }] })).toBe(
+      "3 × 45 s",
     );
-  });
-
-  it("describes a custom measurement as the owner labelled it", () => {
-    expect(
-      describeTarget({ label: "Rowing split", value: "1:58", unit: "/500 m" }),
-    ).toBe("Rowing split: 1:58 · /500 m");
     expect(
       describeTarget({
-        label: "Wore a heart-rate strap",
-        value: true,
-        unit: "",
+        groups: [{ sets: 2, seconds: 90, load: 10 }],
+        load_unit: "kg",
       }),
-    ).toBe("Wore a heart-rate strap: Yes");
+    ).toBe("2 × 1:30 · 10 kg");
+  });
+
+  it("describes interval blocks, a distance in a time, and rest", () => {
+    expect(
+      describeTarget({
+        blocks: [
+          { repeats: 6, distance: 400, rest_seconds: 90 },
+          { repeats: 4, distance: 200, seconds: 40 },
+        ],
+        distance_unit: "m",
+      }),
+    ).toBe("6 × 400 m · 1:30 rest + 4 × 200 m in 40 s");
+    expect(
+      describeTarget({
+        blocks: [{ repeats: 5, seconds: 180, rest_seconds: 0 }],
+      }),
+    ).toBe("5 × 3:00 · 0:00 rest");
   });
 });

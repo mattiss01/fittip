@@ -932,23 +932,41 @@ describe("session activities review follow-ups", () => {
     ).toEqual({ outcome: "rejected", reason: "schema" });
   });
 
-  it("checks a custom target's free text like every other string", () => {
-    expect(
-      validateSessionActivitiesCandidate({
-        body: bodyWith((body) => {
-          body.activities[1].measurementMode = "custom";
-          body.activities[1].target = {
-            ...(body.activities[1].target as Record<string, unknown>),
-            duration_minutes: null,
-            intensity: null,
-            label: "Note",
-            value: "Push through the pain",
-            unit: "cue",
-          };
-        }),
-        context: COACH_AI_FIXTURE_SESSION_CONTEXT,
+  it("refuses a measurement mode that no longer exists (ADR-038)", () => {
+    const result = validateSessionActivitiesCandidate({
+      body: bodyWith((body) => {
+        body.activities[1].measurementMode = "custom";
       }),
-    ).toEqual({ outcome: "rejected", reason: "unsafe_content" });
+      context: COACH_AI_FIXTURE_SESSION_CONTEXT,
+    });
+    expect(result.outcome).toBe("rejected");
+  });
+
+  it("accepts timed sets and interval blocks from the grammar", () => {
+    const result = validateSessionActivitiesCandidate({
+      body: bodyWith((body) => {
+        const empty = Object.fromEntries(
+          Object.keys(body.activities[1].target as Record<string, unknown>).map(
+            (key) => [key, null],
+          ),
+        );
+        body.activities[1].measurementMode = "intervals";
+        body.activities[1].target = {
+          ...empty,
+          blocks: [
+            { repeats: 6, distance: 400, seconds: null, rest_seconds: 90 },
+          ],
+          distance_unit: "m",
+        };
+      }),
+      context: COACH_AI_FIXTURE_SESSION_CONTEXT,
+    });
+    expect(result.outcome).toBe("accepted");
+    if (result.outcome !== "accepted") return;
+    expect(result.proposal.activities[1].target).toEqual({
+      blocks: [{ repeats: 6, distance: 400, rest_seconds: 90 }],
+      distance_unit: "m",
+    });
   });
 });
 

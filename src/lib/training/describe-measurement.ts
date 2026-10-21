@@ -7,11 +7,13 @@
  * progress screen. The type comes from `@/lib/training/measurement` so that a
  * Client Component can call this at all.
  *
- * It describes a target and an actual alike. They are the same five shapes —
+ * It describes a target and an actual alike. They are the same shapes —
  * what the plan asked for and what the owner did are only distinguished by
  * which column they were read from.
  */
 import type {
+  DistanceUnit,
+  IntervalBlock,
   LoadUnit,
   SetGroup,
   TrainingMeasurement,
@@ -74,12 +76,8 @@ export function describeMeasurement(
     ]);
   }
 
-  if ("repetitions" in target) {
-    return `${target.repetitions} ${target.unit}`;
-  }
-
-  if ("label" in target) {
-    return join([`${target.label}: ${formatValue(target.value)}`, target.unit]);
+  if ("blocks" in target) {
+    return describeBlocks(target.blocks, target.distance_unit);
   }
 
   return join([
@@ -107,13 +105,18 @@ function describeGroups(
   const described = groups
     .map((group) =>
       join([
+        // A set is counted in reps or held for a time (ADR-038).
         group.sets !== undefined && group.reps !== undefined
           ? `${group.sets} × ${group.reps}`
-          : group.sets !== undefined
-            ? `${group.sets} ${group.sets === 1 ? "set" : "sets"}`
-            : group.reps !== undefined
-              ? `${group.reps} ${group.reps === 1 ? "rep" : "reps"}`
-              : null,
+          : group.sets !== undefined && group.seconds !== undefined
+            ? `${group.sets} × ${formatHold(group.seconds)}`
+            : group.sets !== undefined
+              ? `${group.sets} ${group.sets === 1 ? "set" : "sets"}`
+              : group.reps !== undefined
+                ? `${group.reps} ${group.reps === 1 ? "rep" : "reps"}`
+                : group.seconds !== undefined
+                  ? formatHold(group.seconds)
+                  : null,
         group.load === undefined
           ? null
           : `${formatNumber(group.load)}${loadUnit === undefined ? "" : ` ${loadUnit}`}`,
@@ -121,6 +124,41 @@ function describeGroups(
     )
     .filter((part): part is string => part !== null);
   return described.length === 0 ? null : described.join(" + ");
+}
+
+/**
+ * Interval blocks (ADR-038), joined with `+` as set groups are: `6 × 400 m ·
+ * 1:30 rest + 4 × 200 m · 1:00 rest`. A block with a distance and a time reads
+ * as the distance in that time.
+ */
+function describeBlocks(
+  blocks: IntervalBlock[],
+  distanceUnit: DistanceUnit | undefined,
+): string | null {
+  const described = blocks.map((block) => {
+    const distance =
+      block.distance === undefined
+        ? null
+        : `${formatNumber(block.distance)}${distanceUnit === undefined ? "" : ` ${distanceUnit}`}`;
+    const time = block.seconds === undefined ? null : formatHold(block.seconds);
+    const work =
+      distance !== null && time !== null
+        ? `${distance} in ${time}`
+        : (distance ?? time ?? "");
+    return join([
+      `${block.repeats} × ${work}`,
+      block.rest_seconds === undefined
+        ? null
+        : `${formatSeconds(block.rest_seconds)} rest`,
+    ]);
+  });
+  const kept = described.filter((part): part is string => part !== null);
+  return kept.length === 0 ? null : kept.join(" + ");
+}
+
+/** A hold or a short effort: `45 s` under a minute, a clock from there. */
+function formatHold(seconds: number): string {
+  return seconds < 60 ? `${seconds} s` : formatSeconds(seconds);
 }
 
 function join(parts: (string | null)[]): string | null {
@@ -141,9 +179,4 @@ function formatSeconds(seconds: number): string {
 /** Trailing zeros are noise on a plan the owner wrote in whole numbers. */
 function formatNumber(value: number): string {
   return Number.isInteger(value) ? String(value) : String(Number(value));
-}
-
-function formatValue(value: string | number | boolean): string {
-  if (typeof value === "boolean") return value ? "Yes" : "No";
-  return typeof value === "number" ? formatNumber(value) : value;
 }

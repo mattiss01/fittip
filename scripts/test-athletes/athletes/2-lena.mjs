@@ -6,6 +6,7 @@
 import {
   act,
   addDays,
+  count,
   effort,
   FRI,
   lift,
@@ -13,7 +14,6 @@ import {
   ramp,
   run,
   SAT,
-  skill,
   todayIn,
   TUE,
   WED,
@@ -332,8 +332,8 @@ const athlete = {
       key: "boulder",
       name: "Bouldern",
       sport: "Klettern",
-      kind: "skill",
-      value: skill(25, "Boulder"),
+      kind: "lift",
+      value: count(25),
     },
     {
       key: "flow",
@@ -425,7 +425,7 @@ const athlete = {
         "Technik und Spaß, keine Maximalversuche mit der linken Schulter.",
       minutes: 90,
       activities: [
-        act("Bouldern", "Klettern", "skill", skill(25, "Boulder"), {
+        act("Bouldern", "Klettern", "lift", count(25), {
           lib: "boulder",
         }),
       ],
@@ -436,7 +436,7 @@ const athlete = {
               status: "completed",
               minutes: 95,
               effort: 6,
-              actual: [skill(20 + n, "Boulder")],
+              actual: [count(20 + n)],
             },
     },
     {

@@ -63,7 +63,7 @@ select lives_ok(
 );
 select throws_ok(
   $$insert into public.personal_activities (user_id, name, sport, measurement_mode)
-    values ('a5000000-0000-4000-8000-000000000001', 'Rudern', 'Rowing', 'custom')$$,
+    values ('a5000000-0000-4000-8000-000000000001', 'Rudern', 'Rowing', 'unmeasured')$$,
   '23505', null,
   'the same name is refused, whatever the sport or mode'
 );

@@ -19,8 +19,15 @@ describe("preserved training measurement validation", () => {
       },
     ],
     ["duration_intensity", { duration_minutes: 45, perceived_effort: 6 }],
-    ["skill_repetitions", { repetitions: 20, unit: "serves" }],
-    ["custom", { label: "Bouldering grade", value: "6A", unit: "Font" }],
+    ["sets_reps_load", { groups: [{ sets: 3, seconds: 45 }] }],
+    [
+      "intervals",
+      {
+        blocks: [{ repeats: 6, distance: 400, rest_seconds: 90 }],
+        distance_unit: "m",
+      },
+    ],
+    ["intervals", { blocks: [{ repeats: 5, seconds: 180 }] }],
   ])("accepts an explicit %s measurement", (mode, measurement) => {
     expect(parseTrainingMeasurement(mode, measurement)).toEqual(measurement);
   });
@@ -32,8 +39,13 @@ describe("preserved training measurement validation", () => {
     // is a prescription now, because the owner asked that intensity not be
     // mandatory. An intensity outside the four is still malformed.
     ["duration_intensity", { duration_minutes: 45, intensity: "brutal" }],
-    ["skill_repetitions", { repetitions: 0, unit: "serves" }],
-    ["custom", { label: "Grade", value: "6A" }],
+    ["sets_reps_load", { groups: [{ sets: 3, reps: 8, seconds: 30 }] }],
+    ["intervals", { blocks: [{ repeats: 6, rest_seconds: 90 }] }],
+    ["intervals", { blocks: [{ repeats: 6, distance: 400 }] }],
+    [
+      "intervals",
+      { blocks: [{ repeats: 6, seconds: 60 }], distance_unit: "m" },
+    ],
   ])("rejects a malformed %s measurement", (mode, value) => {
     expect(() => parseTrainingMeasurement(mode, value)).toThrow(
       TrainingMeasurementValidationError,

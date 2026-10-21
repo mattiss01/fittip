@@ -5,6 +5,7 @@ import {
   buildMeasurement,
   draftFromMeasurement,
   emptyDraft,
+  type IntervalBlockDraft,
   type SetGroupDraft,
 } from "@/lib/training/measurement-draft";
 import { parseTrainingMeasurement } from "@/server/training/training-measurements";
@@ -16,6 +17,7 @@ function build(
   mode: Mode,
   fields: Record<string, string> = {},
   groups?: Partial<SetGroupDraft>[],
+  blocks?: Partial<IntervalBlockDraft>[],
 ) {
   const draft = emptyDraft(mode);
   return buildMeasurement(mode, {
@@ -23,7 +25,24 @@ function build(
     groups:
       groups === undefined
         ? draft.groups
-        : groups.map((group) => ({ sets: "", reps: "", load: "", ...group })),
+        : groups.map((group) => ({
+            sets: "",
+            reps: "",
+            time: "",
+            load: "",
+            by: "reps" as const,
+            ...group,
+          })),
+    blocks:
+      blocks === undefined
+        ? draft.blocks
+        : blocks.map((block) => ({
+            repeats: "",
+            distance: "",
+            time: "",
+            rest: "",
+            ...block,
+          })),
   });
 }
 
@@ -55,7 +74,7 @@ describe("an activity with nothing to count", () => {
     expect(
       buildMeasurement("unmeasured", {
         fields: { duration_minutes: "40" },
-        groups: [{ sets: "5", reps: "5", load: "80" }],
+        groups: [{ sets: "5", reps: "5", time: "", load: "80", by: "reps" }],
       }),
     ).toEqual({ ok: true, measurement: null });
   });
@@ -150,9 +169,112 @@ describe("what the server would refuse, said in words first", () => {
       measurement: { duration_minutes: 40 },
     });
   });
+});
 
-  it("refuses a count with nothing named", () => {
-    expect(build("skill_repetitions", { repetitions: "20" }).ok).toBe(false);
+describe("sets held for a time (ADR-038)", () => {
+  it("builds seconds from a clock or a bare number, with a weight", () => {
+    expect(
+      build("sets_reps_load", { load_unit: "kg" }, [
+        { sets: "3", time: "0:45", by: "time" },
+        { sets: "2", time: "90", load: "10", by: "time" },
+      ]),
+    ).toEqual({
+      ok: true,
+      measurement: {
+        groups: [
+          { sets: 3, seconds: 45 },
+          { sets: 2, seconds: 90, load: 10 },
+        ],
+        load_unit: "kg",
+      },
+    });
+  });
+
+  it("sends only the answer the row is set to", () => {
+    expect(
+      build("sets_reps_load", {}, [
+        { sets: "3", reps: "8", time: "0:30", by: "time" },
+      ]),
+    ).toEqual({
+      ok: true,
+      measurement: { groups: [{ sets: 3, seconds: 30 }] },
+    });
+    expect(
+      build("sets_reps_load", {}, [
+        { sets: "3", reps: "8", time: "0:30", by: "reps" },
+      ]),
+    ).toEqual({ ok: true, measurement: { groups: [{ sets: 3, reps: 8 }] } });
+  });
+
+  it("refuses a time that does not read", () => {
+    expect(
+      build("sets_reps_load", {}, [{ sets: "3", time: "0:4", by: "time" }]).ok,
+    ).toBe(false);
+  });
+
+  it("comes back as a time row", () => {
+    expect(
+      draftFromMeasurement("sets_reps_load", {
+        groups: [{ sets: 3, seconds: 45 }],
+      }).groups,
+    ).toEqual([{ sets: "3", reps: "", time: "0:45", load: "", by: "time" }]);
+  });
+});
+
+describe("intervals (ADR-038)", () => {
+  it("builds blocks of distances with rest, and the unit once", () => {
+    expect(
+      build("intervals", { distance_unit: "m" }, undefined, [
+        { repeats: "6", distance: "400", rest: "1:30" },
+        { repeats: "4", distance: "200", time: "40", rest: "0" },
+      ]),
+    ).toEqual({
+      ok: true,
+      measurement: {
+        blocks: [
+          { repeats: 6, distance: 400, rest_seconds: 90 },
+          { repeats: 4, distance: 200, seconds: 40, rest_seconds: 0 },
+        ],
+        distance_unit: "m",
+      },
+    });
+  });
+
+  it("builds timed repeats with no unit", () => {
+    expect(
+      build("intervals", {}, undefined, [
+        { repeats: "5", time: "3:00", rest: "2:00" },
+      ]),
+    ).toEqual({
+      ok: true,
+      measurement: {
+        blocks: [{ repeats: 5, seconds: 180, rest_seconds: 120 }],
+      },
+    });
+  });
+
+  it("refuses a block with neither a distance nor a time", () => {
+    expect(
+      build("intervals", {}, undefined, [{ repeats: "6", rest: "1:00" }]),
+    ).toEqual({ ok: false, message: "Each block needs a distance or a time." });
+  });
+
+  it("refuses repeats that are not a count", () => {
+    expect(
+      build("intervals", {}, undefined, [{ repeats: "", distance: "400" }]).ok,
+    ).toBe(false);
+  });
+
+  it("round-trips through the form", () => {
+    const measurement = {
+      blocks: [{ repeats: 8, distance: 400, seconds: 90, rest_seconds: 60 }],
+      distance_unit: "m" as const,
+    };
+    const draft = draftFromMeasurement("intervals", measurement);
+    expect(buildMeasurement("intervals", draft)).toEqual({
+      ok: true,
+      measurement,
+    });
   });
 });
 
@@ -238,8 +360,8 @@ describe("round trips", () => {
     expect(
       draftFromMeasurement("sets_reps_load", built.measurement).groups,
     ).toEqual([
-      { sets: "3", reps: "5", load: "60" },
-      { sets: "1", reps: "3", load: "100" },
+      { sets: "3", reps: "5", time: "", load: "60", by: "reps" },
+      { sets: "1", reps: "3", time: "", load: "100", by: "reps" },
     ]);
   });
 
@@ -253,7 +375,7 @@ describe("round trips", () => {
         load: 82.5,
         load_unit: "kg",
       }).groups,
-    ).toEqual([{ sets: "5", reps: "5", load: "82.5" }]);
+    ).toEqual([{ sets: "5", reps: "5", time: "", load: "82.5", by: "reps" }]);
   });
 });
 
@@ -297,9 +419,6 @@ describe("the editor and the server agree", () => {
     ["duration_intensity", { duration_minutes: "40" }],
     ["duration_intensity", { duration_minutes: "40", intensity: "easy" }],
     ["duration_intensity", { duration_minutes: "60", intensity: "very_hard" }],
-    ["skill_repetitions", { repetitions: "20", unit: "throws" }],
-    ["custom", { label: "Grip", value: "closed", unit: "hold" }],
-    ["custom", { label: "Depth", value: "12", unit: "m" }],
   ];
 
   for (const [mode, fields, groups] of cases) {
@@ -315,9 +434,23 @@ describe("the editor and the server agree", () => {
     });
   }
 
-  it("builds a custom numeric value as a number, which the server keeps", () => {
-    const built = build("custom", { label: "Depth", value: "12", unit: "m" });
-    if (!built.ok) throw new Error("expected a measurement");
-    expect(built.measurement).toEqual({ label: "Depth", value: 12, unit: "m" });
+  it("intervals and timed sets agree with the server", () => {
+    for (const built of [
+      build("intervals", { distance_unit: "m" }, undefined, [
+        { repeats: "6", distance: "400", rest: "1:30" },
+      ]),
+      build("sets_reps_load", {}, [{ sets: "3", time: "0:45", by: "time" }]),
+    ]) {
+      if (!built.ok || built.measurement === null) {
+        throw new Error("expected a measurement");
+      }
+      const measurement = built.measurement;
+      expect(() =>
+        parseTrainingMeasurement(
+          "blocks" in measurement ? "intervals" : "sets_reps_load",
+          measurement,
+        ),
+      ).not.toThrow();
+    }
   });
 });

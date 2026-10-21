@@ -120,12 +120,13 @@ describe("what every prompt says about the athlete's data (ADR-023)", () => {
     expect(tokens("create_seven_day_plan", PLAN_STATIC_PREFIX_BUDGET)).toBe(
       18_141,
     );
+    // 14,929 until timed sets and intervals joined the mode lines (ADR-038).
     expect(
       tokens(
         "fill_session_activities",
         SESSION_ACTIVITIES_STATIC_PREFIX_BUDGET,
       ),
-    ).toBe(14_929);
+    ).toBe(14_954);
   });
 });
 
@@ -471,8 +472,12 @@ describe("the plan response grammar", () => {
  * and with the fill's own part of it (decisions 14 to 19):
  *
  *   8,200 + 64 + 51,450 = 59,714   ceil(59,714 / 4) = 14,929  vs  15,000
+ *
+ * and with timed sets and intervals in the mode lines (ADR-038):
+ *
+ *   8,300 + 64 + 51,450 = 59,814   ceil(59,814 / 4) = 14,954  vs  15,000
  */
-const SESSION_ACTIVITIES_STATIC_PREFIX_BUDGET = 8_200;
+const SESSION_ACTIVITIES_STATIC_PREFIX_BUDGET = 8_300;
 
 describe("the session activities prompt", () => {
   it("says what ADR-023 gave a fill to read, and how to read it", () => {

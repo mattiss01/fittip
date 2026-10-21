@@ -423,3 +423,9 @@
   border-radius: var(--radius-control);
   font: 400 1rem var(--font-sans);
 }
+
+/* A repeat with no distance shows its rest where the distance would be. */
+.restNote {
+  color: var(--moss);
+  font-size: 0.8rem;
+}

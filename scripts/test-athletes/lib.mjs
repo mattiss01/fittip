@@ -81,20 +81,39 @@ export function effort(minutes, intensity, perceived) {
   return value;
 }
 
-export function skill(repetitions, unit) {
-  return { repetitions, unit };
+/** A count of anything, as one set of reps: `count(25)` boulders. */
+export function count(reps) {
+  return { groups: [{ sets: 1, reps }] };
 }
 
-export function custom(label, value, unit) {
-  return { label, value, unit };
+/** Sets held for a time, e.g. a plank: `timed(3, 45)`. */
+export function timed(sets, seconds, load, unit = "kg") {
+  return load === undefined
+    ? { groups: [{ sets, seconds }] }
+    : { groups: [{ sets, seconds, load }], load_unit: unit };
+}
+
+/** Interval blocks: `[[6, { dist: 400, rest: 90 }], [3, { sec: 720 }]]`. */
+export function intervals(blocks, unit = "m") {
+  const value = {
+    blocks: blocks.map(([repeats, { dist, sec, rest }]) => ({
+      repeats,
+      ...(dist === undefined ? {} : { distance: dist }),
+      ...(sec === undefined ? {} : { seconds: sec }),
+      ...(rest === undefined ? {} : { rest_seconds: rest }),
+    })),
+  };
+  if (value.blocks.some((block) => block.distance !== undefined)) {
+    value.distance_unit = unit;
+  }
+  return value;
 }
 
 const MODES = {
   run: "time_distance_pace",
   lift: "sets_reps_load",
   effort: "duration_intensity",
-  skill: "skill_repetitions",
-  custom: "custom",
+  intervals: "intervals",
   none: "unmeasured",
 };
 

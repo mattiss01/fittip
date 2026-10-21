@@ -31,9 +31,6 @@ export class TrainingMeasurementValidationError extends Error {
   }
 }
 
-/** A target's own words, by key: what `parseTrainingMeasurement` accepts. */
-export const TARGET_TEXT_MAX = { unit: 32, label: 80, value: 500 } as const;
-
 export function parseTrainingMeasurement(
   mode: TrainingMeasurementMode,
   value: unknown,
@@ -144,27 +141,8 @@ export function parseTrainingMeasurement(
         ...(effort === undefined ? {} : { perceived_effort: effort }),
       };
     }
-    case "skill_repetitions":
-      assertOnlyKeys(record, ["repetitions", "unit"]);
-      return {
-        repetitions: readInteger(record.repetitions, 1, 1000000),
-        unit: readString(record.unit, TARGET_TEXT_MAX.unit),
-      };
-    case "custom": {
-      assertOnlyKeys(record, ["label", "value", "unit"]);
-      const customValue = record.value;
-      if (
-        !["string", "number", "boolean"].includes(typeof customValue) ||
-        (typeof customValue === "number" && !Number.isFinite(customValue)) ||
-        String(customValue).length > TARGET_TEXT_MAX.value
-      )
-        invalid();
-      return {
-        label: readString(record.label, TARGET_TEXT_MAX.label),
-        value: customValue as string | number | boolean,
-        unit: readString(record.unit, TARGET_TEXT_MAX.unit),
-      };
-    }
+    case "intervals":
+      return parseIntervals(record);
   }
 }
 
@@ -186,22 +164,34 @@ function parseSetGroups(record: Record<string, unknown>): TrainingMeasurement {
   let loaded = false;
   const groups = raw.map((entry) => {
     const group = readRecord(entry);
-    assertOnlyKeys(group, ["sets", "reps", "load"]);
+    assertOnlyKeys(group, ["sets", "reps", "seconds", "load"]);
     const sets =
       group.sets === undefined ? undefined : readInteger(group.sets, 1, 100);
     const reps =
       group.reps === undefined ? undefined : readInteger(group.reps, 1, 10000);
+    const seconds =
+      group.seconds === undefined
+        ? undefined
+        : readInteger(group.seconds, 1, 86400);
     const load =
       group.load === undefined ? undefined : readNumber(group.load, 0, 100000);
-    // At least one of the three, the rule `time_distance_pace` already
-    // follows. A group carrying no numbers says nothing.
-    if (sets === undefined && reps === undefined && load === undefined) {
+    // At least one, the rule `time_distance_pace` already follows: a group
+    // carrying no numbers says nothing. A set is counted or held, never both
+    // (ADR-038).
+    if (
+      (sets === undefined &&
+        reps === undefined &&
+        seconds === undefined &&
+        load === undefined) ||
+      (reps !== undefined && seconds !== undefined)
+    ) {
       invalid();
     }
     if (load !== undefined) loaded = true;
     return {
       ...(sets === undefined ? {} : { sets }),
       ...(reps === undefined ? {} : { reps }),
+      ...(seconds === undefined ? {} : { seconds }),
       ...(load === undefined ? {} : { load }),
     };
   });
@@ -213,6 +203,50 @@ function parseSetGroups(record: Record<string, unknown>): TrainingMeasurement {
   }
   if (record.load_unit !== undefined) invalid();
   return { groups };
+}
+
+/**
+ * Intervals (ADR-038). Mirrors the `intervals` branch of
+ * `is_valid_training_measurement`: one to twenty blocks, each of repeats of a
+ * distance or a time (or both) with optional rest, and a distance unit exactly
+ * when some block has a distance.
+ */
+function parseIntervals(record: Record<string, unknown>): TrainingMeasurement {
+  assertOnlyKeys(record, ["blocks", "distance_unit"]);
+  const raw = record.blocks;
+  if (!Array.isArray(raw) || raw.length < 1 || raw.length > 20) invalid();
+
+  let measured = false;
+  const blocks = raw.map((entry) => {
+    const block = readRecord(entry);
+    assertOnlyKeys(block, ["repeats", "distance", "seconds", "rest_seconds"]);
+    const distance = optionalNumber(block.distance, Number.MIN_VALUE, 1000000);
+    const seconds =
+      block.seconds === undefined
+        ? undefined
+        : readInteger(block.seconds, 1, 86400);
+    const rest =
+      block.rest_seconds === undefined
+        ? undefined
+        : readInteger(block.rest_seconds, 0, 3600);
+    if (distance === undefined && seconds === undefined) invalid();
+    if (distance !== undefined) measured = true;
+    return {
+      repeats: readInteger(block.repeats, 1, 100),
+      ...(distance === undefined ? {} : { distance }),
+      ...(seconds === undefined ? {} : { seconds }),
+      ...(rest === undefined ? {} : { rest_seconds: rest }),
+    };
+  });
+
+  if (measured) {
+    return {
+      blocks,
+      distance_unit: readChoice(record.distance_unit, DISTANCE_UNITS),
+    };
+  }
+  if (record.distance_unit !== undefined) invalid();
+  return { blocks };
 }
 
 function readRecord(value: unknown): Record<string, unknown> {
@@ -260,13 +294,6 @@ function readChoice<const T extends readonly string[]>(
 ): T[number] {
   if (typeof value !== "string" || !choices.includes(value)) invalid();
   return value as T[number];
-}
-
-function readString(value: unknown, max: number) {
-  if (typeof value !== "string") invalid();
-  const result = value.trim();
-  if (result.length < 1 || result.length > max) invalid();
-  return result;
 }
 
 function invalid(): never {

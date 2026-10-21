@@ -53,7 +53,7 @@ describe("parsePersonalActivityChange", () => {
       {
         operation: "edit",
         personalActivityId: ID,
-        activity: { name: "a", sport: "b", measurementMode: "custom" },
+        activity: { name: "a", sport: "b", measurementMode: "unmeasured" },
       },
     ],
     [
@@ -63,7 +63,7 @@ describe("parsePersonalActivityChange", () => {
         activity: {
           name: "a",
           sport: "b",
-          measurementMode: "custom",
+          measurementMode: "unmeasured",
           archivedAt: null,
         },
       },
