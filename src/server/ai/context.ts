@@ -320,7 +320,7 @@ export type CoachAIContextLimits = {
  *
  *   roadmap  prefix 7,800 + wrapper 64 + context 63,700 = 71,564  17,891 tokens
  *   plan     prefix 8,700 + wrapper 64 + context 52,100 = 60,864  15,216 tokens
- *   fill     prefix 8,300 + wrapper 64 + context 51,450 = 59,814  14,954 tokens
+ *   fill     prefix 8,450 + wrapper 64 + context 51,450 = 59,964  14,991 tokens
  *
  * Each line includes that call's own part of ADR-023. Every `total` holds the
  * sum of its parts and the envelope; the plan's did not before, and the
@@ -373,8 +373,10 @@ export const COACH_AI_CONTEXT_LIMITS = {
       //
       // 68,900 since ADR-035 added the "don't repeat" list's 5,200:
       //
-      //   prefix 8,400 + wrapper 64 + context 68,900 = 77,364 characters
-      //   ceil(77,364 / 4) = 19,341  against maxInputTokens 20,000.
+      //   prefix 8,500 + wrapper 64 + context 68,900 = 77,464 characters
+      //   ceil(77,464 / 4) = 19,366  against maxInputTokens 20,000
+      //   (the prefix budget 8,400 until the safety rule for a health
+      //   condition, 21 Oct 2026).
       total: 68_900,
     },
   },
@@ -554,9 +556,10 @@ export const COACH_AI_CONTEXT_LIMITS = {
       sessionDetail: 22_100,
       // The sum of the parts (50,402) and about 1,000 for the envelope:
       //
-      //   prefix 8,300 + wrapper 64 + context 51,450 = 59,814 characters
-      //   ceil(59,814 / 4) = 14,954  against the 15,000 this was sized to
-      //   (the prefix grew 100 with ADR-038's mode lines);
+      //   prefix 8,450 + wrapper 64 + context 51,450 = 59,964 characters
+      //   ceil(59,964 / 4) = 14,991  against the 15,000 this was sized to
+      //   (the prefix grew 100 with ADR-038's mode lines and 150 with the
+      //   safety rule for a health condition, 21 Oct 2026);
       //   maxInputTokens is 18,000 since ADR-028, for the roadmap call.
       total: 51_450,
     },

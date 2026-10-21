@@ -13,9 +13,10 @@ import {
   coachAIStaticPrefix,
 } from "@/server/ai/openai-prompt";
 
-// 8,100 since 19 Oct 2026 (ADR-034): the goal suggestion's sentence. The
-// worst case is 17,966 tokens against the 20,000 ceiling.
-const STATIC_PREFIX_BUDGET = 8_400;
+// 8,100 since 19 Oct 2026 (ADR-034): the goal suggestion's sentence. 8,500
+// since 21 Oct 2026: the safety rule for a health condition. The worst case
+// is 19,366 tokens against the 20,000 ceiling.
+const STATIC_PREFIX_BUDGET = 8_500;
 
 /**
  * The plan prompt gets a larger allowance than the roadmap's, and that is a
@@ -84,6 +85,11 @@ describe("what every prompt says about the athlete's data (ADR-023)", () => {
   ] as const)("is in the shared part of %s", (operation) => {
     const prefix = coachAIStaticPrefix(operation);
 
+    // A health condition, such as a pregnancy named in a note, is planned
+    // conservatively and pointed to a professional (owner, 21 Oct 2026).
+    expect(prefix).toContain(
+      "keep load conservative and say once that a health professional can advise on what suits them.",
+    );
     // The basics are for load, and body weight is not the coach's subject.
     expect(prefix).toContain(
       "Use them only to judge training load and progression.",
@@ -111,7 +117,8 @@ describe("what every prompt says about the athlete's data (ADR-023)", () => {
 
     // 14,179 until ADR-028: a request to change the roadmap sends it whole.
     // 17,966 until ADR-035 sent the "don't repeat" list.
-    expect(tokens("create_roadmap", STATIC_PREFIX_BUDGET)).toBe(19_341);
+    // 19,341 until the safety rule for a health condition (21 Oct 2026).
+    expect(tokens("create_roadmap", STATIC_PREFIX_BUDGET)).toBe(19_366);
     // 14,991 until the plan's logs took 10,200 bytes (16 Oct 2026); 15,216
     // until the prompt said an empty week is an answer (17 Oct 2026); 15,291
     // until the coach could suggest a cancel (ADR-033, 19 Oct 2026); 15,391
@@ -120,13 +127,14 @@ describe("what every prompt says about the athlete's data (ADR-023)", () => {
     expect(tokens("create_seven_day_plan", PLAN_STATIC_PREFIX_BUDGET)).toBe(
       18_141,
     );
-    // 14,929 until timed sets and intervals joined the mode lines (ADR-038).
+    // 14,929 until timed sets and intervals joined the mode lines (ADR-038);
+    // 14,954 until the safety rule for a health condition (21 Oct 2026).
     expect(
       tokens(
         "fill_session_activities",
         SESSION_ACTIVITIES_STATIC_PREFIX_BUDGET,
       ),
-    ).toBe(14_954);
+    ).toBe(14_991);
   });
 });
 
@@ -476,8 +484,12 @@ describe("the plan response grammar", () => {
  * and with timed sets and intervals in the mode lines (ADR-038):
  *
  *   8,300 + 64 + 51,450 = 59,814   ceil(59,814 / 4) = 14,954  vs  15,000
+ *
+ * and with the safety rule for a health condition (21 Oct 2026):
+ *
+ *   8,450 + 64 + 51,450 = 59,964   ceil(59,964 / 4) = 14,991  vs  15,000
  */
-const SESSION_ACTIVITIES_STATIC_PREFIX_BUDGET = 8_300;
+const SESSION_ACTIVITIES_STATIC_PREFIX_BUDGET = 8_450;
 
 describe("the session activities prompt", () => {
   it("says what ADR-023 gave a fill to read, and how to read it", () => {
