@@ -28,8 +28,14 @@ export default async function HomeLayout({
   // error no earlier run had logged. One run proves nothing either way, so
   // the plainer form stays: every page under here already waits for the
   // same claims check and a read of its own.
-  const { setupOpen, decisionsOpen, roadmapAttention, sports, liveWorkout } =
-    await readShell();
+  const {
+    setupOpen,
+    decisionsOpen,
+    noGoal,
+    roadmapAttention,
+    sports,
+    liveWorkout,
+  } = await readShell();
   return (
     <div className={styles.appShell}>
       <a className={styles.skipLink} href="#main-content">
@@ -43,6 +49,7 @@ export default async function HomeLayout({
       <MobileNavigation
         setupOpen={setupOpen}
         decisionsOpen={decisionsOpen}
+        noGoal={noGoal}
         roadmapAttention={roadmapAttention}
       />
     </div>
@@ -61,6 +68,7 @@ export default async function HomeLayout({
 async function readShell(): Promise<{
   setupOpen: boolean;
   decisionsOpen: boolean;
+  noGoal: boolean;
   roadmapAttention: RoadmapAttention;
   sports: string[];
   liveWorkout: {
@@ -92,6 +100,7 @@ async function readShell(): Promise<{
     return {
       setupOpen: shell.setupOpen,
       decisionsOpen: decisions.goals || decisions.memory,
+      noGoal: decisions.noGoal,
       roadmapAttention,
       sports: shell.sports,
       liveWorkout:
@@ -108,6 +117,7 @@ async function readShell(): Promise<{
     return {
       setupOpen: false,
       decisionsOpen: false,
+      noGoal: false,
       roadmapAttention: null,
       sports: [],
       liveWorkout: null,

@@ -104,6 +104,18 @@ export class GoalRepository {
     return { revision: head?.revision ?? 0, goals: data.map(toGoal) };
   }
 
+  /** Whether any goal is active, for the dot on You and Goals while none is. */
+  async hasActive(): Promise<boolean> {
+    const userId = await this.getVerifiedUserId();
+    const { count, error } = await this.client
+      .from("goals")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("status", "active");
+    if (error) throw new GoalPersistenceError();
+    return (count ?? 0) > 0;
+  }
+
   /**
    * When each goal that is not active entered the status it has, for the
    * Goals page, which says "Achieved on ...".
