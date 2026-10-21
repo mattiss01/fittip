@@ -1,4 +1,5 @@
-/* The coach's memory suggestions, inside a review (owner, 19 Oct 2026). */
+/* The coach's memory suggestions (owner, 19 Oct 2026), restyled as a quiet
+   card with pill choices (owner, 21 Oct 2026). */
 
 .list {
   display: grid;
@@ -8,20 +9,25 @@
   list-style: none;
 }
 
+/* A tinted card with no border, so it does not read as a box inside the
+   panel that holds it (owner, 21 Oct 2026). */
 .item {
   display: grid;
   gap: 0.4rem;
-  padding: 0.8rem 0.9rem;
-  border-radius: var(--radius-control);
-  background: var(--ledger-paper);
-  box-shadow: inset 0 0 0 1px var(--rule);
+  padding: 0.9rem 0.95rem 0.6rem;
+  border-radius: 1rem;
+  background: var(--sage);
+  color: var(--pine);
 }
 
 .type {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
   margin: 0;
-  color: var(--ledger-muted);
-  font: 500 0.62rem var(--font-mono);
-  text-transform: uppercase;
+  color: var(--ember-dark);
+  font-size: 0.75rem;
+  font-weight: 700;
 }
 
 .content {
@@ -33,28 +39,41 @@
 
 .choices {
   display: flex;
-  gap: 0.5rem;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.6rem;
 }
 
 .accept,
 .reject {
-  flex: 1;
   min-height: 2.75rem;
-  border-radius: var(--radius-control);
-  font: 700 0.9rem var(--font-sans);
+  border-radius: 999px;
+  font: 700 0.88rem var(--font-sans);
   cursor: pointer;
 }
 
 .accept {
-  border: 0;
+  padding: 0 1rem;
+  border: 1px solid var(--pine);
   background: var(--pine);
-  color: var(--ledger-paper);
+  color: var(--paper);
 }
 
 .reject {
-  border: 1px solid var(--rule);
+  padding: 0 0.4rem;
+  border: 0;
   background: transparent;
-  color: var(--ledger-ink);
+  color: var(--muted);
+}
+
+/* The global button hover paints every button orange; these keep theirs. */
+.accept:hover {
+  background: var(--pine-soft);
+}
+
+.reject:hover {
+  background: transparent;
+  text-decoration: underline;
 }
 
 .accept:disabled,
@@ -70,7 +89,7 @@
 
 .notice {
   margin: 0;
-  color: var(--ledger-muted);
+  color: var(--muted);
   font-size: 0.85rem;
 }
 

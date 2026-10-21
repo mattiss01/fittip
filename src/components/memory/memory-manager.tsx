@@ -302,6 +302,9 @@ function MemorySection({
   );
 }
 
+const INTERNAL_ID =
+  /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+
 function MemoryCard({
   item,
   state,
@@ -341,7 +344,12 @@ function MemoryCard({
         <p className={styles.origin}>
           {PROVENANCE_LABELS[item.provenance] ?? "Origin recorded"}
           {item.confidence === null ? "" : ` · confidence ${item.confidence}%`}
-          {item.sourceReference === null ? "" : ` · ${item.sourceReference}`}
+          {/* A reference that is an internal id, such as a roadmap
+              proposal's, is not something to read (owner, 21 Oct 2026). */}
+          {item.sourceReference === null ||
+          INTERNAL_ID.test(item.sourceReference)
+            ? ""
+            : ` · ${item.sourceReference}`}
           {item.userConfirmedAt === null ? "" : " · confirmed by you"}
         </p>
         {item.expiresOn === null ? null : (

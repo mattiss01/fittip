@@ -214,6 +214,7 @@
 .itemActions {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 0.45rem;
   margin-top: 0.9rem;
 }
@@ -222,9 +223,9 @@
 .confirmation button,
 .form button {
   min-height: 2.75rem;
-  padding: 0.5rem 0.9rem;
+  padding: 0.5rem 1rem;
   border: 0;
-  border-radius: var(--radius-control);
+  border-radius: 999px;
   background: var(--line);
   color: var(--ledger-ink);
   font: 700 0.9rem var(--font-sans);
@@ -237,9 +238,31 @@
 }
 
 .confirmation {
-  flex: 1 1 10rem;
+  flex: 0 1 auto;
   border: 1px solid var(--line);
+  border-radius: 999px;
+}
+
+/* Open, it takes the row to say what it would do. */
+.confirmation[open] {
+  flex-basis: 100%;
   border-radius: var(--radius-control);
+}
+
+/* The rarest and heaviest choice, quietest until opened, at the row's end
+   (owner, 21 Oct 2026). */
+.confirmation[data-confirmation="delete"] {
+  margin-left: auto;
+  border-color: transparent;
+}
+
+.confirmation[data-confirmation="delete"] > summary {
+  color: var(--ember-dark);
+  font-weight: 600;
+}
+
+.confirmation[data-confirmation="delete"][open] {
+  border-color: var(--line);
 }
 
 .confirmation > summary {
@@ -407,4 +430,10 @@
 .confirmation[data-confirmation="delete"] form > button {
   background: var(--danger);
   color: white;
+}
+
+/* A proposal's Accept is the card's main choice (owner, 21 Oct 2026). */
+.card[data-state="proposed"] .itemActions > form:first-child button {
+  background: var(--pine);
+  color: var(--paper);
 }

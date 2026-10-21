@@ -1,4 +1,5 @@
-/* The coach's goal suggestions (owner, 19 Oct 2026; ADR-034). */
+/* The coach's goal suggestions (owner, 19 Oct 2026; ADR-034), restyled as
+   a quiet card with pill choices (owner, 21 Oct 2026). */
 
 .list {
   display: grid;
@@ -8,20 +9,23 @@
   list-style: none;
 }
 
+/* A tinted card with no border, so it does not read as a box inside the
+   panel that holds it (owner, 21 Oct 2026). */
 .item {
   display: grid;
-  gap: 0.35rem;
-  padding: 0.85rem 0.9rem;
-  border-radius: var(--radius-control);
-  background: var(--ledger-paper);
-  box-shadow: inset 0 0 0 1px var(--rule);
+  gap: 0.4rem;
+  padding: 0.9rem 0.95rem 0.6rem;
+  border-radius: 1rem;
+  background: var(--sage);
+  color: var(--pine);
 }
 
 .title {
   margin: 0;
   overflow-wrap: anywhere;
-  font-size: 1rem;
+  font-size: 1.05rem;
   font-weight: 800;
+  line-height: 1.25;
 }
 
 .outcome {
@@ -31,38 +35,88 @@
   line-height: 1.45;
 }
 
-.meta {
-  margin: 0;
-  color: var(--ledger-muted);
-  font-size: 0.82rem;
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0.1rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tags li {
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  background: var(--paper);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.tags:empty {
+  display: none;
 }
 
 .choices {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 0.2rem;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.3rem;
+}
+
+/* Its own line, so Core, Supporting and Reject share the next at 390px. */
+.addAs {
+  flex-basis: 100%;
+  margin-bottom: -0.15rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 700;
 }
 
 .accept,
 .reject {
-  flex: 1 1 8rem;
   min-height: 2.75rem;
-  border-radius: var(--radius-control);
+  border-radius: 999px;
   font: 700 0.88rem var(--font-sans);
   cursor: pointer;
 }
 
 .accept {
-  border: 0;
+  padding: 0 1rem;
+  border: 1px solid var(--pine);
   background: var(--pine);
-  color: var(--ledger-paper);
+  color: var(--paper);
 }
 
 .reject {
-  border: 1px solid var(--rule);
+  padding: 0 0.4rem;
+  border: 0;
   background: transparent;
-  color: var(--ledger-ink);
+  color: var(--muted);
+}
+
+/* The global button hover paints every button orange; these keep theirs. */
+.accept:hover {
+  background: var(--pine-soft);
+}
+
+.reject:hover {
+  background: transparent;
+  text-decoration: underline;
+}
+
+.reject {
+  margin-left: auto;
+}
+
+.accept + .accept {
+  border-color: var(--fern);
+  background: var(--paper);
+  color: var(--pine);
+}
+
+.accept + .accept:hover {
+  background: var(--fern);
 }
 
 .accept:disabled,
@@ -78,7 +132,7 @@
 
 .notice {
   margin: 0;
-  color: var(--ledger-muted);
+  color: var(--muted);
   font-size: 0.85rem;
 }
 

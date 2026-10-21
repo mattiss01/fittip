@@ -62,17 +62,21 @@ export function GoalSuggestions({
             data-goal-suggestion={suggestion.id}
           >
             <p className={styles.title}>{suggestion.title}</p>
-            <p className={styles.outcome}>{suggestion.desiredOutcome}</p>
-            <p className={styles.meta}>
-              {[
-                suggestion.sports.join(", "),
-                suggestion.targetDate === null
-                  ? null
-                  : `by ${DATE.format(new Date(`${suggestion.targetDate}T00:00:00Z`))}`,
-              ]
-                .filter(Boolean)
-                .join(" · ")}
-            </p>
+            {suggestion.desiredOutcome.trim() ===
+            suggestion.title.trim() ? null : (
+              <p className={styles.outcome}>{suggestion.desiredOutcome}</p>
+            )}
+            <ul className={styles.tags}>
+              {suggestion.sports.map((sport) => (
+                <li key={sport}>{sport}</li>
+              ))}
+              {suggestion.targetDate === null ? null : (
+                <li>
+                  by{" "}
+                  {DATE.format(new Date(`${suggestion.targetDate}T00:00:00Z`))}
+                </li>
+              )}
+            </ul>
             <form className={styles.choices} action={action}>
               <input type="hidden" name="suggestionId" value={suggestion.id} />
               <input
@@ -80,6 +84,9 @@ export function GoalSuggestions({
                 name="expectedGoalRevision"
                 value={expectedGoalRevision}
               />
+              <span className={styles.addAs} aria-hidden="true">
+                Add as
+              </span>
               <button
                 className={styles.accept}
                 type="submit"
@@ -88,7 +95,7 @@ export function GoalSuggestions({
                 disabled={pending}
                 aria-label={`Add as a core goal: ${suggestion.title}`}
               >
-                Add as core
+                Core
               </button>
               <button
                 className={styles.accept}
@@ -98,7 +105,7 @@ export function GoalSuggestions({
                 disabled={pending}
                 aria-label={`Add as a supporting goal: ${suggestion.title}`}
               >
-                Add as supporting
+                Supporting
               </button>
               <button
                 className={styles.reject}
