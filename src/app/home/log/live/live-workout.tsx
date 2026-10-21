@@ -71,15 +71,31 @@ export function LiveWorkout({
   const clock = useLiveClock(view);
 
   // What is stored, and what is waiting to be. Refs, so a save that lands
-  // after a newer change does not undo it.
+  // after a newer change does not undo it. Every write - a save, a pause -
+  // runs through one queue, so each answers to the revision the one before
+  // it left, and nothing reports "stored" while an earlier write is still
+  // on its way.
   const revision = useRef(workout.revision);
+  const pausedAt = useRef(workout.pausedAt);
   const pending = useRef<LiveWorkoutState | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const inFlight = useRef<Promise<void> | null>(null);
+  const queue = useRef<Promise<unknown>>(Promise.resolve());
+
+  function enqueue<T>(job: () => Promise<T>): Promise<T> {
+    const run = queue.current.then(job, job);
+    queue.current = run.catch(() => undefined);
+    return run;
+  }
+
+  // A conflict or an ended session stays said until the page is reloaded:
+  // every later write would meet the same answer.
+  const stuck = (current: SaveStatus) =>
+    current === "conflict" || current === "session";
 
   function settle(result: LiveSaveResult): boolean {
     if (result.status === "saved") {
       revision.current = result.workout.revision;
+      pausedAt.current = result.workout.pausedAt;
       setView(result.workout);
       return true;
     }
@@ -93,47 +109,47 @@ export function LiveWorkout({
     return false;
   }
 
-  async function flush(): Promise<boolean> {
+  /** Stores what is waiting, after every write already queued. */
+  function flush(): Promise<boolean> {
     if (timer.current !== null) {
       clearTimeout(timer.current);
       timer.current = null;
     }
-    await inFlight.current;
-    const state = pending.current;
-    if (state === null) return true;
-    pending.current = null;
-    setStatus("saving");
-    let ok = false;
-    const run = (async () => {
-      ok = settle(
+    return enqueue(async () => {
+      const state = pending.current;
+      if (state === null) return true;
+      pending.current = null;
+      setStatus((current) => (stuck(current) ? current : "saving"));
+      const ok = settle(
         await saveLiveWorkoutAction(view.id, revision.current, state),
       );
+      // A failed save keeps what it was trying to store, so Retry sends it.
+      if (!ok && pending.current === null) pending.current = state;
       if (ok && pending.current === null) setStatus("saved");
-    })();
-    inFlight.current = run;
-    await run;
-    inFlight.current = null;
-    // A failed save keeps what it was trying to store, so Retry sends it.
-    if (!ok && pending.current === null) pending.current = state;
-    return ok;
+      return ok;
+    });
   }
 
   function change(next: LiveActivity[]) {
     setActivities(next);
     pending.current = { activities: next };
-    setStatus("saving");
+    setStatus((current) => (stuck(current) ? current : "saving"));
     if (timer.current !== null) clearTimeout(timer.current);
     timer.current = setTimeout(() => void flush(), SAVE_DELAY_MS);
   }
 
-  // Store what is pending if the page is left or hidden.
+  // Store what is pending if the page is hidden: a phone put away mid-set.
+  const flushLatest = useRef(flush);
+  useEffect(() => {
+    flushLatest.current = flush;
+  });
   useEffect(() => {
     const onHide = () => {
-      if (document.visibilityState === "hidden") void flush();
+      if (document.visibilityState === "hidden") void flushLatest.current();
     };
     document.addEventListener("visibilitychange", onHide);
     return () => document.removeEventListener("visibilitychange", onHide);
-  });
+  }, []);
 
   function update(key: string, edit: (activity: LiveActivity) => LiveActivity) {
     change(
@@ -145,13 +161,15 @@ export function LiveWorkout({
 
   async function togglePause() {
     if (!(await flush())) return;
-    setStatus("saving");
-    const result = await pauseLiveWorkoutAction(
-      view.id,
-      revision.current,
-      view.pausedAt === null,
-    );
-    if (settle(result)) setStatus("saved");
+    await enqueue(async () => {
+      setStatus((current) => (stuck(current) ? current : "saving"));
+      const result = await pauseLiveWorkoutAction(
+        view.id,
+        revision.current,
+        pausedAt.current === null,
+      );
+      if (settle(result) && pending.current === null) setStatus("saved");
+    });
   }
 
   function finish() {

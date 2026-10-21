@@ -81,6 +81,8 @@ type Props = {
   isRecoveryDay: boolean;
   /** False when the ADR-017 top-up could not run for this read. */
   toppedUp: boolean;
+  /** The title of a workout already running (ADR-037), or null. */
+  runningWorkout?: string | null;
   sessions: TodaySessionView[];
   /**
    * Completions logged on this day that no card above carries: training that
@@ -119,6 +121,7 @@ export function TodayDay({
   lastPlaceableDate,
   isRecoveryDay,
   toppedUp,
+  runningWorkout = null,
   sessions,
   unattached,
 }: Props) {
@@ -204,7 +207,7 @@ export function TodayDay({
                   key={session.id}
                   date={date}
                   session={session}
-                  isToday={date === today}
+                  isToday={date === today && runningWorkout === null}
                 />
               ))}
               {unattached.map((completion) => (
@@ -271,7 +274,17 @@ export function TodayDay({
         </div>
       </Slide>
 
-      {date === today ? (
+      {runningWorkout !== null ? (
+        // One workout at a time: the one running is the one offered.
+        <Link
+          className={styles.addAction}
+          href="/home/log/live"
+          data-today-continue-workout
+        >
+          <span aria-hidden="true">▶</span>
+          Continue {runningWorkout}
+        </Link>
+      ) : date === today ? (
         <Link
           className={styles.addAction}
           href="/home/log/live?new=1"

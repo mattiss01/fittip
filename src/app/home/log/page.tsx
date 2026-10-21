@@ -360,9 +360,11 @@ async function renderFromWorkout(workoutId: string, today: string) {
     id: workout.id,
     title: workout.title,
     sport: workout.sport,
-    durationMinutes: Math.max(
-      1,
-      Math.round(activeMilliseconds(workout, Date.now()) / 60000),
+    // Within the bound a log's duration holds (a week), so a workout left
+    // running for days still opens a log that can be corrected and saved.
+    durationMinutes: Math.min(
+      10080,
+      Math.max(1, Math.round(activeMilliseconds(workout, Date.now()) / 60000)),
     ),
     activities: toLoggedActivities(workout.state),
   };

@@ -64,7 +64,14 @@ test.describe("logging a session live", () => {
       await expect(page.getByText("Saved", { exact: true })).toBeVisible();
       await expectNoHorizontalOverflow(page);
 
-      // ---- Leave it: the clock on another page leads back. ----
+      // ---- Leave it: Today offers it to continue, not a second start. ----
+      await page.goto("/home/today");
+      await expect(page.locator("[data-today-continue-workout]")).toContainText(
+        "Continue Upper body",
+      );
+      await expect(page.locator("[data-today-start-live]")).toHaveCount(0);
+
+      // ---- The clock on another page leads back. ----
       await page.goto("/home/plan");
       const pill = page.locator("[data-live-pill]");
       await expect(pill).toContainText("Upper body");
