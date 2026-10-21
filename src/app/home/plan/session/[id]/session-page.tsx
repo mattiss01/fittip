@@ -577,7 +577,7 @@ export function SessionPage({
             </button>
           ) : (
             <Link className={page.main} href={logHref}>
-              {session.log ? "Edit log" : "Log this session"}
+              {session.log ? "Edit log" : "Log results"}
             </Link>
           )}
 
@@ -585,7 +585,7 @@ export function SessionPage({
             <MoreMenu>
               {(close) => (
                 <>
-                  <MenuLink href={logHref}>Log this session</MenuLink>
+                  <MenuLink href={logHref}>Log results</MenuLink>
                   {session.localDate === today ? (
                     // Tracked while it happens (ADR-037), on its own day.
                     <MenuItem

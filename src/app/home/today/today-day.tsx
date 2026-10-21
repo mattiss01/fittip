@@ -433,7 +433,7 @@ function SessionCard({
             className={styles.logAction}
             href={`/home/log?plannedSession=${session.id}&date=${date}`}
           >
-            Log this session
+            Log results
             <span aria-hidden="true">→</span>
           </Link>
         </div>

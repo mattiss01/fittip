@@ -89,7 +89,7 @@ test.describe("M3-15C progress", () => {
 
       await page.goto("/home/today");
       await todayCard(page, "Tempo run")
-        .getByRole("link", { name: "Log this session" })
+        .getByRole("link", { name: "Log results" })
         .click();
       await logInSteps(page, {
         outcome: "Completed",
