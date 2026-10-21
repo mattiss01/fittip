@@ -174,7 +174,11 @@ const UNSAFE_PATTERNS: readonly RegExp[] = [
   /\bprescrib(e|ed|es|ing)\b/i,
   /\bprescription\b/i,
   /\b(medication|dosage|painkillers?|ibuprofen|cortisone)\b/i,
-  /\b(cure|heal|treat) (your|the) \w+/i,
+  /\b(cure|heal) (your|the) \w+/i,
+  // "Treat the tendon" is treatment; "treat the targets as deadlines" is not
+  // (owner, 21 Oct 2026: a paid roadmap for Tom was refused over it). An "as"
+  // later in the same clause makes it "regard as".
+  /\btreat (your|the) \w+(?![^.,;:!?]*\bas\b)/i,
   /\bpush through (the |your )?pain\b/i,
   /\bignore (the|your) (pain|injury|symptoms?)\b/i,
   /\byou (probably |likely )?have (a |an )?(torn|fracture|sprain|tendinitis|tendonitis)/i,
