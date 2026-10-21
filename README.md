@@ -1,239 +1,138 @@
 # FitTip
 
-This repository contains the mobile-first web and data foundation for FitTip.
-M0-03 implements local public email/password registration, Mailpit
-confirmation, protected sessions, and minimal username-free profiles. M0-06A
-adds the approved owner-only founder-hosted staging policy; it is not a
-production or external-user release.
+A personal training coach, built for one athlete: its author. The athlete keeps
+goals and coaching context, maintains one continuous training plan, logs what
+actually happened, and asks an AI coach to propose changes that they review
+before anything is added.
 
-Current planning is separated by milestone:
+This is a private project developed in the open. It is not a product, there is
+no public sign-up, and the hosted instance accepts only its owner. You are
+welcome to read the code; see [Rights](#rights) before reusing any of it.
 
-- [M0 foundation and external-use gates](docs/backlog/M0/M0-BACKLOG.md)
-- [M1 manual training planning and tracking](docs/backlog/M1/M1-BACKLOG.md)
-- [M2 goals, editable coaching context, and guided onboarding](docs/backlog/M2/M2-BACKLOG.md)
-- [M3 AI roadmap and selected 1–7-day proposal](docs/backlog/M3/M3-BACKLOG.md)
+## What it does
 
-Start with the [documentation overview](docs/README.md) to navigate product
-briefs, decisions, backlog tickets, and validation evidence.
+- **Today** shows the day's planned sessions, logs them, and runs a workout in
+  progress.
+- **Plan** is a rolling plan viewed by date: sessions, recurring series,
+  recovery days, saved session templates and a personal activity library. Its
+  roadmap sets out the longer direction in phases and milestones.
+- **Progress** is the training record, a month at a time. A log is kept
+  separately from the plan that suggested it, is corrected as a revision, and is
+  removed only when the owner deletes it.
+- **You** holds goals (at most three core), coaching memory and settings.
 
-See the [visual data-model overview](docs/product/DATA-MODEL-OVERVIEW.md) for
-the ownership, plan-versus-actual, goals/memory, and AI-proposal relationships.
+The **coach** writes a rough roadmap and detailed 1–7-day plan proposals. Every
+answer is schema-validated and shown as a proposal next to the real data;
+nothing changes until the owner accepts it. Memory the coach infers is proposed,
+never treated as fact. Pain, illness and injury are handled conservatively and
+without diagnosis.
 
-## Prerequisites
+The vocabulary is defined in [CONTEXT.md](CONTEXT.md), and the reasoning behind
+the bigger choices is in [docs/decisions](docs/decisions/).
 
-- Node.js 24.18.0 LTS (see `.nvmrc`)
-- npm 11.16.0 (bundled with the selected Node.js release)
-- Docker Desktop or another Docker-compatible runtime with at least 7 GB of
-  memory available to the local Supabase stack
+## Stack
 
-The M0-02 implementation was verified with Docker 28.1.1, Supabase CLI 2.109.1,
-`@supabase/supabase-js` 2.110.8, and `@supabase/ssr` 0.12.3. All versions are
-exact-pinned in `package.json` and `package-lock.json`.
+- Next.js 16 (App Router) and React, deployed on Vercel
+- Supabase: Postgres with Row Level Security on every owned table, and Auth
+- Vitest, pgTAP and Playwright at a 390px phone viewport
+- An AI provider reached only from the server, behind one validating boundary
 
-## Install
+## Run it locally
 
-Install the exact dependency tree recorded in `package-lock.json`:
+You need Node.js 24 (see `.nvmrc`) and Docker with about 7 GB of memory for the
+local Supabase stack. On Windows, use `npm.cmd` and `npx.cmd` if PowerShell
+blocks `npm.ps1`.
 
-```powershell
+```sh
 npm ci
+npx supabase start            # first start downloads images and takes a while
+npx supabase status -o env    # prints the local URL and keys
 ```
 
-On Windows systems where PowerShell blocks `npm.ps1`, use `npm.cmd` in place of `npm`.
+Copy `.env.example` to `.env.local` and fill in `API_URL` and
+`PUBLISHABLE_KEY` from that output. Use the `sb_publishable_…` key, not
+`ANON_KEY`: the app refuses legacy JWT-form keys on purpose.
 
-## Run locally
-
-```powershell
+```sh
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). The local M0-03 flow is
-available from `/`: create an email/password account, open its captured
-confirmation message in Mailpit, then continue to the protected `/home` route.
-A forgotten password is reset from the sign-in page: the mail is captured in
-Mailpit too, and its link opens `/reset-password` on `http://127.0.0.1:3000`
-(ADR-022). This works locally and in CI only: the hosted project cannot take
-the mail text in `supabase/templates/recovery.html` until it has a mail sender
-of its own, which the owner has put off until further users are invited.
+Open <http://localhost:3000> and create an account. Confirmation and
+password-reset mail is captured by Mailpit at <http://127.0.0.1:54324> rather
+than sent.
 
-## Local Supabase
+For an account with data already in it, `npm run athletes:seed` creates five
+made-up athletes on the local stack (password `fittip-local`). The
+[test athletes guide](scripts/test-athletes/README.md) says who each one is.
 
-The checked-in `supabase/config.toml` is a local development configuration. It
-is not linked to a hosted project and must not be exposed to external traffic.
+### The coach runs offline by default
 
-Start the Docker-compatible runtime first, then run:
+Unless `FITTIP_AI_LIVE=enabled` is set together with a provider, model, API key,
+owner allowlist and operation list (`src/server/ai/enablement.ts`), the coach
+answers from built-in fixtures. Nothing is sent anywhere and nothing costs
+money. Any missing or malformed setting keeps it offline.
 
-```powershell
-npx supabase start
+### Hosted mode
+
+Every Vercel environment runs in `founder-staging` mode: `FITTIP_RUNTIME_MODE`
+and `FITTIP_OWNER_USER_ID` restrict it to one pre-created owner account, sign-up
+is closed, and any other session is signed out. Leave both unset locally.
+
+## Checks
+
+```sh
+npm run lint
+npm run typecheck
+npm run test:run      # once; `npm run test` is watch mode
+npm run build
+npm run test:e2e      # needs the app on port 3000 and the local stack
+```
+
+Database checks run against the local stack:
+
+```sh
 npx supabase db reset --local
 npx supabase db lint --local --level warning --fail-on warning
 npx supabase db advisors --local --type all --level warn --fail-on warn
 npx supabase test db --local supabase/tests/database
 ```
 
-The first start downloads the local Supabase images and can take several
-minutes. Later starts are faster. Stop the stack when it is no longer needed:
+## Database changes
 
-```powershell
-npx supabase stop
-```
+Create each migration with `npx supabase migration new <name>`. Applied
+migrations are never edited; corrections go forward in a new one.
 
-The local Auth server requires email confirmation. Development email is
-captured rather than sent; Mailpit is available at
-[http://127.0.0.1:54324](http://127.0.0.1:54324).
-
-### Environment variables
-
-Copy `.env.example` to an uncommitted `.env.local`. Use the local project URL
-and publishable key reported by `npx supabase status`:
-
-```text
-NEXT_PUBLIC_SUPABASE_URL
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
-```
-
-Both values are public project coordinates. The key must use the modern
-`sb_publishable_...` format; the environment validator rejects modern secret
-keys and all legacy JWT-form keys rather than trying to distinguish a legacy
-`anon` key from a legacy `service_role` key. The exact-pinned local CLI reports
-a compatible modern publishable key. Never place a secret key, service-role
-key, database password, or connection string in a `NEXT_PUBLIC_` variable. The
-application has no secret/service Supabase client.
-
-Founder-hosted staging additionally uses two server-only variables. Leave both
-unset locally; hosted staging requires the exact mode and the owner's
-administratively created canonical UUID. These values are not public project
-coordinates and must never use the `NEXT_PUBLIC_` prefix:
-
-```text
-FITTIP_RUNTIME_MODE=founder-staging
-FITTIP_OWNER_USER_ID=replace-with-owner-user-id
-```
-
-This is a disposable, owner-only staging exception. It has no public
-registration, friend/external-user, commercial, or production authorization.
-Every Vercel environment, including production and preview, is founder
-restricted: its server runtime must set the exact `founder-staging` mode and a
-canonical owner UUID. Vercel never defaults to local mode. Founder staging also
-requires an HTTPS Supabase URL; local development alone may use the HTTP local
-Supabase URL.
-
-The protected-page fallback uses a narrow internal session-denial route to
-reliably clear a founder-staging non-owner session even after a direct
-address-bar `/home` request, where a redirect may not preserve a `Referer`.
-That makes it a logout-only GET endpoint: cross-origin navigation can at most
-clear the current browser session and receives a generic private redirect. The
-tradeoff is accepted only for disposable founder staging; the route performs
-a bounded auth-session mutation and is not a substitute for CSRF controls
-required before external use.
-
-### Schema and access model
-
-M0-02 creates only `public.profiles`:
-
-| Role            |       SELECT |       INSERT | UPDATE | DELETE |
-| --------------- | -----------: | -----------: | -----: | -----: |
-| `anon`          |           No |           No |     No |     No |
-| `authenticated` | Own row only | Own row only |     No |     No |
-
-The user-scoped server repository verifies Auth claims, derives `user_id`
-itself, repeats the ownership filter on reads, and remains subject to RLS.
-Email and all credentials stay in Supabase Auth.
-
-### Migrations and generated types
-
-Create every new migration through the exact-pinned CLI:
-
-```powershell
-npx supabase migration new descriptive_name
-```
-
-Use forward-only corrections after a migration reaches an approved remote
-environment. Do not edit applied history. Verify all committed migrations from
-zero with `npx supabase db reset --local`.
-
-Regenerate the committed types after a clean reset. Run all three steps, in
-this order:
-
-```powershell
-npx supabase gen types --local --lang typescript |
-  Set-Content -Encoding utf8 src/lib/supabase/database.types.ts
-npm run format
-npm run types:patch
-```
-
-`npm run types:gen` runs the same three steps as one command, formatting only
-the generated file, and refuses CLI output that is not the types. It is the
-form the agent is permitted to run.
-
-`git status` must be clean afterwards. If it is not, the schema changed and the
-new output belongs in your commit.
-
-Two things about that sequence are not obvious:
-
-- **No `--schema public`.** The committed file also carries `graphql_public`,
-  and passing the flag silently drops it.
-- **Keep `types:patch` in the sequence.** M3-11 removed the legacy completion
-  function whose arguments needed a hand-maintained nullability correction.
-  The step is now a no-op guard that fails if the removed generated surface
-  reappears; retaining it keeps one stable schema workflow across old and new
-  migrations.
-
-Never hand-edit `src/lib/supabase/database.types.ts`.
-
-ADR-007 approves one separate disposable founder-hosted staging project only.
-Do not run `supabase link`, `db push`, or any hosted migration/configuration
-command until the product owner proceeds with its separately gated resource
-creation and names the exact FitTip target environment. Never link or mutate
-the unrelated existing Supabase project.
-
-## Quality commands
-
-```powershell
-npm run lint
-npm run typecheck
-npm run test
-npm run test:run
-npm run format
-npm run format:check
-npm run build
-npm run test:e2e
-```
-
-- `test` starts Vitest in watch mode.
-- `test:run` runs the deterministic test suite once.
-- `format` rewrites supported application and repository-tooling files with Prettier.
-- `test:e2e` runs the 390px browser flow. Start the local Supabase stack and
-  `npm run dev` first, and set the two public local Supabase variables shown
-  above. It reads the confirmation link only from local Mailpit.
-
-M0-06A owns the approved founder-hosted Supabase/Vercel configuration and
-hosted authentication/deployment validation. Every external-use, commercial, or
-production capability remains later gated work.
+After a clean `db reset --local`, regenerate the committed types with
+`npm run types:gen`. It writes, formats and checks
+`src/lib/supabase/database.types.ts`, which is never edited by hand. Do not add
+`--schema public` to a manual run: the file also carries `graphql_public`, and
+the flag drops it silently.
 
 ## Continuous integration
 
-`.github/workflows/ci.yml` runs the commands above on `master`, on `ticket/**`
-and `chore/**` branches, and on pull requests into `master`. It exists so a
-branch proves itself once, instead of the builder, the reviewer, and the
-post-merge check each re-running the same suites by hand.
+`.github/workflows/ci.yml` runs on `master`, `ticket/**` and `chore/**` branches
+and on pull requests. It needs no repository secrets: each job starts its own
+disposable Supabase stack and contacts no hosted service.
 
-| Job        | Covers                                                                                                     |
-| ---------- | ---------------------------------------------------------------------------------------------------------- |
-| `static`   | Prettier, ESLint, TypeScript, Vitest, and the production build                                             |
-| `database` | `db reset` from zero, database lint, security/performance advisors, pgTAP, and the concurrency harnesses   |
-| `browser`  | The 390px production Playwright flows for authentication, M2-01 goals, M2-02 memory, and M3-11 maintenance |
+| Job        | Covers                                                                        |
+| ---------- | ----------------------------------------------------------------------------- |
+| `static`   | Prettier, ESLint, TypeScript, Vitest and the production build                 |
+| `database` | Every migration from zero, database lint, advisors, pgTAP, concurrency checks |
+| `browser`  | The 390px production Playwright flows, split over three runners               |
 
-The pipeline requires **no repository secrets**. Every job starts its own
-disposable local Supabase stack and derives that container's ephemeral
-coordinates with `.github/scripts/supabase-env.mjs`. No hosted project,
-founder-staging environment, deployment, or paid resource is contacted; the
-workflow has read-only repository permissions.
+## How the work is organized
 
-The `static` job runs without Docker and uses shape-valid placeholder Supabase
-coordinates so the environment validator and `next build` can run. The
-`database` and `browser` jobs derive real local coordinates before building,
-because `NEXT_PUBLIC_*` values are inlined into the client bundle at build time.
+- [CLAUDE.md](CLAUDE.md) is the working agreement. Most of the code is written
+  with Claude Code under it.
+- [docs/backlog/NEXT.md](docs/backlog/NEXT.md) lists what is open, and
+  `docs/backlog/LOG-<year>.md` records each merge.
+- [docs/product](docs/product/) holds feature briefs and the
+  [data-model overview](docs/product/DATA-MODEL-OVERVIEW.md).
 
-A green run is evidence for a ticket's validation record. It does not replace
-exact-commit independent review, Vercel Preview verification, or product-owner
-acceptance.
+## Rights
+
+Copyright © 2026 mattiss01. All rights reserved.
+
+No license is granted. You may read this code and fork it on GitHub as GitHub's
+terms allow, but you may not copy, modify, distribute or use it, in whole or in
+part, without written permission.
