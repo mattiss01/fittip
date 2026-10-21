@@ -307,7 +307,14 @@ export function actualMeasurement(activity: LiveActivity): MeasurementBuild {
 /** Done repeats collapsed back into blocks, as sets are into groups. */
 function actualIntervals(activity: LiveActivity): MeasurementBuild {
   const blocks: (Omit<LiveRepeat, "done"> & { count: number })[] = [];
-  for (const repeat of activity.repeats.filter((candidate) => candidate.done)) {
+  // A ticked repeat with neither a distance nor a time has nothing to record,
+  // and would otherwise keep the whole log from opening.
+  const recorded = activity.repeats.filter(
+    (candidate) =>
+      candidate.done &&
+      (candidate.distance.trim() !== "" || candidate.time.trim() !== ""),
+  );
+  for (const repeat of recorded) {
     const last = blocks.at(-1);
     if (
       last &&

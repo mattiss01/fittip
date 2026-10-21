@@ -111,6 +111,54 @@ begin
 end;
 $$;
 
+-- What is about to be converted, said in the apply's output so the owner is
+-- told what changed on the founder project.
+do $$
+declare
+  v_line text;
+begin
+  for v_line in
+    select format('%s: %s row(s) in a removed mode', name, total)
+    from (values
+      ('personal_activities', (select count(*) from public.personal_activities
+        where measurement_mode in ('skill_repetitions', 'custom'))),
+      ('rolling_plan_activities', (select count(*) from public.rolling_plan_activities
+        where measurement_mode in ('skill_repetitions', 'custom'))),
+      ('rolling_plan_series_activities', (select count(*)
+        from public.rolling_plan_series_activities
+        where measurement_mode in ('skill_repetitions', 'custom'))),
+      ('saved_session_activities', (select count(*) from public.saved_session_activities
+        where measurement_mode in ('skill_repetitions', 'custom'))),
+      ('completion_activities', (select count(*) from public.completion_activities
+        where measurement_mode in ('skill_repetitions', 'custom'))),
+      ('completions.planned_snapshot', (select count(*) from public.completions
+        where planned_snapshot::text like '%skill_repetitions%'
+          or planned_snapshot::text like '%"custom"%')),
+      ('rolling_plan_change_entries', (select count(*)
+        from public.rolling_plan_change_entries
+        where before_state::text like '%skill_repetitions%'
+          or before_state::text like '%"custom"%'
+          or after_state::text like '%skill_repetitions%'
+          or after_state::text like '%"custom"%')),
+      ('plan_proposals', (select count(*) from public.plan_proposals
+        where content::text like '%skill_repetitions%'
+          or content::text like '%"custom"%')),
+      ('session_activity_proposals', (select count(*)
+        from public.session_activity_proposals
+        where content::text like '%skill_repetitions%'
+          or content::text like '%"custom"%')),
+      ('live_workouts (deleted)', (select count(*) from public.live_workouts
+        where exists (
+          select 1 from pg_catalog.jsonb_array_elements(state->'activities') as a
+          where a->>'mode' in ('skill_repetitions', 'custom')
+            or a->>'targetMode' in ('skill_repetitions', 'custom'))))
+    ) as counted(name, total)
+  loop
+    raise notice '%', v_line;
+  end loop;
+end;
+$$;
+
 update public.personal_activities
 set default_measurement = public.fittip_converted_measurement(
     measurement_mode, default_measurement),
@@ -166,8 +214,11 @@ where content::text like '%skill_repetitions%'
 -- A workout in progress is a draft (ADR-037): one holding a removed mode is
 -- dropped rather than converted.
 delete from public.live_workouts
-where state::text like '%skill_repetitions%'
-  or state::text like '%"custom"%';
+where exists (
+  select 1 from pg_catalog.jsonb_array_elements(state->'activities') as a
+  where a->>'mode' in ('skill_repetitions', 'custom')
+    or a->>'targetMode' in ('skill_repetitions', 'custom')
+);
 
 drop function public.fittip_converted_document(jsonb);
 drop function public.fittip_converted_measurement(text, jsonb);

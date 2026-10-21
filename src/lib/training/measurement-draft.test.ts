@@ -265,6 +265,18 @@ describe("intervals (ADR-038)", () => {
     ).toBe(false);
   });
 
+  it("keeps a zero rest, typed or read back as 0:00", () => {
+    const measurement = {
+      blocks: [{ repeats: 4, seconds: 60, rest_seconds: 0 }],
+    };
+    const draft = draftFromMeasurement("intervals", measurement);
+    expect(draft.blocks?.[0]?.rest).toBe("0:00");
+    expect(buildMeasurement("intervals", draft)).toEqual({
+      ok: true,
+      measurement,
+    });
+  });
+
   it("round-trips through the form", () => {
     const measurement = {
       blocks: [{ repeats: 8, distance: 400, seconds: 90, rest_seconds: 60 }],

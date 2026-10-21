@@ -462,6 +462,8 @@ function readTarget(
   const present: Record<string, unknown> = {};
   for (const [key, field] of Object.entries(value)) {
     if (field === null) continue;
+    // An empty list says what null says: nothing in that shape.
+    if (Array.isArray(field) && field.length === 0) continue;
     if ((key === "groups" || key === "blocks") && Array.isArray(field)) {
       present[key] = field.map((part) =>
         isRecord(part)

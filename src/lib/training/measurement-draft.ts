@@ -381,11 +381,12 @@ function buildIntervals(draft: MeasurementDraft): MeasurementBuild {
     if (distance === null && seconds === null) {
       return { ok: false, message: "Each block needs a distance or a time." };
     }
-    // Rest may be none at all, so a typed 0 is kept as "no rest between".
+    // Rest may be none at all, so a typed 0 or 0:00 is kept as "no rest
+    // between".
     const rest =
       restText === ""
         ? null
-        : restText === "0"
+        : /^0+(:0+){0,2}$/.test(restText)
           ? 0
           : readWholeClock(restText, 3600);
     if (restText !== "" && rest === null) {

@@ -251,4 +251,26 @@ describe("timed sets and intervals live (ADR-038)", () => {
       },
     });
   });
+
+  it("leaves out a ticked repeat with nothing on it rather than fail", () => {
+    const empty = liveActivityFrom({
+      plannedPosition: null,
+      personalActivityId: null,
+      name: "Strides",
+      sport: "Running",
+      measurementMode: "intervals",
+      target: null,
+    });
+    const ticked = withRepeats(empty, [
+      { distance: "", time: "", rest: "", done: true },
+      { distance: "100", time: "", rest: "", done: true },
+    ]);
+    expect(actualMeasurement(ticked)).toEqual({
+      ok: true,
+      measurement: {
+        blocks: [{ repeats: 1, distance: 100 }],
+        distance_unit: "m",
+      },
+    });
+  });
 });

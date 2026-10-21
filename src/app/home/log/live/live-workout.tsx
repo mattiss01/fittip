@@ -577,7 +577,9 @@ function RepeatRows({
         i === index ? { ...repeat, ...change } : repeat,
       ),
     );
-  const hasDistance = repeats.some((repeat) => repeat.distance.trim() !== "");
+  // Kilometres and miles step by a tenth, metres and yards by fifty.
+  const distanceStep =
+    activity.distanceUnit === "km" || activity.distanceUnit === "mi" ? 0.1 : 50;
 
   return (
     <>
@@ -585,20 +587,16 @@ function RepeatRows({
         {repeats.map((repeat, index) => (
           <li key={index} className={repeat.done ? styles.setDone : undefined}>
             <span className={styles.setNumber}>{index + 1}</span>
-            {hasDistance ? (
-              <Stepper
-                id={`${idPrefix}-distance-${index}`}
-                label={`Repeat ${index + 1} distance`}
-                unit={activity.distanceUnit}
-                value={repeat.distance}
-                step={activity.distanceUnit === "km" ? 0.1 : 50}
-                onChange={(distance) => edit(index, { distance })}
-              />
-            ) : (
-              <span className={styles.restNote}>
-                {repeat.rest === "" ? "" : `${repeat.rest} rest`}
-              </span>
-            )}
+            {/* Always offered: an interval added live, or switched to, has
+                no planned distance to start from. */}
+            <Stepper
+              id={`${idPrefix}-distance-${index}`}
+              label={`Repeat ${index + 1} distance`}
+              unit={activity.distanceUnit}
+              value={repeat.distance}
+              step={distanceStep}
+              onChange={(distance) => edit(index, { distance })}
+            />
             <Stepper
               id={`${idPrefix}-rtime-${index}`}
               label={`Repeat ${index + 1} time`}
