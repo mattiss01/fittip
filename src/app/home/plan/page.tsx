@@ -7,7 +7,11 @@ import {
 import { readLibraryOptions } from "./activities/library-options";
 import { readMeasurementHistory } from "./activities/measurement-history";
 import { readSavedSessionOptions } from "./saved/session-options";
-import { PlanManager, type PlanSessionLog } from "./plan-manager";
+import {
+  PlanManager,
+  type PlanSessionLog,
+  type PlanUnplannedLog,
+} from "./plan-manager";
 import { planHistoryStart, type PlanPhase } from "./plan-weeks";
 import { planWindowFor } from "./plan-window";
 import {
@@ -144,6 +148,7 @@ async function PlanWindow({
   let phases: PlanPhase[];
   const logged = new Map<string, PlanSessionLog>();
   let replacedByCoach = new Set<string>();
+  let unplannedLogs: PlanUnplannedLog[] = [];
   try {
     const [plan, log] = await Promise.all([
       createRollingPlan(),
@@ -166,11 +171,25 @@ async function PlanWindow({
     // Thursday. A log's own date can be any day before its session's, so the
     // logs are found by session rather than by window, in one read.
     const sessionIds = slice.sessions.map((session) => session.id);
-    const [found, replaced] = await Promise.all([
+    const [found, replaced, loggedInWindow] = await Promise.all([
       log.findByPlanSessions(sessionIds),
       readReplacedByCoach(slice.sessions),
+      log.list(firstDate, today),
     ]);
     replacedByCoach = replaced;
+    // Training done without a plan sits on its day like a logged session
+    // (owner, 22 Oct 2026), so a past week shows everything that happened.
+    unplannedLogs = loggedInWindow
+      .filter((completion) => completion.planSessionId === null)
+      .map((completion) => ({
+        completionId: completion.id,
+        localDate: completion.actualLocalDate,
+        title: completion.title ?? "Unplanned training",
+        sport: completion.sport ?? "",
+        ...(completion.durationMinutes === undefined
+          ? {}
+          : { durationMinutes: completion.durationMinutes }),
+      }));
     for (const completion of found) {
       if (completion.planSessionId) {
         logged.set(completion.planSessionId, {
@@ -223,6 +242,7 @@ async function PlanWindow({
                 ...(log === undefined ? {} : { log }),
               };
             })}
+          unplannedLogs={unplannedLogs}
           recoveryDates={slice.recoveryDates}
           savedSessions={savedSessions}
           uncoveredSeriesDates={findUncoveredSeriesDates(

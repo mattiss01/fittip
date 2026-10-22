@@ -783,6 +783,30 @@ describe("PlanManager", () => {
     );
   });
 
+  it("shows an unplanned log on its day as a logged card, opening its record", () => {
+    renderManager(INITIAL_PLAN_ACTION_STATE, [session()], {
+      unplannedLogs: [
+        {
+          completionId: "7f000000-0000-4000-8000-0000000000d1",
+          localDate: TODAY,
+          title: "Evening swim",
+          sport: "Swimming",
+          durationMinutes: 40,
+        },
+      ],
+    });
+    const card = day(TODAY).querySelector<HTMLElement>("[data-unplanned-log]")!;
+
+    expect(card.textContent).toContain("Evening swim");
+    expect(card.textContent).toContain("40 min · Unplanned");
+    expect(card.querySelector("a")?.getAttribute("href")).toBe(
+      `/home/progress/7f000000-0000-4000-8000-0000000000d1?from=plan&date=${TODAY}`,
+    );
+    // Nothing plans it: it is not a session card, and the planned one stays.
+    expect(card.hasAttribute("data-session-card")).toBe(false);
+    expect(day(TODAY).querySelectorAll("[data-session-card]")).toHaveLength(1);
+  });
+
   it("keeps the card for a session logged on its own day", () => {
     renderManager(INITIAL_PLAN_ACTION_STATE, [
       session({

@@ -21,6 +21,7 @@ import {
 import { useLiveClock } from "@/components/home/live-workout-clock";
 import { describeMeasurement } from "@/lib/training/describe-measurement";
 import {
+  actualMeasurement,
   changeMode,
   emptyRepeat,
   emptySet,
@@ -189,30 +190,22 @@ export function LiveWorkout({
   const sessionSport = view.sport;
 
   return (
-    <div className={styles.live} data-live-workout>
+    <div className={styles.live} data-live-workout data-live-save={status}>
       <header className={styles.head}>
         <div className={styles.headTop}>
           <Link className={styles.headLink} href="/home/today">
             ‹ Today
           </Link>
           <span className={styles.headTitle}>{view.title}</span>
-          <button
-            type="button"
-            className={styles.finish}
-            onClick={finish}
-            disabled={finishing}
-          >
-            Finish
-          </button>
         </div>
-        <div className={styles.clockRow}>
-          <strong
-            className={styles.clock}
-            data-live-clock
-            aria-label={`${paused ? "Paused at" : "Trained"} ${clock}`}
-          >
-            {clock}
-          </strong>
+        <strong
+          className={styles.clock}
+          data-live-clock
+          aria-label={`${paused ? "Paused at" : "Trained"} ${clock}`}
+        >
+          {clock}
+        </strong>
+        <div className={styles.clockActions}>
           <button
             type="button"
             className={styles.pause}
@@ -220,6 +213,14 @@ export function LiveWorkout({
             aria-pressed={paused}
           >
             {paused ? "▶ Continue" : "❚❚ Pause"}
+          </button>
+          <button
+            type="button"
+            className={styles.finish}
+            onClick={finish}
+            disabled={finishing}
+          >
+            Finish
           </button>
         </div>
         <SaveLine status={status} onRetry={() => void flush()} />
@@ -304,13 +305,8 @@ function SaveLine({
   status: SaveStatus;
   onRetry: () => void;
 }) {
-  if (status === "saved" || status === "saving") {
-    return (
-      <p className={styles.saveLine} aria-live="polite">
-        {status === "saving" ? "Saving…" : "Saved"}
-      </p>
-    );
-  }
+  // Storing is quiet (owner, 22 Oct 2026): only a problem is said.
+  if (status === "saved" || status === "saving") return null;
   if (status === "conflict") {
     return (
       <p className={styles.saveProblem} role="alert">
@@ -350,8 +346,60 @@ function ActivityCard({
 }) {
   const validity = useRef<HTMLInputElement>(null);
   const [measuring, setMeasuring] = useState(false);
-  const plan = describeMeasurement(activity.target);
+  const [confirmRemove, setConfirmRemove] = useState(false);
+  // Only a planned activity has a plan to show: one added from the library
+  // carries its usual target as a starting point, not as a plan (owner,
+  // 22 Oct 2026).
+  const plan =
+    activity.plannedPosition === null
+      ? null
+      : describeMeasurement(activity.target);
   const doneSets = activity.sets.filter((set) => set.done).length;
+  const finished = isFinished(activity);
+  // A finished activity folds to one line so the open ones keep the room
+  // (owner, 22 Oct 2026). It folds as it is finished; the owner can open it
+  // again, or fold any other by hand.
+  const [open, setOpen] = useState(!finished);
+  const [wasFinished, setWasFinished] = useState(finished);
+  if (finished !== wasFinished) {
+    setWasFinished(finished);
+    setOpen(!finished);
+  }
+  const progress =
+    activity.mode === "sets_reps_load"
+      ? `${doneSets} of ${activity.sets.length} sets`
+      : activity.mode === "intervals"
+        ? `${activity.repeats.filter((r) => r.done).length} of ${activity.repeats.length}`
+        : activity.done
+          ? "Done"
+          : "";
+  const named = activity.name !== "";
+
+  if (!open && named) {
+    const built = actualMeasurement(activity);
+    const did = built.ok ? describeMeasurement(built.measurement) : null;
+    return (
+      <li
+        className={`${styles.card} ${styles.cardFolded} ${activity.done ? styles.cardDone : ""}`}
+        data-live-activity={activity.name}
+        data-live-folded
+      >
+        <button
+          type="button"
+          className={styles.foldToggle}
+          aria-expanded={false}
+          onClick={() => setOpen(true)}
+        >
+          <span className={styles.foldText}>
+            <strong>{activity.name}</strong>
+            {did === null ? null : <small>{did}</small>}
+          </span>
+          <span className={styles.progress}>{progress}</span>
+          <span className={styles.chevron} aria-hidden="true" />
+        </button>
+      </li>
+    );
+  }
 
   return (
     <li
@@ -359,7 +407,7 @@ function ActivityCard({
       data-live-activity={activity.name}
     >
       <div className={styles.cardHead}>
-        <div>
+        <div className={styles.cardName}>
           {activity.plannedPosition === null && activity.name === "" ? (
             <input
               className={styles.nameInput}
@@ -376,15 +424,18 @@ function ActivityCard({
           )}
           {plan === null ? null : <p className={styles.plan}>Plan: {plan}</p>}
         </div>
-        <span className={styles.progress}>
-          {activity.mode === "sets_reps_load"
-            ? `${doneSets} of ${activity.sets.length} sets`
-            : activity.mode === "intervals"
-              ? `${activity.repeats.filter((r) => r.done).length} of ${activity.repeats.length}`
-              : activity.done
-                ? "Done"
-                : ""}
-        </span>
+        <span className={styles.progress}>{progress}</span>
+        {named ? (
+          <button
+            type="button"
+            className={styles.foldClose}
+            aria-expanded={true}
+            aria-label={`Fold ${activity.name}`}
+            onClick={() => setOpen(false)}
+          >
+            <span className={styles.chevron} aria-hidden="true" />
+          </button>
+        ) : null}
       </div>
 
       {activity.mode === "sets_reps_load" ? (
@@ -429,18 +480,43 @@ function ActivityCard({
       <div className={styles.cardFoot}>
         <button
           type="button"
-          className={styles.quiet}
+          className={styles.footButton}
           aria-expanded={measuring}
           onClick={() => setMeasuring((open) => !open)}
         >
           Change how it is measured
         </button>
-        {onRemove ? (
-          <button type="button" className={styles.quiet} onClick={onRemove}>
+        {onRemove && !confirmRemove ? (
+          <button
+            type="button"
+            className={`${styles.footButton} ${styles.footRemove}`}
+            onClick={() =>
+              hasContent(activity) ? setConfirmRemove(true) : onRemove()
+            }
+          >
             Remove
           </button>
         ) : null}
       </div>
+      {/* A second step once something is in it, so a stray tap does not
+          take what was entered (owner, 22 Oct 2026). */}
+      {onRemove && confirmRemove ? (
+        <div className={styles.removeConfirm}>
+          <p>Remove {activity.name || "this activity"} and what is in it?</p>
+          <div className={styles.row}>
+            <button type="button" className={styles.danger} onClick={onRemove}>
+              Remove
+            </button>
+            <button
+              type="button"
+              className={styles.quiet}
+              onClick={() => setConfirmRemove(false)}
+            >
+              Keep it
+            </button>
+          </div>
+        </div>
+      ) : null}
       {measuring ? (
         <MeasurementModeField
           id={`${idPrefix}-mode`}
@@ -452,6 +528,31 @@ function ActivityCard({
         />
       ) : null}
     </li>
+  );
+}
+
+/** Every set or repeat ticked, or, measured otherwise, marked done. */
+function isFinished(activity: LiveActivity): boolean {
+  if (activity.mode === "sets_reps_load") {
+    return activity.sets.length > 0 && activity.sets.every((set) => set.done);
+  }
+  if (activity.mode === "intervals") {
+    return (
+      activity.repeats.length > 0 &&
+      activity.repeats.every((repeat) => repeat.done)
+    );
+  }
+  return activity.done;
+}
+
+/** Anything the owner would lose: a name, a number, a tick. */
+function hasContent(activity: LiveActivity): boolean {
+  return (
+    activity.name !== "" ||
+    activity.done ||
+    activity.sets.some((set) => set.reps || set.time || set.load) ||
+    activity.repeats.some((r) => r.distance || r.time || r.rest) ||
+    Object.values(activity.fields).some((value) => value !== "")
   );
 }
 

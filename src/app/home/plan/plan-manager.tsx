@@ -60,7 +60,13 @@ import {
   type PlanWeek,
   type PlanWeekDay,
 } from "./plan-weeks";
-import { readsAsLogged, sessionHref, type PlanCardView } from "./session-view";
+import {
+  readsAsLogged,
+  sessionHref,
+  unplannedLogCard,
+  type PlanCardView,
+  type PlanUnplannedLog,
+} from "./session-view";
 
 import type { SavedSessionOption } from "@/components/training/saved-session-picker";
 import {
@@ -69,7 +75,11 @@ import {
   useSeriesRecoveredReload,
 } from "./series-transition-watch";
 
-export type { PlanCardView, PlanSessionLog } from "./session-view";
+export type {
+  PlanCardView,
+  PlanSessionLog,
+  PlanUnplannedLog,
+} from "./session-view";
 
 type Props = {
   today: string;
@@ -85,6 +95,8 @@ type Props = {
   initialDate?: string | null;
   expectedRevision: number;
   sessions: PlanCardView[];
+  /** Training logged without a plan, shown on its day beside the sessions. */
+  unplannedLogs?: PlanUnplannedLog[];
   recoveryDates: string[];
   /** What a day's sheet may start a session from. */
   savedSessions?: SavedSessionOption[];
@@ -108,6 +120,7 @@ export function PlanManager({
   initialDate = null,
   expectedRevision,
   sessions,
+  unplannedLogs = [],
   recoveryDates,
   savedSessions = [],
   uncoveredSeriesDates = [],
@@ -300,9 +313,14 @@ export function PlanManager({
       ? state.message
       : null;
   const labelled = new Set(recoveryDates);
-  const tones = sportTones(sessions.map((session) => session.sport));
+  const logCards = unplannedLogs.map(unplannedLogCard);
+  const tones = sportTones(
+    [...sessions, ...logCards].map((session) => session.sport),
+  );
   const onDate = (date: string) =>
     sessions.filter((session) => session.localDate === date);
+  const logsOn = (date: string) =>
+    logCards.filter((card) => card.localDate === date);
 
   return (
     <div className={styles.manager}>
@@ -394,6 +412,7 @@ export function PlanManager({
                 today={today}
                 isRecoveryDay={labelled.has(day.date)}
                 sessions={onDate(day.date)}
+                logs={logsOn(day.date)}
                 tones={tones}
                 dropTarget={drag.overDate === day.date}
                 swipe={swipe}
@@ -626,6 +645,7 @@ function PlanDay({
   today,
   isRecoveryDay,
   sessions,
+  logs,
   tones,
   dropTarget,
   dragHandle,
@@ -642,6 +662,8 @@ function PlanDay({
   today: string;
   isRecoveryDay: boolean;
   sessions: PlanCardView[];
+  /** Unplanned logs on this day, as cards. */
+  logs: PlanCardView[];
   tones: Map<string, number>;
   onAdd: () => void;
 }) {
@@ -652,7 +674,8 @@ function PlanDay({
     (session) => session.status === "cancelled" && !session.log,
   );
   const headingId = `plan-day-${day.date}`;
-  const empty = shown.length === 0 && cancelled.length === 0;
+  const empty =
+    shown.length === 0 && cancelled.length === 0 && logs.length === 0;
 
   return (
     <li
@@ -704,6 +727,15 @@ function PlanDay({
                 swipe={day.past || session.log ? null : swipe}
               />
             ))}
+            {logs.map((card) => (
+              <PlanSessionCard
+                key={card.id}
+                session={card}
+                past={day.past}
+                tone={tones.get(sportKey(card.sport)) ?? 0}
+                unplanned
+              />
+            ))}
             {cancelled.map((session) => (
               <PlanSessionCard
                 key={session.id}
@@ -743,7 +775,10 @@ function PlanSessionCard({
   tone,
   drag = null,
   swipe = null,
+  unplanned = false,
 }: {
+  /** An unplanned log, drawn as a session logged on its day. */
+  unplanned?: boolean;
   /** What makes the card draggable to another day, where it may move. */
   drag?: object | null;
   /** Swiping it open to Cancel and Delete; none in the past or once logged. */
@@ -772,7 +807,10 @@ function PlanSessionCard({
       data-tone={tone}
       data-cancelled={cancelled || undefined}
       data-logged={loggedElsewhere || undefined}
-      data-session-card={cancelled || loggedElsewhere ? undefined : true}
+      data-session-card={
+        cancelled || loggedElsewhere || unplanned ? undefined : true
+      }
+      data-unplanned-log={unplanned || undefined}
       data-swiped={open || undefined}
       data-swiping={moving || undefined}
       style={
