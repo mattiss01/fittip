@@ -55,6 +55,45 @@ export type PlanCardView = Pick<
   | "log"
 >;
 
+/** Training logged without a planned session, on the day it was done. */
+export type PlanUnplannedLog = {
+  completionId: string;
+  localDate: string;
+  title: string;
+  sport: string;
+  /** When it started, `HH:MM` in the log's own zone, where it says. */
+  startTime?: string;
+  durationMinutes?: number;
+};
+
+/**
+ * An unplanned log as a week card draws it: the card a session logged on
+ * its own day gets, so a past day reads the same whether it was planned
+ * (owner, 22 Oct 2026). Its id is the log's; nothing plans, drags or swipes
+ * it.
+ */
+export function unplannedLogCard(log: PlanUnplannedLog): PlanCardView {
+  return {
+    id: log.completionId,
+    localDate: log.localDate,
+    position: Number.MAX_SAFE_INTEGER,
+    title: log.title,
+    sport: log.sport,
+    expectedDurationMinutes: null,
+    startTime: log.startTime ?? null,
+    status: "active",
+    seriesId: null,
+    log: {
+      completionId: log.completionId,
+      outcome: "unplanned",
+      actualLocalDate: log.localDate,
+      ...(log.durationMinutes === undefined
+        ? {}
+        : { durationMinutes: log.durationMinutes }),
+    },
+  };
+}
+
 export type PlanSessionLog = {
   completionId: string;
   outcome: CompletionOutcome;
