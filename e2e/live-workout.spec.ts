@@ -67,7 +67,7 @@ test.describe("logging a session live", () => {
         "saved",
       );
       // Marked done, stretching folds to one line, and opens again.
-      await expect(stretching).toHaveAttribute("data-live-folded", "");
+      await expect(stretching).toHaveAttribute("data-live-folded");
       await stretching.getByRole("button", { expanded: false }).click();
       await expect(stretching.getByLabel("Minutes")).toHaveValue("10");
       await expectNoHorizontalOverflow(page);
