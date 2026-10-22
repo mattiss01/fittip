@@ -22,7 +22,11 @@ import {
 import { LiveWorkoutConflictError } from "@/server/live-workout/live-workout";
 import { keepSports, submittedSports } from "@/server/profile/keep-sports";
 import { createProfileRepository } from "@/server/repositories/profile-repository";
-import { instantInTimezone } from "@/lib/date/local-date";
+import {
+  instantInTimezone,
+  isoDateInTimezone,
+  localTimeInTimezone,
+} from "@/lib/date/local-date";
 import { isStartTime } from "@/lib/training/start-time";
 import {
   CompletionAuthenticationError,
@@ -500,13 +504,21 @@ async function readStartedAt(
         ?.timezoneName;
   // No zone: the write refuses the log for that reason, in its own words.
   if (!timezoneName) return {};
-  return {
-    actualStartedAt: instantInTimezone(
-      facts.actualLocalDate as string,
-      startTime,
-      timezoneName,
-    ).toISOString(),
-  };
+  const instant = instantInTimezone(
+    facts.actualLocalDate as string,
+    startTime,
+    timezoneName,
+  );
+  // A time the clocks skipped that night names no instant on that day.
+  if (
+    localTimeInTimezone(instant, timezoneName) !== startTime ||
+    isoDateInTimezone(instant, timezoneName) !== facts.actualLocalDate
+  ) {
+    throw new LogFieldError(
+      "The clocks changed that night, so that time did not happen. Pick another.",
+    );
+  }
+  return { actualStartedAt: instant.toISOString() };
 }
 
 function optionalNumber(formData: FormData, key: string) {

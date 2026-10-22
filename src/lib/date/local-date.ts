@@ -68,8 +68,9 @@ export function localTimeInTimezone(date: Date, timezoneName: string): string {
  * The instant a wall-clock time on a calendar date names in a zone: a log's
  * date and "Started at" as the database stores them. The zone's offset is
  * read at that moment, so a date across a daylight-saving change is right. A
- * time the clocks skipped (02:30 on a spring-forward night) lands an hour
- * later, as a clock that sprang forward would show it.
+ * time the clocks skipped (02:30 on a spring-forward night) names no instant;
+ * what comes back is an hour either side depending on the zone, so a caller
+ * that must be exact reads it back with `localTimeInTimezone` and compares.
  */
 export function instantInTimezone(
   isoDate: string,

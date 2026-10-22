@@ -274,6 +274,10 @@ export class InMemoryRollingPlanAdapter implements RollingPlanAdapter {
             ...(change.series.endDate === undefined
               ? { endDate: undefined }
               : {}),
+            // A rewrite without a time clears it, as the database's does.
+            ...(change.series.startTime === undefined
+              ? { startTime: undefined }
+              : {}),
           });
           const sweepFrom =
             change.series.startDate < segment.startDate

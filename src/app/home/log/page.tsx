@@ -364,11 +364,15 @@ async function renderFromWorkout(
       />
     );
   }
+  // A workout is logged on the day it started, so its start time and date
+  // agree: one begun at 23:40 and finished after midnight is the day before.
+  const started = new Date(workout.startedAt);
+  const startedOn = isoDateInTimezone(started, timezoneName);
   const fromWorkout: LogFromWorkout = {
     id: workout.id,
     title: workout.title,
     sport: workout.sport,
-    startTime: localTimeInTimezone(new Date(workout.startedAt), timezoneName),
+    startTime: localTimeInTimezone(started, timezoneName),
     // Within the bound a log's duration holds (a week), so a workout left
     // running for days still opens a log that can be corrected and saved.
     durationMinutes: Math.min(
@@ -413,7 +417,7 @@ async function renderFromWorkout(
           modes={modes}
           saveActivityToLibrary={saveActivityToLibraryAction}
           updateActivityInLibrary={updateActivityInLibraryAction}
-          defaultDate={today}
+          defaultDate={startedOn}
           today={today}
           returnDate={today}
         />
@@ -460,7 +464,7 @@ async function renderFromWorkout(
             ? null
             : { id: logged.id, dayLabel: longDay(logged.actualLocalDate) }
         }
-        defaultDate={today}
+        defaultDate={startedOn}
         today={today}
         returnDate={today}
       />
