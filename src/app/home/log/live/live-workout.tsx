@@ -287,7 +287,7 @@ export function LiveWorkout({
         ) : (
           <button
             type="button"
-            className={styles.quiet}
+            className={styles.discardButton}
             onClick={() => setConfirmDiscard(true)}
           >
             Discard workout
@@ -612,13 +612,31 @@ function SetRows({
             >
               <CheckMark />
             </button>
+            <RemoveRow
+              label={`Remove set ${index + 1}`}
+              hidden={sets.length === 1}
+              onRemove={() => onSets(sets.filter((_, i) => i !== index))}
+            />
           </li>
         ))}
       </ol>
-      <div className={styles.row}>
+      <div className={styles.rowTools}>
+        {/* Counted or held (ADR-038): a plank is timed, a squat is not. */}
+        <div className={styles.segmented} role="group" aria-label="Each set">
+          {(["reps", "time"] as const).map((by) => (
+            <button
+              key={by}
+              type="button"
+              aria-pressed={sets.every((set) => set.by === by)}
+              onClick={() => onSets(sets.map((set) => ({ ...set, by })))}
+            >
+              {by === "reps" ? "Reps" : "Time"}
+            </button>
+          ))}
+        </div>
         <button
           type="button"
-          className={styles.quiet}
+          className={styles.addRow}
           disabled={sets.length >= LIVE_SET_LIMIT}
           onClick={() => {
             const last = sets.at(-1);
@@ -628,32 +646,38 @@ function SetRows({
             ]);
           }}
         >
-          + set
+          + Add set
         </button>
-        {/* Counted or held (ADR-038): a plank is timed, a squat is not. */}
-        <button
-          type="button"
-          className={styles.quiet}
-          onClick={() => {
-            const by = sets.every((set) => set.by === "time") ? "reps" : "time";
-            onSets(sets.map((set) => ({ ...set, by })));
-          }}
-        >
-          {sets.every((set) => set.by === "time")
-            ? "Count reps instead"
-            : "Time each set instead"}
-        </button>
-        {sets.length > 1 && !sets.at(-1)?.done ? (
-          <button
-            type="button"
-            className={styles.quiet}
-            onClick={() => onSets(sets.slice(0, -1))}
-          >
-            − set
-          </button>
-        ) : null}
       </div>
     </>
+  );
+}
+
+/**
+ * Takes one set or repeat away, beside its tick (owner, 22 Oct 2026). Kept
+ * in its place while hidden, so the last row lines up with the others.
+ */
+function RemoveRow({
+  label,
+  hidden,
+  onRemove,
+}: {
+  label: string;
+  hidden: boolean;
+  onRemove: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className={styles.removeRow}
+      aria-label={label}
+      hidden={hidden}
+      onClick={onRemove}
+    >
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M7 7l10 10M17 7L7 17" />
+      </svg>
+    </button>
   );
 }
 
@@ -716,13 +740,18 @@ function RepeatRows({
             >
               <CheckMark />
             </button>
+            <RemoveRow
+              label={`Remove repeat ${index + 1}`}
+              hidden={repeats.length === 1}
+              onRemove={() => onRepeats(repeats.filter((_, i) => i !== index))}
+            />
           </li>
         ))}
       </ol>
-      <div className={styles.row}>
+      <div className={styles.rowTools}>
         <button
           type="button"
-          className={styles.quiet}
+          className={styles.addRow}
           disabled={repeats.length >= LIVE_REPEAT_LIMIT}
           onClick={() => {
             const last = repeats.at(-1);
@@ -732,17 +761,8 @@ function RepeatRows({
             ]);
           }}
         >
-          + repeat
+          + Add repeat
         </button>
-        {repeats.length > 1 && !repeats.at(-1)?.done ? (
-          <button
-            type="button"
-            className={styles.quiet}
-            onClick={() => onRepeats(repeats.slice(0, -1))}
-          >
-            − repeat
-          </button>
-        ) : null}
       </div>
     </>
   );
