@@ -376,6 +376,9 @@ function buildChanges(
           ...(session.expectedDurationMinutes === undefined
             ? {}
             : { expectedDurationMinutes: session.expectedDurationMinutes }),
+          ...(session.startTime === undefined
+            ? {}
+            : { startTime: session.startTime }),
           ...(session.note === undefined ? {} : { note: session.note }),
           localDate,
           position: nextPlanPosition(slice, localDate),
@@ -423,6 +426,7 @@ function requireSession(
 
 function readContent(formData: FormData) {
   const minutes = optionalText(formData, "expectedDurationMinutes");
+  const startTime = optionalText(formData, "startTime");
   return {
     title: text(formData, "title"),
     sport: text(formData, "sport"),
@@ -432,6 +436,8 @@ function readContent(formData: FormData) {
     ...(minutes === undefined
       ? {}
       : { expectedDurationMinutes: readMinutes(minutes) }),
+    // Checked by the change parser, which refuses anything but HH:MM.
+    ...(startTime === undefined ? {} : { startTime }),
     ...(optionalText(formData, "note") === undefined
       ? {}
       : { note: text(formData, "note").trim() }),
@@ -454,7 +460,12 @@ function readContent(formData: FormData) {
  */
 type FingerprintableSession = Pick<
   RollingPlanSession,
-  "title" | "sport" | "intent" | "expectedDurationMinutes" | "note"
+  | "title"
+  | "sport"
+  | "intent"
+  | "expectedDurationMinutes"
+  | "startTime"
+  | "note"
 > & {
   /** The stored side carries an `id` the submitted side has no reason to. */
   activities: readonly (RollingPlanActivityInput & { id?: string })[];
@@ -466,6 +477,7 @@ function sessionFingerprint(content: FingerprintableSession): string {
     sport: content.sport,
     intent: content.intent ?? null,
     expectedDurationMinutes: content.expectedDurationMinutes ?? null,
+    startTime: content.startTime ?? null,
     note: content.note ?? null,
     activities: content.activities.map((activity) => ({
       personalActivityId: activity.personalActivityId ?? null,
@@ -536,6 +548,7 @@ function draftFrom(formData: FormData): PlanActionDraft {
     expectedDurationMinutes: stringValue(
       formData.get("expectedDurationMinutes"),
     ),
+    startTime: stringValue(formData.get("startTime")),
     note: stringValue(formData.get("note")),
   };
 }

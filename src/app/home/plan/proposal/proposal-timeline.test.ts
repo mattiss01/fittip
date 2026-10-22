@@ -315,6 +315,7 @@ function planned(
     expectedDurationMinutes: 60,
     status: "active",
     intent: null,
+    startTime: null,
     note: null,
     activities: [],
     seriesId: null,

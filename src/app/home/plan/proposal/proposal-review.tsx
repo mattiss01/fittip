@@ -670,6 +670,7 @@ function PlannedSession({
                       session.expectedDurationMinutes === null
                         ? ""
                         : String(session.expectedDurationMinutes),
+                    startTime: session.startTime ?? "",
                     intent: session.intent ?? "",
                     note: session.note ?? "",
                   }}

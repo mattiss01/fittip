@@ -103,6 +103,46 @@ describe("rolling plan interface validation", () => {
     ).rejects.toThrow(RollingPlanValidationError);
   });
 
+  // Owner, 22 Oct 2026: optional, whole minutes, `HH:MM` and nothing else.
+  it("takes a start time as HH:MM and refuses any other shape", async () => {
+    const plan = new RollingPlan(
+      new InMemoryRollingPlanAdapter({ timezoneName: CONTRACT_TIMEZONE }),
+    );
+    const add = (startTime: unknown, revision: number) =>
+      plan.applyChangeSet(
+        {
+          idempotencyKey: `75000000-0000-4000-8000-00000000030${revision}`,
+          provenance: "owner_manual",
+          changes: [
+            {
+              operation: "add",
+              sessionId: `75000000-0000-4000-8000-00000000040${revision}`,
+              session: {
+                localDate: "2126-08-20",
+                position: revision,
+                title: "Long run",
+                sport: "Running",
+                activities: [],
+                startTime,
+              },
+            },
+          ],
+        } as never,
+        revision,
+      );
+
+    for (const refused of ["7:30", "24:00", "07:30:00", "07.30", 730]) {
+      await expect(add(refused, 0)).rejects.toThrow(RollingPlanValidationError);
+    }
+    await expect(add("07:30", 0)).resolves.toMatchObject({ planRevision: 1 });
+    await expect(add(null, 1)).resolves.toMatchObject({ planRevision: 2 });
+    const slice = await plan.getPlanSlice("2126-08-20", "2126-08-20");
+    expect(slice.sessions.map((session) => session.startTime)).toEqual([
+      "07:30",
+      undefined,
+    ]);
+  });
+
   it("refuses every change while the owner has no stored zone", async () => {
     const plan = new RollingPlan(new InMemoryRollingPlanAdapter());
     await expect(

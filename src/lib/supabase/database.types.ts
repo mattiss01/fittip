@@ -1874,6 +1874,7 @@ export type Database = {
           skipped_occurrence_dates: string[];
           sport: string;
           start_date: string;
+          start_time: string | null;
           title: string;
           updated_at: string;
           user_id: string;
@@ -1893,6 +1894,7 @@ export type Database = {
           skipped_occurrence_dates?: string[];
           sport: string;
           start_date: string;
+          start_time?: string | null;
           title: string;
           updated_at?: string;
           user_id: string;
@@ -1912,6 +1914,7 @@ export type Database = {
           skipped_occurrence_dates?: string[];
           sport?: string;
           start_date?: string;
+          start_time?: string | null;
           title?: string;
           updated_at?: string;
           user_id?: string;
@@ -2042,6 +2045,7 @@ export type Database = {
           position: number;
           series_id: string | null;
           sport: string;
+          start_time: string | null;
           status: string;
           title: string;
           updated_at: string;
@@ -2062,6 +2066,7 @@ export type Database = {
           position: number;
           series_id?: string | null;
           sport: string;
+          start_time?: string | null;
           status?: string;
           title: string;
           updated_at?: string;
@@ -2082,6 +2087,7 @@ export type Database = {
           position?: number;
           series_id?: string | null;
           sport?: string;
+          start_time?: string | null;
           status?: string;
           title?: string;
           updated_at?: string;

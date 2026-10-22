@@ -22,6 +22,7 @@ export type PlanSeriesView = {
   sport: string;
   intent: string | null;
   expectedDurationMinutes: number | null;
+  startTime: string | null;
   note: string | null;
 };
 
@@ -32,6 +33,7 @@ export type RecurringSessionView = {
   sport: string;
   intent: string | null;
   expectedDurationMinutes: number | null;
+  startTime: string | null;
   note: string | null;
   activities: ActivityValue[];
   /** A coach's suggestion for this occurrence still waiting for an answer. */
@@ -347,7 +349,12 @@ export function RecurringDeleteControls({
 function draftOf(
   value: Pick<
     RecurringSessionView | PlanSeriesView,
-    "title" | "sport" | "intent" | "expectedDurationMinutes" | "note"
+    | "title"
+    | "sport"
+    | "intent"
+    | "expectedDurationMinutes"
+    | "startTime"
+    | "note"
   >,
 ) {
   return {
@@ -358,6 +365,7 @@ function draftOf(
       value.expectedDurationMinutes === null
         ? ""
         : String(value.expectedDurationMinutes),
+    startTime: value.startTime ?? "",
     note: value.note ?? "",
   };
 }

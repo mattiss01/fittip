@@ -449,6 +449,7 @@ function requireSession(
 
 function readContent(formData: FormData) {
   const minutes = optionalText(formData, "expectedDurationMinutes");
+  const startTime = optionalText(formData, "startTime");
   return {
     title: requiredText(formData, "title"),
     sport: requiredText(formData, "sport"),
@@ -458,6 +459,8 @@ function readContent(formData: FormData) {
     ...(minutes === undefined
       ? {}
       : { expectedDurationMinutes: readInteger(minutes) }),
+    // Checked by the change parser, which refuses anything but HH:MM.
+    ...(startTime === undefined ? {} : { startTime }),
     ...(optionalText(formData, "note") === undefined
       ? {}
       : { note: requiredText(formData, "note") }),

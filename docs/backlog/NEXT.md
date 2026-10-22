@@ -21,6 +21,18 @@ that reset untouched.
 
 Ordered by dependency. A lane is named where it is not the build lane.
 
+- [~] **Start times — careful lane.** Owner, 22 Oct 2026: a planned session, a series and a
+      log may carry an optional start time; within a day, timed sessions come first by time,
+      untimed after in their own order (drag still orders those). New nullable
+      `start_time time` (whole minutes) on `rolling_plan_sessions` and `rolling_plan_series`;
+      an occurrence inherits its series' time. Logs already store `actual_started_at`; the
+      log form now sets it, a live workout fills it, a plan's time is never copied in as
+      fact. No data converted; existing rows read as untimed. Saved sessions get none.
+- [ ] **Coach start times — careful lane, after the above.** The coach gives a start time
+      only when the note or memory says when (owner's choice); proposal items carry it, an
+      accepted proposal writes it, a replaced session's own time is kept when the proposal
+      gives none. One paid call to judge, on the owner's click.
+
 - [ ] **A7-5 — Size the fill before its first live run.** Measure output tokens on a
       twelve-activity answer: the grammar pads each target with fourteen nullable keys
       against an 11,500-token ceiling. Needs a provider key, so it waits for one; each run

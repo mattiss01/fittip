@@ -43,6 +43,8 @@ export type PlanActionDraft = {
   sport: string;
   intent: string;
   expectedDurationMinutes: string;
+  /** `HH:MM` or empty. */
+  startTime: string;
   note: string;
 };
 

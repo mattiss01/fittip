@@ -27,6 +27,8 @@ export type ProgressCompletionView = {
   sport: string | null;
   /** The date the planned session sat on, which a late log will not match. */
   plannedLocalDate: string | null;
+  /** When it started, `HH:MM` in the log's own zone, where it says. */
+  startTime: string | null;
   durationMinutes: number | null;
   perceivedEffort: number | null;
   note: string | null;
@@ -87,6 +89,9 @@ export function RecordedFacts({
     showDate
       ? { term: "Logged for", value: shortDay(completion.actualLocalDate) }
       : null,
+    completion.startTime === null
+      ? null
+      : { term: "Started", value: completion.startTime },
     completion.durationMinutes === null
       ? null
       : { term: "Duration", value: `${completion.durationMinutes} min` },

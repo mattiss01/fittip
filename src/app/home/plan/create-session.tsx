@@ -161,6 +161,8 @@ export function CreateSession({
                 intent: startFrom.intent ?? "",
                 expectedDurationMinutes:
                   startFrom.expectedDurationMinutes?.toString() ?? "",
+                // A saved session is a template, not a day: it has no time.
+                startTime: "",
                 note: startFrom.note ?? "",
               }
             : refusedDraft

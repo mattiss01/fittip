@@ -46,3 +46,67 @@ export function shiftIsoDate(isoDate: string, days: number): string {
   shifted.setUTCDate(shifted.getUTCDate() + days);
   return shifted.toISOString().slice(0, 10);
 }
+
+/**
+ * The wall-clock time an instant shows in a zone, `HH:MM` on a 24-hour clock:
+ * when a log says it started, in the zone it was written in.
+ */
+export function localTimeInTimezone(date: Date, timezoneName: string): string {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: timezoneName,
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(date);
+  const hour = parts.find(({ type }) => type === "hour")?.value;
+  const minute = parts.find(({ type }) => type === "minute")?.value;
+  if (!hour || !minute) throw new Error("The local time could not be derived.");
+  return `${hour}:${minute}`;
+}
+
+/**
+ * The instant a wall-clock time on a calendar date names in a zone: a log's
+ * date and "Started at" as the database stores them. The zone's offset is
+ * read at that moment, so a date across a daylight-saving change is right. A
+ * time the clocks skipped (02:30 on a spring-forward night) lands an hour
+ * later, as a clock that sprang forward would show it.
+ */
+export function instantInTimezone(
+  isoDate: string,
+  time: string,
+  timezoneName: string,
+): Date {
+  const wall = Date.parse(`${isoDate}T${time}:00.000Z`);
+  if (!Number.isFinite(wall)) throw new Error("The local time is not valid.");
+  // Two passes: the offset at the first guess, then at the corrected instant.
+  let instant = wall - offsetMs(new Date(wall), timezoneName);
+  instant = wall - offsetMs(new Date(instant), timezoneName);
+  return new Date(instant);
+}
+
+/** How far the zone's wall clock is ahead of UTC at an instant. */
+function offsetMs(date: Date, timezoneName: string): number {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-CA", {
+      timeZone: timezoneName,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hourCycle: "h23",
+    })
+      .formatToParts(date)
+      .map(({ type, value }) => [type, value]),
+  );
+  const asUtc = Date.UTC(
+    Number(parts.year),
+    Number(parts.month) - 1,
+    Number(parts.day),
+    Number(parts.hour),
+    Number(parts.minute),
+    Number(parts.second),
+  );
+  return asUtc - Math.floor(date.getTime() / 1000) * 1000;
+}

@@ -28,6 +28,8 @@ export type PlannedSessionSummary = {
    * one the owner had written on the plan surface.
    */
   intent: string | null;
+  /** Kept by the same edit form, for the same reason. */
+  startTime: string | null;
   note: string | null;
   /**
    * The session's activities, library links included, in order. The edit form

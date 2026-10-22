@@ -95,6 +95,7 @@ function session(overrides: Partial<PlanCardView> = {}): PlanCardView {
     title: "Aerobic run",
     sport: "Running",
     expectedDurationMinutes: 60,
+    startTime: null,
     status: "active",
     seriesId: null,
     ...overrides,
@@ -654,6 +655,7 @@ describe("PlanManager", () => {
         sport: "Running",
         intent: "",
         expectedDurationMinutes: "",
+        startTime: "",
         note: "",
       },
     });
@@ -781,6 +783,33 @@ describe("PlanManager", () => {
     expect(planned.querySelector("[data-session-card]")?.textContent).toContain(
       "Skipped",
     );
+  });
+
+  it("puts a day's timed sessions first, by time, and shows the time", () => {
+    renderManager(INITIAL_PLAN_ACTION_STATE, [
+      session({ id: "7f000000-0000-4000-8000-0000000000e1", title: "Core" }),
+      session({
+        id: "7f000000-0000-4000-8000-0000000000e2",
+        title: "Evening run",
+        position: 1,
+        startTime: "18:00",
+      }),
+      session({
+        id: "7f000000-0000-4000-8000-0000000000e3",
+        title: "Swim",
+        position: 2,
+        startTime: "06:30",
+        expectedDurationMinutes: 45,
+      }),
+    ]);
+    const cards = [...day(TODAY).querySelectorAll("[data-session-card]")];
+
+    expect(cards.map((card) => card.querySelector("h3")?.textContent)).toEqual([
+      "Swim",
+      "Evening run",
+      "Core",
+    ]);
+    expect(cards[0].textContent).toContain("06:30 · 45 min");
   });
 
   it("keeps the card for a session logged on its own day", () => {

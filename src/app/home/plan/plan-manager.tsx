@@ -61,6 +61,7 @@ import {
   type PlanWeekDay,
 } from "./plan-weeks";
 import { readsAsLogged, sessionHref, type PlanCardView } from "./session-view";
+import { byStartTime } from "@/lib/training/start-time";
 
 import type { SavedSessionOption } from "@/components/training/saved-session-picker";
 import {
@@ -647,7 +648,7 @@ function PlanDay({
 }) {
   const shown = sessions
     .filter((session) => session.status === "active" || session.log)
-    .toSorted((left, right) => left.position - right.position);
+    .toSorted(byStartTime);
   const cancelled = sessions.filter(
     (session) => session.status === "cancelled" && !session.log,
   );
@@ -899,7 +900,8 @@ function cardDetail(session: PlanCardView, cancelled: boolean): string {
       .filter(Boolean)
       .join(" · ");
   }
-  return planned ?? "";
+  // A planned time leads, as it orders the day (owner, 22 Oct 2026).
+  return [session.startTime, planned].filter(Boolean).join(" · ");
 }
 
 function DaySheet({
