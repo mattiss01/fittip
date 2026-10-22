@@ -1,12 +1,16 @@
 /* Logging a session live (owner, 21 Oct 2026; the prototype's variant A). */
 
+/* Rows keep their own height: the shell is a screen tall, and a grid left to
+   stretch spread a short list (everything folded) down the page. */
 .page {
   display: grid;
+  align-content: start;
   gap: 0.85rem;
 }
 
 .live {
   display: grid;
+  align-content: start;
   gap: 0.85rem;
 }
 
@@ -269,7 +273,7 @@
 
 .sets li {
   display: grid;
-  grid-template-columns: 1rem 1fr 1fr auto;
+  grid-template-columns: 1rem minmax(0, 1fr) minmax(0, 1fr) auto 1.75rem;
   align-items: center;
   gap: 0.35rem;
 }
@@ -380,6 +384,92 @@
   .tickOn {
     transition: none;
   }
+}
+
+/* A set's own remove, quiet beside its tick (owner, 22 Oct 2026). */
+.removeRow {
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 2.6rem;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0.6rem;
+  background: none;
+  color: color-mix(in srgb, var(--moss) 70%, transparent);
+}
+
+.removeRow:hover {
+  background: color-mix(in srgb, var(--danger) 8%, transparent);
+  color: var(--danger);
+}
+
+/* Hidden on the last row left, holding its column so the rows line up. */
+.removeRow[hidden] {
+  display: grid;
+  visibility: hidden;
+}
+
+.removeRow svg {
+  width: 1rem;
+  height: 1rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+}
+
+.rowTools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.addRow {
+  min-height: 2.5rem;
+  margin: 0 0 0 auto;
+  padding: 0 1rem;
+  border: 1.5px dashed var(--fern);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--pine);
+  font: 600 0.88rem var(--font-sans);
+}
+
+.addRow:hover {
+  background: var(--sage);
+}
+
+/* Reps or time for every set: two halves of one pill. */
+.segmented {
+  display: inline-flex;
+  padding: 0.2rem;
+  border-radius: var(--radius-pill);
+  background: var(--sage);
+}
+
+.segmented button {
+  min-height: 2.1rem;
+  margin: 0;
+  padding: 0 0.95rem;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--moss);
+  font: 600 0.85rem var(--font-sans);
+}
+
+.segmented button:hover {
+  background: color-mix(in srgb, white 50%, transparent);
+}
+
+.segmented button[aria-pressed="true"] {
+  background: white;
+  box-shadow: var(--shadow-card);
+  color: var(--pine);
 }
 
 .doneButton,
@@ -493,6 +583,19 @@
 
 .discard p {
   margin: 0;
+}
+
+.discardButton {
+  width: 100%;
+  margin: 0;
+  border: 1.5px solid var(--danger);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--danger);
+}
+
+.discardButton:hover {
+  background: color-mix(in srgb, var(--danger) 8%, transparent);
 }
 
 .danger {
