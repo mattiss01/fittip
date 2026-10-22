@@ -40,6 +40,7 @@
 }
 
 .headTitle {
+  min-width: 0;
   overflow: hidden;
   font-size: 0.85rem;
   opacity: 0.85;
@@ -55,15 +56,17 @@
   font-size: 0.9rem;
 }
 
-.clockRow {
+/* The clock in the middle, its two buttons beneath it (owner, 22 Oct 2026). */
+.clockActions {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
+  justify-content: center;
+  gap: 0.6rem;
+  padding-bottom: 0.15rem;
 }
 
 .clock {
-  font: 800 3rem/1.05 var(--font-mono);
+  justify-self: center;
+  font: 800 3.4rem/1.05 var(--font-mono);
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.03em;
 }
@@ -82,14 +85,9 @@
   background: rgb(255 255 255 / 0.1);
 }
 
-.saveLine {
-  margin: 0;
-  font-size: 0.75rem;
-  opacity: 0.75;
-}
-
 .saveProblem {
   margin: 0;
+  text-align: center;
   color: #ffd9cc;
   font-size: 0.85rem;
 }
@@ -137,6 +135,102 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 0.75rem;
+}
+
+.cardName {
+  flex: 1;
+  min-width: 0;
+}
+
+.cardHead .progress {
+  padding-top: 0.25rem;
+}
+
+/* A finished activity, folded to one line. */
+.cardFolded {
+  padding: 0;
+}
+
+.foldToggle {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  min-height: 3.25rem;
+  margin: 0;
+  padding: 0.6rem 1rem;
+  border: 0;
+  border-radius: inherit;
+  background: none;
+  color: var(--pine);
+  text-align: left;
+}
+
+.foldToggle:hover {
+  background: none;
+}
+
+.foldText {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+
+.foldText strong {
+  overflow: hidden;
+  font-size: 1rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.foldText small {
+  color: var(--moss);
+  font-size: 0.8rem;
+}
+
+.foldClose {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 2.75rem;
+  min-height: 2.75rem;
+  margin: -0.55rem -0.6rem 0 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--moss);
+}
+
+.foldClose:hover {
+  background: none;
+  color: var(--pine);
+}
+
+/* Points down while folded, up while open. */
+.chevron {
+  flex: none;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  color: var(--moss);
+  transform: translateY(-0.15rem) rotate(45deg);
+}
+
+.foldClose .chevron {
+  transform: translateY(0.15rem) rotate(-135deg);
+}
+
+.removeConfirm {
+  display: grid;
+  gap: 0.4rem;
+  padding: 0.8rem;
+  border: 1px solid var(--danger);
+  border-radius: var(--radius-control);
+}
+
+.removeConfirm p {
+  margin: 0;
 }
 
 .cardTitle {
@@ -315,6 +409,32 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem;
+}
+
+/* The card's own actions: real buttons, small (owner, 22 Oct 2026). */
+.footButton {
+  min-height: 2.5rem;
+  margin: 0;
+  padding: 0 0.95rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-pill);
+  background: white;
+  color: var(--pine);
+  font: 600 0.85rem var(--font-sans);
+}
+
+.footButton:hover {
+  background: var(--sage);
+}
+
+.footRemove {
+  margin-left: auto;
+  border-color: color-mix(in srgb, var(--danger) 45%, transparent);
+  color: var(--danger);
+}
+
+.footRemove:hover {
+  background: color-mix(in srgb, var(--danger) 8%, white);
 }
 
 .quiet {

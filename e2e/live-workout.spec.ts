@@ -61,7 +61,15 @@ test.describe("logging a session live", () => {
         .selectOption("duration_intensity");
       await stretching.getByLabel("Minutes").fill("10");
       await stretching.getByRole("button", { name: "Mark done" }).click();
-      await expect(page.getByText("Saved", { exact: true })).toBeVisible();
+      // Storing is quiet on screen; the page still says when it is done.
+      await expect(page.locator("[data-live-workout]")).toHaveAttribute(
+        "data-live-save",
+        "saved",
+      );
+      // Marked done, stretching folds to one line, and opens again.
+      await expect(stretching).toHaveAttribute("data-live-folded", "");
+      await stretching.getByRole("button", { expanded: false }).click();
+      await expect(stretching.getByLabel("Minutes")).toHaveValue("10");
       await expectNoHorizontalOverflow(page);
 
       // ---- Leave it: Today offers it to continue, not a second start. ----
