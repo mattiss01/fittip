@@ -95,6 +95,7 @@ function session(overrides: Partial<PlanCardView> = {}): PlanCardView {
     title: "Aerobic run",
     sport: "Running",
     expectedDurationMinutes: 60,
+    startTime: null,
     status: "active",
     seriesId: null,
     ...overrides,
@@ -654,6 +655,7 @@ describe("PlanManager", () => {
         sport: "Running",
         intent: "",
         expectedDurationMinutes: "",
+        startTime: "",
         note: "",
       },
     });
@@ -783,6 +785,33 @@ describe("PlanManager", () => {
     );
   });
 
+  it("puts a day's timed sessions first, by time, and shows the time", () => {
+    renderManager(INITIAL_PLAN_ACTION_STATE, [
+      session({ id: "7f000000-0000-4000-8000-0000000000e1", title: "Core" }),
+      session({
+        id: "7f000000-0000-4000-8000-0000000000e2",
+        title: "Evening run",
+        position: 1,
+        startTime: "18:00",
+      }),
+      session({
+        id: "7f000000-0000-4000-8000-0000000000e3",
+        title: "Swim",
+        position: 2,
+        startTime: "06:30",
+        expectedDurationMinutes: 45,
+      }),
+    ]);
+    const cards = [...day(TODAY).querySelectorAll("[data-session-card]")];
+
+    expect(cards.map((card) => card.querySelector("h3")?.textContent)).toEqual([
+      "Swim",
+      "Evening run",
+      "Core",
+    ]);
+    expect(cards[0].textContent).toContain("06:30 · 45 min");
+  });
+
   it("shows an unplanned log on its day as a logged card, opening its record", () => {
     renderManager(INITIAL_PLAN_ACTION_STATE, [session()], {
       unplannedLogs: [
@@ -805,6 +834,36 @@ describe("PlanManager", () => {
     // Nothing plans it: it is not a session card, and the planned one stays.
     expect(card.hasAttribute("data-session-card")).toBe(false);
     expect(day(TODAY).querySelectorAll("[data-session-card]")).toHaveLength(1);
+  });
+
+  it("places a timed unplanned log by its start, among the sessions", () => {
+    renderManager(
+      INITIAL_PLAN_ACTION_STATE,
+      [
+        session({ title: "Core" }),
+        session({
+          id: "7f000000-0000-4000-8000-0000000000e2",
+          title: "Evening run",
+          position: 1,
+          startTime: "18:00",
+        }),
+      ],
+      {
+        unplannedLogs: [
+          {
+            completionId: "7f000000-0000-4000-8000-0000000000d2",
+            localDate: TODAY,
+            title: "Morning swim",
+            sport: "Swimming",
+            startTime: "06:15",
+          },
+        ],
+      },
+    );
+
+    expect(
+      [...day(TODAY).querySelectorAll("h3")].map((title) => title.textContent),
+    ).toEqual(["Morning swim", "Evening run", "Core"]);
   });
 
   it("keeps the card for a session logged on its own day", () => {

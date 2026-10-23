@@ -19,7 +19,11 @@ import { readLibraryOptions } from "../plan/activities/library-options";
 import { readMeasurementHistory } from "../plan/activities/measurement-history";
 import { readSavedSessionOptions } from "../plan/saved/session-options";
 import { readRecordOrigin, recordHref } from "../progress/record-href";
-import { isoDateInTimezone, shiftIsoDate } from "@/lib/date/local-date";
+import {
+  isoDateInTimezone,
+  localTimeInTimezone,
+  shiftIsoDate,
+} from "@/lib/date/local-date";
 import {
   activeMilliseconds,
   toLoggedActivities,
@@ -218,7 +222,7 @@ async function renderForm(
 
     const workoutId = readUuid(params.workout);
     if (workoutId !== null) {
-      return await renderFromWorkout(workoutId, today);
+      return await renderFromWorkout(workoutId, today, timezoneName);
     }
 
     if (plannedSessionId !== null) {
@@ -342,7 +346,11 @@ async function renderForm(
  * started from a planned session logs that session; one whose session was
  * since deleted or moved off its week is logged as unplanned training.
  */
-async function renderFromWorkout(workoutId: string, today: string) {
+async function renderFromWorkout(
+  workoutId: string,
+  today: string,
+  timezoneName: string,
+) {
   const workout = await (await createLiveWorkouts()).current();
   if (workout === null || workout.id !== workoutId) {
     return (
@@ -356,10 +364,15 @@ async function renderFromWorkout(workoutId: string, today: string) {
       />
     );
   }
+  // A workout is logged on the day it started, so its start time and date
+  // agree: one begun at 23:40 and finished after midnight is the day before.
+  const started = new Date(workout.startedAt);
+  const startedOn = isoDateInTimezone(started, timezoneName);
   const fromWorkout: LogFromWorkout = {
     id: workout.id,
     title: workout.title,
     sport: workout.sport,
+    startTime: localTimeInTimezone(started, timezoneName),
     // Within the bound a log's duration holds (a week), so a workout left
     // running for days still opens a log that can be corrected and saved.
     durationMinutes: Math.min(
@@ -404,7 +417,7 @@ async function renderFromWorkout(workoutId: string, today: string) {
           modes={modes}
           saveActivityToLibrary={saveActivityToLibraryAction}
           updateActivityInLibrary={updateActivityInLibraryAction}
-          defaultDate={today}
+          defaultDate={startedOn}
           today={today}
           returnDate={today}
         />
@@ -451,7 +464,7 @@ async function renderFromWorkout(workoutId: string, today: string) {
             ? null
             : { id: logged.id, dayLabel: longDay(logged.actualLocalDate) }
         }
-        defaultDate={today}
+        defaultDate={startedOn}
         today={today}
         returnDate={today}
       />
@@ -521,6 +534,14 @@ function toExistingView(completion: Completion): LogExistingView {
     revision: completion.revision,
     outcome: completion.status,
     actualLocalDate: completion.actualLocalDate,
+    // Read in the zone the log was written in, as its date is.
+    startTime:
+      completion.actualStartedAt === undefined
+        ? null
+        : localTimeInTimezone(
+            new Date(completion.actualStartedAt),
+            completion.timezoneName,
+          ),
     durationMinutes: completion.durationMinutes ?? null,
     perceivedEffort: completion.perceivedEffort ?? null,
     note: completion.note ?? null,

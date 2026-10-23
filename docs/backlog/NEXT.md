@@ -21,6 +21,11 @@ that reset untouched.
 
 Ordered by dependency. A lane is named where it is not the build lane.
 
+- [ ] **Coach start times — careful lane.** The coach gives a start time
+      only when the note or memory says when (owner's choice); proposal items carry it, an
+      accepted proposal writes it, a replaced session's own time is kept when the proposal
+      gives none. One paid call to judge, on the owner's click.
+
 - [ ] **A7-5 — Size the fill before its first live run.** Measure output tokens on a
       twelve-activity answer: the grammar pads each target with fourteen nullable keys
       against an 11,500-token ceiling. Needs a provider key, so it waits for one; each run

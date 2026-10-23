@@ -274,6 +274,10 @@ export class InMemoryRollingPlanAdapter implements RollingPlanAdapter {
             ...(change.series.endDate === undefined
               ? { endDate: undefined }
               : {}),
+            // A rewrite without a time clears it, as the database's does.
+            ...(change.series.startTime === undefined
+              ? { startTime: undefined }
+              : {}),
           });
           const sweepFrom =
             change.series.startDate < segment.startDate
@@ -394,6 +398,8 @@ export class InMemoryRollingPlanAdapter implements RollingPlanAdapter {
         throw new RollingPlanRuleError("session-completed");
       const before = JSON.stringify(current);
       if (change.operation === "edit") {
+        // An edit without a time clears it, as the database's does.
+        delete current.startTime;
         Object.assign(current, change.session, {
           activities: change.session.activities.map((activity) => ({
             ...activity,
@@ -518,6 +524,9 @@ export class InMemoryRollingPlanAdapter implements RollingPlanAdapter {
             ...(segment.expectedDurationMinutes === undefined
               ? {}
               : { expectedDurationMinutes: segment.expectedDurationMinutes }),
+            ...(segment.startTime === undefined
+              ? {}
+              : { startTime: segment.startTime }),
             ...(segment.note === undefined ? {} : { note: segment.note }),
             seriesId: segment.id,
             occurrenceDate,

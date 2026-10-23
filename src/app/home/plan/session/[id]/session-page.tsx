@@ -322,6 +322,7 @@ export function SessionPage({
     sport: session.sport,
     intent: session.intent,
     expectedDurationMinutes: session.expectedDurationMinutes,
+    startTime: session.startTime,
     note: session.note,
     activities: session.activities,
     openFill: session.openFill,

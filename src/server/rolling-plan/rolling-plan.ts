@@ -9,6 +9,8 @@ import {
 } from "@/server/training/training-measurements";
 import { parseCancellationReason } from "./session-cancellation";
 
+import { isStartTime } from "@/lib/training/start-time";
+
 export type RollingPlanActivityInput = {
   personalActivityId?: string;
   position: number;
@@ -24,6 +26,8 @@ export type RollingPlanSessionContent = {
   sport: string;
   intent?: string;
   expectedDurationMinutes?: number;
+  /** `HH:MM`, absent when the session is untimed. */
+  startTime?: string;
   note?: string;
   activities: RollingPlanActivityInput[];
 };
@@ -55,6 +59,8 @@ export type RollingPlanSeriesInput = {
   sport: string;
   intent?: string;
   expectedDurationMinutes?: number;
+  /** Every occurrence starts at it; absent when they are untimed. */
+  startTime?: string;
   note?: string;
   activities: RollingPlanSeriesActivityInput[];
 };
@@ -570,6 +576,7 @@ function parseSeries(value: unknown): RollingPlanSeriesInput {
     "sport",
     "intent",
     "expectedDurationMinutes",
+    "startTime",
     "note",
     "activities",
   ]);
@@ -609,6 +616,7 @@ function parseSeries(value: unknown): RollingPlanSeriesInput {
             10080,
           ),
         }),
+    ...optionalStartTime(record.startTime),
     ...optionalString("note", record.note, 2000),
     activities,
   };
@@ -660,6 +668,7 @@ function parseSession(value: unknown, withPlacement: boolean) {
     "sport",
     "intent",
     "expectedDurationMinutes",
+    "startTime",
     "note",
     "activities",
   ];
@@ -691,6 +700,7 @@ function parseSession(value: unknown, withPlacement: boolean) {
             10080,
           ),
         }),
+    ...optionalStartTime(record.startTime),
     ...optionalString("note", record.note, 2000),
     activities,
   };
@@ -803,6 +813,12 @@ function optionalString<K extends string>(
   if (typeof value !== "string" || value.length > max)
     throw new RollingPlanValidationError();
   return { [key]: value } as Record<K, string>;
+}
+
+function optionalStartTime(value: unknown): { startTime?: string } {
+  if (value === undefined || value === null || value === "") return {};
+  if (!isStartTime(value)) throw new RollingPlanValidationError();
+  return { startTime: value };
 }
 
 function readInteger(value: unknown, min: number, max: number) {

@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { isoDateInTimezone, shiftIsoDate } from "@/lib/date/local-date";
+import {
+  instantInTimezone,
+  isoDateInTimezone,
+  localTimeInTimezone,
+  shiftIsoDate,
+} from "@/lib/date/local-date";
 
 describe("isoDateInTimezone", () => {
   it("uses the next owner-local date east of the date line", () => {
@@ -38,5 +43,44 @@ describe("shiftIsoDate", () => {
 
   it("refuses a value that is not a date", () => {
     expect(() => shiftIsoDate("not-a-date", 1)).toThrow();
+  });
+});
+
+describe("start times in a zone", () => {
+  it("reads the instant a wall-clock time names, on either side of a clock change", () => {
+    // Berlin is UTC+2 in summer time and UTC+1 after 25 Oct 2026.
+    expect(
+      instantInTimezone("2026-10-24", "07:30", "Europe/Berlin").toISOString(),
+    ).toBe("2026-10-24T05:30:00.000Z");
+    expect(
+      instantInTimezone("2026-10-26", "07:30", "Europe/Berlin").toISOString(),
+    ).toBe("2026-10-26T06:30:00.000Z");
+    expect(
+      instantInTimezone(
+        "2026-10-24",
+        "23:15",
+        "Pacific/Auckland",
+      ).toISOString(),
+    ).toBe("2026-10-24T10:15:00.000Z");
+  });
+
+  it("shows an instant as the time the zone's clock read", () => {
+    const instant = new Date("2026-10-26T06:30:00.000Z");
+    expect(localTimeInTimezone(instant, "Europe/Berlin")).toBe("07:30");
+    expect(localTimeInTimezone(instant, "UTC")).toBe("06:30");
+    expect(
+      localTimeInTimezone(new Date("2026-10-24T22:05:00.000Z"), "UTC"),
+    ).toBe("22:05");
+  });
+
+  it("round-trips a time it wrote", () => {
+    for (const time of ["00:00", "06:45", "12:00", "23:59"]) {
+      expect(
+        localTimeInTimezone(
+          instantInTimezone("2026-03-29", time, "America/New_York"),
+          "America/New_York",
+        ),
+      ).toBe(time);
+    }
   });
 });

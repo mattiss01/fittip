@@ -81,6 +81,7 @@ function planned(
     expectedDurationMinutes: 45,
     status: "active",
     intent: "Conversational throughout.",
+    startTime: null,
     note: "Left knee was tight last week.",
     activities: [],
     seriesId: null,

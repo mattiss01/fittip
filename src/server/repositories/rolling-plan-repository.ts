@@ -7,6 +7,7 @@ import {
   VerifiedUserAccessError,
 } from "@/lib/auth/verified-user";
 import type { Database, Json } from "@/lib/supabase/database.types";
+import { isStartTime } from "@/lib/training/start-time";
 import {
   createServerUserClient,
   type ServerUserClient,
@@ -42,7 +43,7 @@ type RollingPlanClient = SupabaseClient<Database> | ServerUserClient;
 
 const ROLLING_PLAN_SERIES_COLUMNS = `
   id, predecessor_series_id, frequency, interval_count, weekdays, start_date,
-  end_date, title, sport, intent, expected_duration_minutes, note, created_at,
+  end_date, title, sport, intent, expected_duration_minutes, start_time, note, created_at,
   skipped_occurrence_dates,
   rolling_plan_series_activities (
     personal_activity_id, position, name, sport, instructions,
@@ -103,7 +104,7 @@ export class PostgresRollingPlanAdapter implements RollingPlanAdapter {
       .select(
         `id, revision,
         rolling_plan_sessions (
-          id, local_date, position, title, sport, expected_duration_minutes,
+          id, local_date, position, title, sport, expected_duration_minutes, start_time,
           status, cancelled_at, series_id, occurrence_date, has_diverged
         ),
         rolling_plan_recovery_days ( local_date )`,
@@ -360,6 +361,7 @@ function parseSession(value: unknown): RollingPlanSession {
       session.expectedDurationMinutes === null ||
       isInteger(session.expectedDurationMinutes, 1)
     ) ||
+    !(session.startTime === null || isStartTime(session.startTime)) ||
     !(session.note === null || typeof session.note === "string") ||
     !(session.status === "active" || session.status === "cancelled") ||
     !(
@@ -386,6 +388,7 @@ function parseSession(value: unknown): RollingPlanSession {
     ...(session.expectedDurationMinutes === null
       ? {}
       : { expectedDurationMinutes: session.expectedDurationMinutes }),
+    ...(session.startTime === null ? {} : { startTime: session.startTime }),
     ...(session.note === null ? {} : { note: session.note }),
     status: session.status,
     cancelledAt: session.cancelledAt,
@@ -408,6 +411,7 @@ function parseCardRow(value: unknown): RollingPlanSessionCard {
       row.expected_duration_minutes === null ||
       isInteger(row.expected_duration_minutes, 1)
     ) ||
+    !(row.start_time === null || isTableTime(row.start_time)) ||
     !(row.status === "active" || row.status === "cancelled") ||
     !(row.cancelled_at === null || typeof row.cancelled_at === "string") ||
     // Both halves of an occurrence identity or neither, as in `parseSession`:
@@ -428,6 +432,9 @@ function parseCardRow(value: unknown): RollingPlanSessionCard {
     ...(row.expected_duration_minutes === null
       ? {}
       : { expectedDurationMinutes: row.expected_duration_minutes }),
+    ...(row.start_time === null
+      ? {}
+      : { startTime: row.start_time.slice(0, 5) }),
     status: row.status,
     cancelledAt: row.cancelled_at,
     seriesId: row.series_id,
@@ -508,6 +515,7 @@ function parseSeries(value: unknown): RollingPlanSeries {
       series.expected_duration_minutes === null ||
       isInteger(series.expected_duration_minutes, 1)
     ) ||
+    !(series.start_time === null || isTableTime(series.start_time)) ||
     !(series.note === null || typeof series.note === "string") ||
     !Array.isArray(series.skipped_occurrence_dates) ||
     !series.skipped_occurrence_dates.every(isIsoDate) ||
@@ -538,6 +546,9 @@ function parseSeries(value: unknown): RollingPlanSeries {
     ...(series.expected_duration_minutes === null
       ? {}
       : { expectedDurationMinutes: series.expected_duration_minutes }),
+    ...(series.start_time === null
+      ? {}
+      : { startTime: series.start_time.slice(0, 5) }),
     ...(series.note === null ? {} : { note: series.note }),
     skippedOccurrenceDates: [...series.skipped_occurrence_dates].toSorted(),
     activities: activities
@@ -610,6 +621,15 @@ function isUuid(value: unknown): value is string {
     /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
       value,
     )
+  );
+}
+
+/** A `time` column as PostgREST returns it: `07:30:00`, whole minutes. */
+function isTableTime(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    /^\d{2}:\d{2}:00$/.test(value) &&
+    isStartTime(value.slice(0, 5))
   );
 }
 

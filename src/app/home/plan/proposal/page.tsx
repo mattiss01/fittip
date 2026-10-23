@@ -290,6 +290,7 @@ async function loadProposalState() {
     expectedDurationMinutes: session.expectedDurationMinutes ?? null,
     status: session.status,
     intent: session.intent ?? null,
+    startTime: session.startTime ?? null,
     note: session.note ?? null,
     activities: session.activities.map(toActivityValue),
     seriesId: session.seriesId ?? null,

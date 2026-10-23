@@ -60,6 +60,8 @@ export type TodaySessionView = {
   sport: string;
   intent: string | null;
   expectedDurationMinutes: number | null;
+  /** `HH:MM`, or null when untimed. */
+  startTime: string | null;
   note: string | null;
   status: "active" | "cancelled";
   isRecurring: boolean;
@@ -331,6 +333,7 @@ function SessionCard({
 }) {
   const summary = [
     session.sport,
+    session.startTime,
     session.expectedDurationMinutes === null
       ? null
       : `${session.expectedDurationMinutes} min planned`,

@@ -57,15 +57,26 @@ export function SessionFields({
         />
       </div>
       {dateField}
+      <div className={styles.field}>
+        <label htmlFor={`${idPrefix}-sport`}>Sport</label>
+        <SportInput
+          id={`${idPrefix}-sport`}
+          name="sport"
+          required
+          value={sport}
+          onChange={setSport}
+        />
+      </div>
       <div className={styles.fieldPair}>
+        {/* Optional (owner, 22 Oct 2026): a timed session leads its day. */}
         <div className={styles.field}>
-          <label htmlFor={`${idPrefix}-sport`}>Sport</label>
-          <SportInput
-            id={`${idPrefix}-sport`}
-            name="sport"
-            required
-            value={sport}
-            onChange={setSport}
+          <label htmlFor={`${idPrefix}-start`}>Starts at</label>
+          <input
+            id={`${idPrefix}-start`}
+            name="startTime"
+            type="time"
+            step={60}
+            defaultValue={draft?.startTime ?? ""}
           />
         </div>
         <div className={styles.field}>

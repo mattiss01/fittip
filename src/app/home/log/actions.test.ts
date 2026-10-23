@@ -3,11 +3,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const {
   createCompletionLogMock,
   createPlanMock,
+  createProfileMock,
   revalidatePathMock,
   redirectMock,
 } = vi.hoisted(() => ({
   createCompletionLogMock: vi.fn(),
   createPlanMock: vi.fn(),
+  createProfileMock: vi.fn(),
   revalidatePathMock: vi.fn(),
   redirectMock: vi.fn(),
 }));
@@ -20,6 +22,11 @@ vi.mock("@/server/repositories/completion-log-repository", async (original) => {
       typeof import("@/server/repositories/completion-log-repository")
     >();
   return { ...actual, createCompletionLog: createCompletionLogMock };
+});
+vi.mock("@/server/repositories/profile-repository", async (original) => {
+  const actual =
+    await original<typeof import("@/server/repositories/profile-repository")>();
+  return { ...actual, createProfileRepository: createProfileMock };
 });
 vi.mock("@/server/repositories/rolling-plan-repository", async (original) => {
   const actual =
@@ -156,6 +163,64 @@ describe("logCompletionAction", () => {
     // Nothing about the planned session is read or touched.
     expect(getPlanSlice).not.toHaveBeenCalled();
     expect(applyChangeSet).not.toHaveBeenCalled();
+  });
+
+  // Owner, 22 Oct 2026: "Started at" is stored as the instant it names, read
+  // in the profile's zone on a new log and in the record's own on a fix.
+  it("stores a start time as the instant it names in the log's zone", async () => {
+    createProfileMock.mockResolvedValue({
+      getCurrentProfile: async () => ({ timezoneName: "Europe/Berlin" }),
+    });
+    await logCompletionAction(
+      INITIAL_LOG_ACTION_STATE,
+      form({
+        operation: "create",
+        status: "unplanned",
+        actualLocalDate: DAY,
+        returnDate: DAY,
+        startTime: "07:30",
+      }),
+    );
+    expect(applyChange.mock.calls[0][0].completion.actualStartedAt).toBe(
+      "2026-08-30T05:30:00.000Z",
+    );
+
+    const get = vi.fn().mockResolvedValue({ timezoneName: "UTC" });
+    createCompletionLogMock.mockResolvedValue({ applyChange, get });
+    await logCompletionAction(
+      INITIAL_LOG_ACTION_STATE,
+      form({
+        operation: "edit",
+        completionId: COMPLETION_ID,
+        expectedRevision: "1",
+        status: "unplanned",
+        actualLocalDate: DAY,
+        returnDate: DAY,
+        startTime: "07:30",
+      }),
+    );
+    expect(get).toHaveBeenCalledWith(COMPLETION_ID);
+    expect(applyChange.mock.calls[1][0].completion.actualStartedAt).toBe(
+      "2026-08-30T07:30:00.000Z",
+    );
+  });
+
+  it("refuses a start time that is not a time of day, and writes nothing", async () => {
+    const result = await logCompletionAction(
+      INITIAL_LOG_ACTION_STATE,
+      form({
+        operation: "create",
+        status: "unplanned",
+        actualLocalDate: DAY,
+        returnDate: DAY,
+        startTime: "7.30",
+      }),
+    );
+    expect(result).toMatchObject({
+      status: "validation",
+      message: "Give the start as a time of day, like 07:30.",
+    });
+    expect(applyChange).not.toHaveBeenCalled();
   });
 
   it("links the log to the planned session when it was done instead of it", async () => {

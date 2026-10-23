@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { monthOf, monthWindow, readRequestedMonth } from "./month";
 import { ProgressMonth } from "./progress-month";
 import type { ProgressCompletionView } from "./progress-record";
+import { startTimeOf } from "./start-time-of";
 import styles from "./progress.module.css";
 
 import homeStyles from "../home.module.css";
@@ -162,6 +163,7 @@ function toCompletionView(completion: Completion): ProgressCompletionView {
     title: completion.title ?? completion.plannedSnapshot?.title ?? null,
     sport: completion.sport ?? completion.plannedSnapshot?.sport ?? null,
     plannedLocalDate: completion.plannedSnapshot?.localDate ?? null,
+    startTime: startTimeOf(completion),
     durationMinutes: completion.durationMinutes ?? null,
     perceivedEffort: completion.perceivedEffort ?? null,
     note: completion.note ?? null,

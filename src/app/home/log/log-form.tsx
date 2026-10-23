@@ -66,6 +66,8 @@ export type LogExistingView = {
   revision: number;
   outcome: CompletionOutcome;
   actualLocalDate: string;
+  /** When it started, `HH:MM` in the log's own zone, where it says. */
+  startTime: string | null;
   durationMinutes: number | null;
   perceivedEffort: number | null;
   note: string | null;
@@ -94,6 +96,8 @@ export type LogFromWorkout = {
   id: string;
   title: string;
   sport: string;
+  /** When the clock was started, `HH:MM` in the owner's zone. */
+  startTime: string;
   durationMinutes: number;
   activities: LogRecordedActivityView[];
 };
@@ -268,6 +272,13 @@ export function LogForm({
             0)
         : (existing.durationMinutes ?? ""),
     ),
+  );
+  // Optional (owner, 22 Oct 2026). A live workout knows it; a plan's time
+  // is what was intended, not what happened, so it is never copied in.
+  const [startTime, setStartTime] = useState(
+    existing === null
+      ? (fromWorkout?.startTime ?? "")
+      : (existing.startTime ?? ""),
   );
   const [effort, setEffort] = useState<number | null>(
     existing?.perceivedEffort ?? null,
@@ -963,6 +974,17 @@ export function LogForm({
               +5
             </button>
           </div>
+          <div className={styles.field}>
+            <label htmlFor="log-start-time">Started at (optional)</label>
+            <input
+              id="log-start-time"
+              name="startTime"
+              type="time"
+              step={60}
+              value={startTime}
+              onChange={(event) => setStartTime(event.target.value)}
+            />
+          </div>
           <button className={styles.primary} type="button" onClick={next}>
             {fromSummary ? "Back to summary" : "Next"}
           </button>
@@ -1184,7 +1206,12 @@ export function LogForm({
             [
               "minutes",
               "Duration",
-              durationEntered(minutes) ? `${minutes} min` : "—",
+              [
+                durationEntered(minutes) ? `${minutes} min` : null,
+                startTime === "" ? null : `from ${startTime}`,
+              ]
+                .filter(Boolean)
+                .join(" ") || "—",
             ],
             ["effort", "Effort", effort === null ? "—" : `${effort} of 10`],
           ] as [Step, string, string][])

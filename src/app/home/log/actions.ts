@@ -21,6 +21,13 @@ import {
 } from "@/server/completions/completion-log";
 import { LiveWorkoutConflictError } from "@/server/live-workout/live-workout";
 import { keepSports, submittedSports } from "@/server/profile/keep-sports";
+import { createProfileRepository } from "@/server/repositories/profile-repository";
+import {
+  instantInTimezone,
+  isoDateInTimezone,
+  localTimeInTimezone,
+} from "@/lib/date/local-date";
+import { isStartTime } from "@/lib/training/start-time";
 import {
   CompletionAuthenticationError,
   createCompletionLog,
@@ -87,11 +94,12 @@ async function writeLog(
       throw new CompletionValidationError();
     }
     const facts = readFacts(formData);
+    const log = await createCompletionLog();
+    Object.assign(facts, await readStartedAt(formData, facts, editing, log));
     // The day the record now sits on, which is where it can be seen. Moving a
     // log to another day and being returned to the day it left is a small lie
     // about where the training went.
     const returnDate = facts.actualLocalDate as string;
-    const log = await createCompletionLog();
 
     // Every log carries its own name and restates its whole activity list,
     // planned or not. What a planned log was measured against is captured by
@@ -471,6 +479,46 @@ function readFacts(formData: FormData): Record<string, unknown> {
     injuryReported: readFlag(formData.get("injuryReported")),
     severeFatigueReported: readFlag(formData.get("severeFatigueReported")),
   };
+}
+
+/**
+ * "Started at" as the instant the database keeps (owner, 22 Oct 2026): the
+ * log's date and the time typed, read in the zone the log is written in —
+ * the record's own on a correction, the profile's on a new one. Left out,
+ * the log keeps none; a correction that clears it clears it.
+ */
+async function readStartedAt(
+  formData: FormData,
+  facts: Record<string, unknown>,
+  editing: boolean,
+  log: Awaited<ReturnType<typeof createCompletionLog>>,
+): Promise<{ actualStartedAt?: string }> {
+  const startTime = optionalText(formData, "startTime");
+  if (startTime === undefined) return {};
+  if (!isStartTime(startTime)) {
+    throw new LogFieldError("Give the start as a time of day, like 07:30.");
+  }
+  const timezoneName = editing
+    ? (await log.get(formData.get("completionId")))?.timezoneName
+    : (await (await createProfileRepository()).getCurrentProfile())
+        ?.timezoneName;
+  // No zone: the write refuses the log for that reason, in its own words.
+  if (!timezoneName) return {};
+  const instant = instantInTimezone(
+    facts.actualLocalDate as string,
+    startTime,
+    timezoneName,
+  );
+  // A time the clocks skipped that night names no instant on that day.
+  if (
+    localTimeInTimezone(instant, timezoneName) !== startTime ||
+    isoDateInTimezone(instant, timezoneName) !== facts.actualLocalDate
+  ) {
+    throw new LogFieldError(
+      "The clocks changed that night, so that time did not happen. Pick another.",
+    );
+  }
+  return { actualStartedAt: instant.toISOString() };
 }
 
 function optionalNumber(formData: FormData, key: string) {

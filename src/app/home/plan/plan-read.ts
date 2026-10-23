@@ -33,6 +33,7 @@ export function toSessionView(session: RollingPlanSession): PlanSessionView {
     sport: session.sport,
     intent: session.intent ?? null,
     expectedDurationMinutes: session.expectedDurationMinutes ?? null,
+    startTime: session.startTime ?? null,
     note: session.note ?? null,
     status: session.status,
     activities: session.activities.map(toActivityValue),
@@ -51,6 +52,7 @@ export function toCardView(session: RollingPlanSessionCard): PlanCardView {
     title: session.title,
     sport: session.sport,
     expectedDurationMinutes: session.expectedDurationMinutes ?? null,
+    startTime: session.startTime ?? null,
     status: session.status,
     seriesId: session.seriesId,
   };
@@ -68,6 +70,7 @@ export function toSeriesView(series: RollingPlanSeries): PlanSeriesView {
     sport: series.sport,
     intent: series.intent ?? null,
     expectedDurationMinutes: series.expectedDurationMinutes ?? null,
+    startTime: series.startTime ?? null,
     note: series.note ?? null,
   };
 }

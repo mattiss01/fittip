@@ -16,6 +16,8 @@ export type PlanSessionView = {
   sport: string;
   intent: string | null;
   expectedDurationMinutes: number | null;
+  /** `HH:MM`, or null when untimed. */
+  startTime: string | null;
   note: string | null;
   status: "active" | "cancelled";
   /** The rows the edit form binds, and the list the card prints. */
@@ -47,6 +49,7 @@ export type PlanCardView = Pick<
   | "title"
   | "sport"
   | "expectedDurationMinutes"
+  | "startTime"
   | "status"
   | "seriesId"
   | "log"
@@ -58,6 +61,8 @@ export type PlanUnplannedLog = {
   localDate: string;
   title: string;
   sport: string;
+  /** When it started, `HH:MM` in the log's own zone, where it says. */
+  startTime?: string;
   durationMinutes?: number;
 };
 
@@ -75,6 +80,7 @@ export function unplannedLogCard(log: PlanUnplannedLog): PlanCardView {
     title: log.title,
     sport: log.sport,
     expectedDurationMinutes: null,
+    startTime: log.startTime ?? null,
     status: "active",
     seriesId: null,
     log: {
@@ -125,6 +131,7 @@ export function draftOf(session: PlanSessionView): PlanActionDraft {
       session.expectedDurationMinutes === null
         ? ""
         : String(session.expectedDurationMinutes),
+    startTime: session.startTime ?? "",
     note: session.note ?? "",
   };
 }

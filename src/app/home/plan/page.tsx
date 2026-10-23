@@ -12,6 +12,7 @@ import {
   type PlanSessionLog,
   type PlanUnplannedLog,
 } from "./plan-manager";
+import { startTimeOf } from "../progress/start-time-of";
 import { planHistoryStart, type PlanPhase } from "./plan-weeks";
 import { planWindowFor } from "./plan-window";
 import {
@@ -181,11 +182,13 @@ async function PlanWindow({
     // (owner, 22 Oct 2026), so a past week shows everything that happened.
     unplannedLogs = loggedInWindow
       .filter((completion) => completion.planSessionId === null)
-      .map((completion) => ({
+      .map((completion) => ({ completion, start: startTimeOf(completion) }))
+      .map(({ completion, start }) => ({
         completionId: completion.id,
         localDate: completion.actualLocalDate,
         title: completion.title ?? "Unplanned training",
         sport: completion.sport ?? "",
+        ...(start === null ? {} : { startTime: start }),
         ...(completion.durationMinutes === undefined
           ? {}
           : { durationMinutes: completion.durationMinutes }),

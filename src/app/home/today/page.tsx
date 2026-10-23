@@ -34,6 +34,7 @@ import {
 import { CoachCancellationAuthenticationError } from "@/server/repositories/coach-cancellation-repository";
 import { createLiveWorkouts } from "@/server/repositories/live-workout-repository";
 import type { RollingPlanSession } from "@/server/rolling-plan/rolling-plan";
+import { byStartTime } from "@/lib/training/start-time";
 
 export const dynamic = "force-dynamic";
 
@@ -158,7 +159,7 @@ async function renderDay(timezoneName: string, requested: string | null) {
       (session) =>
         !replacedByCoach.has(session.id) || byPlanSession.has(session.id),
     )
-    .toSorted((left, right) => left.position - right.position)
+    .toSorted(byStartTime)
     .map((session) =>
       toSessionView(session, byPlanSession.get(session.id) ?? null),
     );
@@ -201,6 +202,7 @@ function toSessionView(
     sport: session.sport,
     intent: session.intent ?? null,
     expectedDurationMinutes: session.expectedDurationMinutes ?? null,
+    startTime: session.startTime ?? null,
     note: session.note ?? null,
     status: session.status,
     isRecurring: session.seriesId !== null,

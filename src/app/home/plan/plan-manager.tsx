@@ -67,6 +67,7 @@ import {
   type PlanCardView,
   type PlanUnplannedLog,
 } from "./session-view";
+import { byStartTime } from "@/lib/training/start-time";
 
 import type { SavedSessionOption } from "@/components/training/saved-session-picker";
 import {
@@ -667,9 +668,13 @@ function PlanDay({
   tones: Map<string, number>;
   onAdd: () => void;
 }) {
-  const shown = sessions
-    .filter((session) => session.status === "active" || session.log)
-    .toSorted((left, right) => left.position - right.position);
+  // Unplanned logs take their place among the sessions by when they
+  // started; one without a time goes after the untimed sessions.
+  const unplanned = new Set(logs);
+  const shown = [
+    ...sessions.filter((session) => session.status === "active" || session.log),
+    ...logs,
+  ].toSorted(byStartTime);
   const cancelled = sessions.filter(
     (session) => session.status === "cancelled" && !session.log,
   );
@@ -707,35 +712,36 @@ function PlanDay({
           </p>
         ) : (
           <ol className={w.sessionList} aria-label={dayLabel(day.date)}>
-            {shown.map((session) => (
-              <PlanSessionCard
-                key={session.id}
-                session={session}
-                past={day.past}
-                tone={tones.get(sportKey(session.sport)) ?? 0}
-                // A logged session stays where its log is, and the past is
-                // not replanned.
-                drag={
-                  dragHandle === null || day.past || session.log
-                    ? null
-                    : dragHandle({
-                        id: session.id,
-                        title: session.title,
-                        localDate: session.localDate,
-                      })
-                }
-                swipe={day.past || session.log ? null : swipe}
-              />
-            ))}
-            {logs.map((card) => (
-              <PlanSessionCard
-                key={card.id}
-                session={card}
-                past={day.past}
-                tone={tones.get(sportKey(card.sport)) ?? 0}
-                unplanned
-              />
-            ))}
+            {shown.map((session) =>
+              unplanned.has(session) ? (
+                <PlanSessionCard
+                  key={session.id}
+                  session={session}
+                  past={day.past}
+                  tone={tones.get(sportKey(session.sport)) ?? 0}
+                  unplanned
+                />
+              ) : (
+                <PlanSessionCard
+                  key={session.id}
+                  session={session}
+                  past={day.past}
+                  tone={tones.get(sportKey(session.sport)) ?? 0}
+                  // A logged session stays where its log is, and the past is
+                  // not replanned.
+                  drag={
+                    dragHandle === null || day.past || session.log
+                      ? null
+                      : dragHandle({
+                          id: session.id,
+                          title: session.title,
+                          localDate: session.localDate,
+                        })
+                  }
+                  swipe={day.past || session.log ? null : swipe}
+                />
+              ),
+            )}
             {cancelled.map((session) => (
               <PlanSessionCard
                 key={session.id}
@@ -937,7 +943,8 @@ function cardDetail(session: PlanCardView, cancelled: boolean): string {
       .filter(Boolean)
       .join(" · ");
   }
-  return planned ?? "";
+  // A planned time leads, as it orders the day (owner, 22 Oct 2026).
+  return [session.startTime, planned].filter(Boolean).join(" · ");
 }
 
 function DaySheet({
