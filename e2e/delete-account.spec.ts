@@ -64,9 +64,10 @@ test.describe("deleting an account", () => {
       await page.getByLabel("Email").fill(account.email);
       await page.getByLabel("Password", { exact: true }).fill(account.password);
       await page.getByRole("button", { name: "Sign in" }).click();
-      await expect(page.getByRole("alert")).toHaveText(
-        "We could not sign you in with those details.",
-      );
+      // By its text: Next.js keeps its own empty role="alert" route announcer.
+      await expect(
+        page.getByText("We could not sign you in with those details."),
+      ).toBeVisible();
 
       expect(await authUserExists(request, account.userId)).toBe(false);
       expect(pageErrors).toEqual([]);
