@@ -35,9 +35,9 @@ deleting a user is not available to it.
    unless the confirmation is exactly `DELETE`, which the application also checks first.
 3. **Deleting really deletes.** In one transaction the function locks the profile,
    removes the caller's rows in an order the protective links allow (logs, proposal
-   decisions, goal history, memory, the plan, saved sessions, the library), then deletes
-   the row in `auth.users`, whose cascade removes the profile, every remaining owned row
-   and Supabase's own sessions and identities. Nothing is kept: no tombstone, no undo.
+   decisions, goal history, memory, the plan, saved sessions), then deletes the row in
+   `auth.users`, whose cascade removes the profile, every remaining owned row (the
+   library among them) and Supabase's own sessions and identities. Nothing is kept: no tombstone, no undo.
    The protective links stay as they are; they still stop every other path.
 4. **AI spend records are deleted with the account.** The spend ceilings are counted per
    person, so a person who deletes and signs up again starts with a fresh personal limit.
@@ -54,7 +54,12 @@ deleting a user is not available to it.
 
 Said in the privacy notice: copies in database backups until they roll off, if backups
 are enabled; request content OpenAI keeps for up to 30 days for abuse monitoring;
-providers' own request and sign-in logs, which hold IP addresses for a short time.
+providers' own request and sign-in logs, which hold IP addresses for a short time; and
+two Supabase Auth tables in the same database that have no link to the account and are
+left by Supabase's own admin delete too: `auth.audit_log_entries` (sign-in events, with
+the account id, email and IP address in their payload) and `auth.flow_state` (short-lived
+sign-in handshakes). The audit log is a security record kept by Supabase's sign-in
+service; how long it is kept is a setting to state in the notice.
 
 ## Consequences
 
