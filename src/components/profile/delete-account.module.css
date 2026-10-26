@@ -1,0 +1,52 @@
+/* Deleting an account, the last section of Settings (ADR-039). */
+
+.form {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.form p {
+  margin: 0;
+  color: var(--ledger-muted);
+}
+
+.form .refusal {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.field {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.field span {
+  color: var(--pine);
+  font: 700 0.9rem var(--font-sans);
+}
+
+.field input {
+  min-height: 3rem;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-control);
+  font: 600 1rem var(--font-mono);
+  letter-spacing: 0.06em;
+}
+
+.delete {
+  width: 100%;
+  margin: 0;
+  border-radius: var(--radius-pill);
+  background: var(--danger);
+}
+
+.delete:hover {
+  background: var(--danger-dark);
+}
+
+/* Disabled reads as not yet, not as busy. */
+.delete:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}

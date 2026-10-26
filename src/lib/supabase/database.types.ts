@@ -2719,6 +2719,10 @@ export type Database = {
         Args: { p_decision: string; p_proposal_id: string };
         Returns: string;
       };
+      delete_my_account: {
+        Args: { p_confirmation: string };
+        Returns: undefined;
+      };
       delete_roadmap: { Args: { p_version_id: string }; Returns: string };
       discard_plan_proposal: {
         Args: { p_proposal_id: string };
