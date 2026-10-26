@@ -39,7 +39,9 @@ describe("DeleteAccount (ADR-039)", () => {
   it("explains a refusal, and ignores a reason it does not know", () => {
     const { rerender } = render(<DeleteAccount refusal="confirmation" />);
     expect(screen.getByRole("alert")).toHaveTextContent("Nothing was deleted.");
-    rerender(<DeleteAccount refusal="<script>" />);
-    expect(screen.queryByRole("alert")).toBeNull();
+    for (const unknown of ["<script>", "__proto__", "toString"]) {
+      rerender(<DeleteAccount refusal={unknown} />);
+      expect(screen.queryByRole("alert")).toBeNull();
+    }
   });
 });

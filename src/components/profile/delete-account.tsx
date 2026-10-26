@@ -20,7 +20,12 @@ const REFUSALS: Record<string, string> = {
  */
 export function DeleteAccount({ refusal }: { refusal: string | null }) {
   const [typed, setTyped] = useState("");
-  const message = refusal === null ? null : (REFUSALS[refusal] ?? null);
+  // Own keys only: the reason arrives in the address, and `__proto__` or
+  // `toString` must not reach the page as a message.
+  const message =
+    refusal !== null && Object.hasOwn(REFUSALS, refusal)
+      ? REFUSALS[refusal]
+      : null;
 
   return (
     <form
