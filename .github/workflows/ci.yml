@@ -13,6 +13,8 @@ on:
 
 permissions:
   contents: read
+  # Pulling the Supabase images from GitHub's registry with the run's own token.
+  packages: read
 
 # Superseding an in-flight branch run saves minutes and costs nothing. Doing the
 # same on `master` would leave a merge commit with no completed run, which the
@@ -61,6 +63,12 @@ jobs:
     name: Migrations, RLS, advisors, concurrency
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # The Supabase CLI pulls its images from AWS's public registry by default,
+    # whose anonymous data limit ("toomanyrequests: Data limit exceeded")
+    # stopped runs before any test on 22-26 Oct 2026. GitHub's registry has the
+    # same images and versions and takes the run's own token: no secret.
+    env:
+      SUPABASE_INTERNAL_IMAGE_REGISTRY: ghcr.io
     steps:
       - uses: actions/checkout@v7
 
@@ -70,6 +78,9 @@ jobs:
           cache: npm
 
       - run: npm ci
+
+      - name: Sign in to GitHub's image registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
       # No job stops the stack again: the runner is thrown away with it.
       - name: Start local Supabase stack
@@ -136,6 +147,12 @@ jobs:
     name: 390px production browser flows (${{ matrix.shard }})
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # The Supabase CLI pulls its images from AWS's public registry by default,
+    # whose anonymous data limit ("toomanyrequests: Data limit exceeded")
+    # stopped runs before any test on 22-26 Oct 2026. GitHub's registry has the
+    # same images and versions and takes the run's own token: no secret.
+    env:
+      SUPABASE_INTERNAL_IMAGE_REGISTRY: ghcr.io
     strategy:
       # Report every broken flow in one run, not just the first shard's.
       fail-fast: false
@@ -161,6 +178,9 @@ jobs:
 
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
+
+      - name: Sign in to GitHub's image registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
       # A fresh stack applies every migration as it starts, so there is no
       # reset here; the `database` job is the one that proves them from zero.
