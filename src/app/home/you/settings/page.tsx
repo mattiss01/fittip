@@ -6,6 +6,7 @@ import {
   SportsForm,
   WeightHistory,
 } from "@/components/profile/profile-forms";
+import { DeleteAccount } from "@/components/profile/delete-account";
 import { TrainingSetupForm } from "@/components/profile/training-forms";
 import {
   createProfileRepository,
@@ -25,9 +26,15 @@ export const dynamic = "force-dynamic";
  * own settings, the units and the time zone, which setup takes from the
  * browser without asking (owner, 5 Oct 2026). Subscription, language
  * and appearance are meant to land here too, and none is listed until it
- * exists. Sign out stays on You (owner, 2 Oct 2026).
+ * exists. Sign out stays on You (owner, 2 Oct 2026). Deleting the account is
+ * the last section (owner, 23 Oct 2026; ADR-039).
  */
-export default async function SettingsPage() {
+export default async function SettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ delete?: string }>;
+}) {
+  const { delete: refusal } = await searchParams;
   let details;
   let weights;
   try {
@@ -79,6 +86,14 @@ export default async function SettingsPage() {
       <section className={setupStyles.settingsCard} aria-labelledby="app">
         <h2 id="app">App settings</h2>
         <AppSettingsForm profile={details} />
+      </section>
+      <section
+        className={setupStyles.settingsCard}
+        id="delete-account"
+        aria-labelledby="delete-account-heading"
+      >
+        <h2 id="delete-account-heading">Delete account</h2>
+        <DeleteAccount refusal={typeof refusal === "string" ? refusal : null} />
       </section>
     </main>
   );

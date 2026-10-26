@@ -21,6 +21,12 @@ that reset untouched.
 
 Ordered by dependency. A lane is named where it is not the build lane.
 
+- [~] **Delete my account — careful lane.** Owner, 23 Oct 2026, first of the beta
+      privacy items (GDPR Art. 17). A section at the bottom of You → Settings; typing
+      DELETE enables the button. One SECURITY DEFINER function deletes only the caller
+      (`auth.uid()`), every owned row in an order the ten protective links of ADR-031
+      allow, then the sign-in. AI spend records go too (a re-signup gets a fresh personal
+      limit, accepted). No special case for the owner account. ADR-039.
 - [ ] **Coach start times — careful lane.** The coach gives a start time
       only when the note or memory says when (owner's choice); proposal items carry it, an
       accepted proposal writes it, a replaced session's own time is kept when the proposal

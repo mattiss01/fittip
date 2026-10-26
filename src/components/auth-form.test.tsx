@@ -24,6 +24,13 @@ describe("AuthForm", () => {
     expect(screen.queryByRole("link", { name: "Forgot password?" })).toBeNull();
   });
 
+  it("says an account was deleted when it lands back on sign-in (ADR-039)", () => {
+    render(<AuthForm searchParams={{ accountDeleted: true }} />);
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Your account and everything in it was deleted.",
+    );
+  });
+
   it("renders a server-posted sign-up form and safe validation feedback", () => {
     render(
       <AuthForm initialMode="sign-up" searchParams={{ error: "validation" }} />,

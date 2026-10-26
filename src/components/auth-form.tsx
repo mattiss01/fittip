@@ -18,6 +18,8 @@ export function AuthForm({
     confirmed?: boolean;
     /** A reset link was used and the password is the new one (ADR-022). */
     passwordChanged?: boolean;
+    /** The account and everything in it was deleted (ADR-039). */
+    accountDeleted?: boolean;
     error?: string;
     next?: string;
   };
@@ -94,6 +96,11 @@ export function AuthForm({
         {!isSignUp && searchParams?.passwordChanged && !error ? (
           <p className="form-message success" role="status">
             Your password is changed. Sign in with it.
+          </p>
+        ) : null}
+        {!isSignUp && searchParams?.accountDeleted && !error ? (
+          <p className="form-message success" role="status">
+            Your account and everything in it was deleted.
           </p>
         ) : null}
         {error ? (

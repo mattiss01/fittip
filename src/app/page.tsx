@@ -18,6 +18,7 @@ export default async function Home({
         searchParams={{
           confirmed: params.auth === "confirmed",
           passwordChanged: params.auth === "password-changed",
+          accountDeleted: params.auth === "deleted",
           error: params.error,
           next: params.next,
         }}
