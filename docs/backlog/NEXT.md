@@ -26,6 +26,11 @@ Ordered by dependency. A lane is named where it is not the build lane.
       accepted proposal writes it, a replaced session's own time is kept when the proposal
       gives none. One paid call to judge, on the owner's click.
 
+- [ ] **Press and hold to reorder everywhere.** Owner, 28 Oct 2026: the Edit session
+      activities, the log's "What you did" and a strength activity's set groups lose their
+      ⠿ handles for the live screen's hold-to-drag. First one shared gesture hook for the
+      plan's day drag and these lists (the live one copies `plan-drag.tsx` today), so a fix
+      found on the phone lands in all of them.
 - [ ] **A7-5 — Size the fill before its first live run.** Measure output tokens on a
       twelve-activity answer: the grammar pads each target with fourteen nullable keys
       against an 11,500-token ceiling. Needs a provider key, so it waits for one; each run
@@ -49,14 +54,6 @@ Ordered by dependency. A lane is named where it is not the build lane.
 
 **Coach and records.**
 
-- [ ] **Fill reads the session on screen and keeps the coach's note — careful lane.**
-      Owner, 28 Oct 2026: "give me more exercises" after accepting a push suggestion lost
-      the push, because the coach reads the session as saved and nothing of its answer
-      survived but the activities. The ask sends the editor's rows (checked by the plan's
-      save validator) and a new "Coach's note"; Accept writes the summary into that note
-      and each activity keeps its reason, both visible and editable, both read by the next
-      ask (owner's choice over a request log). Migration re-issues the plan functions as
-      start times did. ADR-040; no paid call to verify.
 - [ ] **A fill's sources are recorded and never checked.** A suggestion names the
       logs, library entries and saved sessions it was built from, and since ADR-023
       the logs whose flags it was sent. Nothing compares them, so a flag corrected
@@ -70,12 +67,6 @@ Ordered by dependency. A lane is named where it is not the build lane.
       stores, and so which kinds can be compared; and the owner's to say, whether a
       stale suggestion warns or loses Accept, where asking again is a paid call.
       Careful lane: a migration.
-- [ ] **An account with logs cannot be deleted.** Found seeding the test athletes,
-      16 Oct 2026: deleting the auth user fails, because a log restricts the deletion of
-      its planned session (`completions` → `rolling_plan_sessions`) and plan,
-      saved-session and log activities hold their library entry with no action. Nothing
-      deletes an account today, but it blocks "delete my account" before anyone else is
-      invited. Careful lane: a migration, and the owner's to say what a deletion takes.
 - [ ] **Setup's small ends.** What is left of the reviews of 5 and 6 Oct 2026, none of
       it build lane. Needs a migration: `weight_entries.measured_on`, `birth_date` and
       the names in the training lists are bounded by the app, not the database. Needs
