@@ -2,7 +2,14 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useId, useRef, useState, useTransition } from "react";
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  useTransition,
+  type KeyboardEvent,
+} from "react";
 
 import {
   discardLiveWorkoutAction,
@@ -11,6 +18,7 @@ import {
   type LiveSaveResult,
 } from "./actions";
 import styles from "./live.module.css";
+import { useHoldReorder, type HoldProps } from "./use-hold-reorder";
 
 import type { LibraryActivityOption } from "@/components/training/activity-editor";
 import { LibraryPicker } from "@/components/training/library-picker";
@@ -73,6 +81,13 @@ export function LiveWorkout({
   const prefix = useId();
   const [view, setView] = useState(workout);
   const [activities, setActivities] = useState(workout.state.activities);
+  // The newest order, for a drag: it moves a card many times between renders.
+  const latest = useRef(workout.state.activities);
+  const list = useRef<HTMLOListElement>(null);
+  const { dragging, hold } = useHoldReorder(list, moveTo);
+  // The card a keyboard move came from, focused again once it has moved:
+  // moving an element in the page takes the focus off it.
+  const refocus = useRef<string | null>(null);
   const [status, setStatus] = useState<SaveStatus>("saved");
   const [finishing, startFinishing] = useTransition();
   const [confirmDiscard, setConfirmDiscard] = useState(false);
@@ -139,6 +154,7 @@ export function LiveWorkout({
   }
 
   function change(next: LiveActivity[]) {
+    latest.current = next;
     setActivities(next);
     pending.current = { activities: next };
     setStatus((current) => (stuck(current) ? current : "saving"));
@@ -166,6 +182,34 @@ export function LiveWorkout({
       ),
     );
   }
+
+  /**
+   * Moves an activity to another place in the list (owner, 28 Oct 2026);
+   * false when it is already there or there is no such place.
+   */
+  function moveTo(key: string, to: number): boolean {
+    const current = latest.current;
+    const from = current.findIndex((activity) => activity.key === key);
+    if (from < 0 || to < 0 || to >= current.length || from === to) {
+      return false;
+    }
+    const next = [...current];
+    const [held] = next.splice(from, 1);
+    next.splice(to, 0, held);
+    change(next);
+    return true;
+  }
+
+  useEffect(() => {
+    const key = refocus.current;
+    if (key === null) return;
+    refocus.current = null;
+    list.current
+      ?.querySelector<HTMLElement>(
+        `[data-live-key="${CSS.escape(key)}"] [data-live-move]`,
+      )
+      ?.focus();
+  }, [activities]);
 
   async function togglePause() {
     if (!(await flush())) return;
@@ -232,12 +276,19 @@ export function LiveWorkout({
         </p>
       ) : null}
 
-      <ol className={styles.activities}>
+      <ol className={styles.activities} ref={list}>
         {activities.map((activity, index) => (
           <ActivityCard
             key={activity.key}
             idPrefix={`${prefix}-${index}`}
             activity={activity}
+            dragging={dragging === activity.key}
+            hold={activities.length < 2 ? undefined : hold(activity.key, index)}
+            onMove={(delta) => {
+              if (moveTo(activity.key, index + delta)) {
+                refocus.current = activity.key;
+              }
+            }}
             onChange={(edit) => update(activity.key, edit)}
             onRemove={
               activity.plannedPosition === null
@@ -336,11 +387,18 @@ function SaveLine({
 function ActivityCard({
   idPrefix,
   activity,
+  dragging,
+  hold,
+  onMove,
   onChange,
   onRemove,
 }: {
   idPrefix: string;
   activity: LiveActivity;
+  dragging: boolean;
+  /** What lets the card's head be held and dragged; absent while alone. */
+  hold?: HoldProps;
+  onMove: (delta: number) => void;
   onChange: (edit: (activity: LiveActivity) => LiveActivity) => void;
   onRemove?: () => void;
 }) {
@@ -374,14 +432,32 @@ function ActivityCard({
           ? "Done"
           : "";
   const named = activity.name !== "";
+  const cardClass = [
+    styles.card,
+    activity.done ? styles.cardDone : "",
+    dragging ? styles.cardDragging : "",
+  ].join(" ");
+  // Without a pointer, the arrow keys on the card's fold button move it.
+  const move = hold
+    ? {
+        "data-live-move": true,
+        "aria-keyshortcuts": "ArrowUp ArrowDown",
+        onKeyDown(event: KeyboardEvent) {
+          if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
+          event.preventDefault();
+          onMove(event.key === "ArrowUp" ? -1 : 1);
+        },
+      }
+    : {};
 
   if (!open && named) {
     const built = actualMeasurement(activity);
     const did = built.ok ? describeMeasurement(built.measurement) : null;
     return (
       <li
-        className={`${styles.card} ${styles.cardFolded} ${activity.done ? styles.cardDone : ""}`}
+        className={`${cardClass} ${styles.cardFolded}`}
         data-live-activity={activity.name}
+        data-live-key={activity.key}
         data-live-folded
       >
         <button
@@ -389,6 +465,8 @@ function ActivityCard({
           className={styles.foldToggle}
           aria-expanded={false}
           onClick={() => setOpen(true)}
+          {...hold}
+          {...move}
         >
           <span className={styles.foldText}>
             <strong>{activity.name}</strong>
@@ -403,10 +481,11 @@ function ActivityCard({
 
   return (
     <li
-      className={`${styles.card} ${activity.done ? styles.cardDone : ""}`}
+      className={cardClass}
       data-live-activity={activity.name}
+      data-live-key={activity.key}
     >
-      <div className={styles.cardHead}>
+      <div className={styles.cardHead} {...hold}>
         <div className={styles.cardName}>
           {activity.plannedPosition === null && activity.name === "" ? (
             <input
@@ -432,6 +511,7 @@ function ActivityCard({
             aria-expanded={true}
             aria-label={`Fold ${activity.name}`}
             onClick={() => setOpen(false)}
+            {...move}
           >
             <span className={styles.chevron} aria-hidden="true" />
           </button>
