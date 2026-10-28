@@ -13,7 +13,7 @@ import {
   fillSessionActivitiesAction,
 } from "./actions";
 import styles from "./fill-with-coach.module.css";
-import type { FillProposal } from "./fill-state";
+import type { FillProposal, FillResult } from "./fill-state";
 
 import { CoachWait } from "@/components/coach-wait/coach-wait";
 import { CoachSpark } from "@/components/home/coach-spark";
@@ -168,23 +168,48 @@ export function FillWithCoach({
     return () => form.removeEventListener("submit", onSubmit);
   }, []);
 
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
+  // An answer that did not arrive, or one still being written, is asked for
+  // again by itself (owner, 28 Oct 2026): a phone that slept through a long
+  // answer lost it, though the server had kept it, and the owner had to ask
+  // twice. The same key makes each ask a replay, never a second paid call.
   function ask() {
     const idempotencyKey = requestKey.current ?? crypto.randomUUID();
     requestKey.current = idempotencyKey;
     setMessage(null);
     startAsking(async () => {
-      try {
-        const result = await fillSessionActivitiesAction({
-          sessionId,
-          note,
-          idempotencyKey,
-        });
+      const started = Date.now();
+      for (;;) {
+        let result: FillResult | null = null;
+        try {
+          result = await fillSessionActivitiesAction({
+            sessionId,
+            note,
+            idempotencyKey,
+          });
+        } catch {
+          // Lost on the way back; the server may well have kept it.
+        }
+        if (!mounted.current) return;
         if (
+          result === null ||
           result.status === "pending" ||
           (result.status === "refused" && result.mayStillRun)
         ) {
-          setMessage(result.message);
-          return;
+          if (Date.now() - started >= KEEP_ASKING_MS) {
+            setMessage(result === null ? COPY.lost : result.message);
+            return;
+          }
+          await askAgainSoon();
+          if (!mounted.current) return;
+          continue;
         }
         requestKey.current = null;
         if (result.status === "refused") {
@@ -197,8 +222,7 @@ export function FillWithCoach({
           added: [],
           fromPlan: false,
         });
-      } catch {
-        setMessage(COPY.lost);
+        return;
       }
     });
   }
@@ -479,6 +503,34 @@ export function FillWithCoach({
       )}
     </>
   );
+}
+
+/**
+ * How long the page keeps asking by itself: the coach's own deadline of
+ * 180 s (`COACH_AI_LIVE_LIMITS`), and a little for the writes after it.
+ */
+const KEEP_ASKING_MS = 200_000;
+/** How long it waits between asks while the page is on screen. */
+const ASK_AGAIN_MS = 5_000;
+
+/**
+ * Resolves when it is time to ask again: after a short wait while the page
+ * is on screen, and as soon as it is back if it was hidden — a phone put away
+ * mid-answer asks the moment it is picked up, not before.
+ */
+function askAgainSoon(): Promise<void> {
+  return new Promise((resolve) => {
+    const done = () => {
+      window.clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onShow);
+      resolve();
+    };
+    const onShow = () => {
+      if (document.visibilityState === "visible") done();
+    };
+    const timer = window.setTimeout(onShow, ASK_AGAIN_MS);
+    document.addEventListener("visibilitychange", onShow);
+  });
 }
 
 const COPY = {

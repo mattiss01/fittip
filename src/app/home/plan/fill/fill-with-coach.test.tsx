@@ -29,6 +29,13 @@ import type {
 
 afterEach(cleanup);
 
+function setVisibility(state: DocumentVisibilityState) {
+  Object.defineProperty(document, "visibilityState", {
+    configurable: true,
+    get: () => state,
+  });
+}
+
 const SESSION_ID = "7e000000-0000-4000-8000-000000000001";
 
 function activity(name: string): ActivityValue {
@@ -264,56 +271,136 @@ describe("FillWithCoach", () => {
     expect(within(box()).getByText("Step-up")).toBeTruthy();
   });
 
-  it("asks with the note, and asks again with the same key while the answer is pending", async () => {
-    fillMock.mockResolvedValue({
-      status: "pending",
-      message: "Still working.",
+  describe("asking again by itself", () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
     });
-    setup();
+    afterEach(() => {
+      vi.useRealTimers();
+      setVisibility("visible");
+    });
 
-    fireEvent.change(screen.getByLabelText("Note for the coach (optional)"), {
-      target: { value: "keep it short" },
-    });
-    for (let round = 0; round < 2; round += 1) {
+    async function ask() {
       await act(async () => {
         fireEvent.click(
           screen.getByRole("button", { name: "Fill with Coach" }),
         );
       });
     }
-
-    expect(fillMock).toHaveBeenCalledTimes(2);
-    const [first, second] = fillMock.mock.calls.map(
-      ([input]) => input as { note: string; idempotencyKey: string },
-    );
-    expect(first.note).toBe("keep it short");
-    expect(second.idempotencyKey).toBe(first.idempotencyKey);
-  });
-
-  it("keeps the key after a deadline, and takes a new one after a refusal", async () => {
-    fillMock.mockResolvedValueOnce({
-      status: "refused",
-      message: "Too slow.",
-      mayStillRun: true,
-    });
-    fillMock.mockResolvedValueOnce({ status: "refused", message: "No." });
-    fillMock.mockResolvedValueOnce({ status: "refused", message: "No." });
-    setup();
-
-    for (let round = 0; round < 3; round += 1) {
+    async function wait(ms: number) {
       await act(async () => {
-        fireEvent.click(
-          screen.getByRole("button", { name: "Fill with Coach" }),
-        );
+        await vi.advanceTimersByTimeAsync(ms);
       });
     }
+    function keys() {
+      return fillMock.mock.calls.map(
+        ([input]) => (input as { idempotencyKey: string }).idempotencyKey,
+      );
+    }
 
-    const keys = fillMock.mock.calls.map(
-      ([input]) => (input as { idempotencyKey: string }).idempotencyKey,
-    );
-    // The provider call may still be running: asking again replays it.
-    expect(keys[1]).toBe(keys[0]);
-    // A definite refusal ends the attempt: asking again is a new question.
-    expect(keys[2]).not.toBe(keys[1]);
+    it("asks with the note, and again with the same key while the answer is pending", async () => {
+      fillMock.mockResolvedValueOnce({
+        status: "pending",
+        message: "Still working.",
+      });
+      fillMock.mockResolvedValueOnce({
+        status: "proposal",
+        proposal: proposal("Box jump"),
+      });
+      setup();
+
+      fireEvent.change(screen.getByLabelText("Note for the coach (optional)"), {
+        target: { value: "keep it short" },
+      });
+      await ask();
+      expect(fillMock).toHaveBeenCalledTimes(1);
+      await wait(5_000);
+
+      expect(fillMock).toHaveBeenCalledTimes(2);
+      const [first, second] = fillMock.mock.calls.map(
+        ([input]) => input as { note: string; idempotencyKey: string },
+      );
+      expect(first.note).toBe("keep it short");
+      expect(second.idempotencyKey).toBe(first.idempotencyKey);
+      expect(within(box()).getByText("Box jump")).toBeTruthy();
+      expect(screen.queryByText("Still working.")).toBeNull();
+    });
+
+    it("replays an answer that did not arrive, without being asked", async () => {
+      fillMock.mockRejectedValueOnce(new Error("network"));
+      fillMock.mockResolvedValueOnce({
+        status: "proposal",
+        proposal: proposal("Push-up"),
+      });
+      setup();
+
+      await ask();
+      await wait(5_000);
+
+      expect(keys()).toHaveLength(2);
+      expect(keys()[1]).toBe(keys()[0]);
+      expect(within(box()).getByText("Push-up")).toBeTruthy();
+    });
+
+    it("keeps the key after a deadline, and takes a new one after a refusal", async () => {
+      fillMock.mockResolvedValueOnce({
+        status: "refused",
+        message: "Too slow.",
+        mayStillRun: true,
+      });
+      fillMock.mockResolvedValueOnce({ status: "refused", message: "No." });
+      fillMock.mockResolvedValueOnce({ status: "refused", message: "No." });
+      setup();
+
+      await ask();
+      await wait(5_000);
+      // The provider call may still be running: asking again replays it.
+      expect(keys()).toHaveLength(2);
+      expect(keys()[1]).toBe(keys()[0]);
+      expect(screen.getByText("No.")).toBeTruthy();
+
+      // A definite refusal ends the attempt: asking again is a new question.
+      await ask();
+      expect(keys()[2]).not.toBe(keys()[1]);
+    });
+
+    it("stops after the coach's deadline and says so, keeping the key", async () => {
+      fillMock.mockResolvedValue({
+        status: "pending",
+        message: "Still working.",
+      });
+      setup();
+
+      await ask();
+      await wait(200_000);
+      const asked = fillMock.mock.calls.length;
+      await wait(60_000);
+
+      expect(fillMock).toHaveBeenCalledTimes(asked);
+      expect(screen.getByText("Still working.")).toBeTruthy();
+      await ask();
+      expect(keys().at(-1)).toBe(keys()[0]);
+    });
+
+    it("waits while the page is hidden, and asks the moment it is back", async () => {
+      fillMock.mockRejectedValueOnce(new Error("network"));
+      fillMock.mockResolvedValueOnce({
+        status: "proposal",
+        proposal: proposal("Dip"),
+      });
+      setup();
+
+      setVisibility("hidden");
+      await ask();
+      await wait(60_000);
+      expect(fillMock).toHaveBeenCalledTimes(1);
+
+      await act(async () => {
+        setVisibility("visible");
+        document.dispatchEvent(new Event("visibilitychange"));
+      });
+      expect(fillMock).toHaveBeenCalledTimes(2);
+      expect(within(box()).getByText("Dip")).toBeTruthy();
+    });
   });
 });
