@@ -353,12 +353,15 @@ describe("FillWithCoach", () => {
       setup();
 
       await ask();
-      await wait(5_000);
-      // The provider call may still be running: asking again replays it.
-      expect(keys()).toHaveLength(2);
+      // That request is closed: nothing is asked again by itself.
+      await wait(30_000);
+      expect(keys()).toHaveLength(1);
+      expect(screen.getByText("Too slow.")).toBeTruthy();
+
+      // Asked again by hand, it replays the same request.
+      await ask();
       expect(keys()[1]).toBe(keys()[0]);
       expect(screen.getByText("No.")).toBeTruthy();
-
       // A definite refusal ends the attempt: asking again is a new question.
       await ask();
       expect(keys()[2]).not.toBe(keys()[1]);
@@ -372,7 +375,7 @@ describe("FillWithCoach", () => {
       setup();
 
       await ask();
-      await wait(200_000);
+      await wait(205_000);
       const asked = fillMock.mock.calls.length;
       await wait(60_000);
 
@@ -401,6 +404,60 @@ describe("FillWithCoach", () => {
       });
       expect(fillMock).toHaveBeenCalledTimes(2);
       expect(within(box()).getByText("Dip")).toBeTruthy();
+    });
+
+    it("asks again at once when the page comes back while an ask was out", async () => {
+      // The first ask never answers: the phone slept with it on its way.
+      fillMock.mockReturnValueOnce(new Promise(() => {}));
+      fillMock.mockResolvedValueOnce({
+        status: "proposal",
+        proposal: proposal("Pike push-up"),
+      });
+      setup();
+
+      await ask();
+      await act(async () => {
+        setVisibility("hidden");
+        document.dispatchEvent(new Event("visibilitychange"));
+      });
+      await wait(400_000);
+      expect(fillMock).toHaveBeenCalledTimes(1);
+
+      await act(async () => {
+        setVisibility("visible");
+        document.dispatchEvent(new Event("visibilitychange"));
+      });
+      expect(keys()).toHaveLength(2);
+      expect(keys()[1]).toBe(keys()[0]);
+      expect(within(box()).getByText("Pike push-up")).toBeTruthy();
+    });
+
+    it("gives up on an ask that never answers, then asks again", async () => {
+      fillMock.mockReturnValueOnce(new Promise(() => {}));
+      fillMock.mockResolvedValueOnce({
+        status: "proposal",
+        proposal: proposal("Dip"),
+      });
+      setup();
+
+      await ask();
+      await wait(210_000);
+      expect(fillMock).toHaveBeenCalledTimes(1);
+      await wait(5_000);
+      expect(fillMock).toHaveBeenCalledTimes(2);
+      expect(within(box()).getByText("Dip")).toBeTruthy();
+    });
+
+    it("keeps the note fixed while the coach is answering it", async () => {
+      fillMock.mockReturnValueOnce(new Promise(() => {}));
+      setup();
+
+      await ask();
+      expect(
+        screen.getByLabelText<HTMLTextAreaElement>(
+          "Note for the coach (optional)",
+        ).disabled,
+      ).toBe(true);
     });
   });
 });

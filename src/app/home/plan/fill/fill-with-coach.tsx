@@ -128,7 +128,9 @@ export function FillWithCoach({
     }
   }
   const [message, setMessage] = useState<string | null>(null);
-  const [asking, startAsking] = useTransition();
+  // Plain state, not a transition: an ask can wait minutes, and a
+  // transition that long would hold back a Save or Dismiss result with it.
+  const [asking, setAsking] = useState(false);
   const [dismissing, startDismissing] = useTransition();
   // Kept until the coach gives a definite answer, so asking again after a
   // lost response or a "still working" replays that request instead of
@@ -168,63 +170,65 @@ export function FillWithCoach({
     return () => form.removeEventListener("submit", onSubmit);
   }, []);
 
-  const mounted = useRef(true);
-  useEffect(() => {
-    mounted.current = true;
-    return () => {
-      mounted.current = false;
-    };
-  }, []);
+  // Ends a running ask when the form goes, listeners and all.
+  const asked = useRef<AbortController | null>(null);
+  useEffect(() => () => asked.current?.abort(), []);
 
   // An answer that did not arrive, or one still being written, is asked for
   // again by itself (owner, 28 Oct 2026): a phone that slept through a long
   // answer lost it, though the server had kept it, and the owner had to ask
   // twice. The same key makes each ask a replay, never a second paid call.
-  function ask() {
+  async function ask() {
     const idempotencyKey = requestKey.current ?? crypto.randomUUID();
     requestKey.current = idempotencyKey;
     setMessage(null);
-    startAsking(async () => {
-      const started = Date.now();
+    setAsking(true);
+    const controller = new AbortController();
+    asked.current = controller;
+    const { signal } = controller;
+    const started = Date.now();
+    try {
       for (;;) {
-        let result: FillResult | null = null;
-        try {
-          result = await fillSessionActivitiesAction({
-            sessionId,
-            note,
-            idempotencyKey,
-          });
-        } catch {
-          // Lost on the way back; the server may well have kept it.
-        }
-        if (!mounted.current) return;
-        if (
-          result === null ||
-          result.status === "pending" ||
-          (result.status === "refused" && result.mayStillRun)
-        ) {
-          if (Date.now() - started >= KEEP_ASKING_MS) {
-            setMessage(result === null ? COPY.lost : result.message);
+        const sent = Date.now();
+        const answer = await answerOrInterruption(
+          fillSessionActivitiesAction({ sessionId, note, idempotencyKey }),
+          signal,
+        );
+        if (signal.aborted) return;
+        // Back from a hidden page mid-ask: whatever was on its way may be
+        // lost, so ask now rather than wait for it.
+        if (answer === "back") continue;
+        if (answer === "lost" || answer.status === "pending") {
+          // Once one ask has gone out after the coach's deadline, its answer
+          // is the last word: the server has finished one way or the other.
+          if (sent - started >= KEEP_ASKING_MS) {
+            setMessage(answer === "lost" ? COPY.lost : answer.message);
             return;
           }
-          await askAgainSoon();
-          if (!mounted.current) return;
+          await askAgainSoon(signal);
+          if (signal.aborted) return;
           continue;
         }
-        requestKey.current = null;
-        if (result.status === "refused") {
-          setMessage(result.message);
+        if (answer.status === "refused") {
+          // After the coach's own deadline the key is kept, so asking again
+          // by hand replays it; it is not asked again here, since that
+          // request is already closed.
+          if (!answer.mayStillRun) requestKey.current = null;
+          setMessage(answer.message);
           return;
         }
+        requestKey.current = null;
         setOpen({
-          proposal: result.proposal,
+          proposal: answer.proposal,
           removed: new Set(),
           added: [],
           fromPlan: false,
         });
         return;
       }
-    });
+    } finally {
+      if (!signal.aborted) setAsking(false);
+    }
   }
 
   function toggleRemoved(index: number) {
@@ -319,6 +323,8 @@ export function FillWithCoach({
               maxLength={NOTE_MAX_LENGTH}
               rows={2}
               placeholder={COPY.notePlaceholder}
+              // The coach is answering this note; a new one waits for it.
+              disabled={asking}
               onChange={(event) => {
                 setNote(event.target.value);
                 // A different note is a different request.
@@ -330,7 +336,7 @@ export function FillWithCoach({
             className={styles.askButton}
             type="button"
             disabled={asking || dismissing}
-            onClick={ask}
+            onClick={() => void ask()}
           >
             <CoachSpark size={16} />
             {asking ? COPY.asking : COPY.ask}
@@ -512,17 +518,53 @@ export function FillWithCoach({
 const KEEP_ASKING_MS = 200_000;
 /** How long it waits between asks while the page is on screen. */
 const ASK_AGAIN_MS = 5_000;
+/**
+ * How long one ask may take before it counts as lost: the deadline and the
+ * writes, and a little more. A request that hangs after a phone wakes would
+ * otherwise never answer at all.
+ */
+const ANSWER_TIMEOUT_MS = 210_000;
+
+/**
+ * One ask's answer, or why there is none: "lost" when it failed or took too
+ * long, "back" when the page was hidden while it ran and has been shown
+ * again — a phone put away mid-answer may have dropped it.
+ */
+function answerOrInterruption(
+  answer: Promise<FillResult>,
+  signal: AbortSignal,
+): Promise<FillResult | "lost" | "back"> {
+  return new Promise((resolve) => {
+    let hidden = document.visibilityState === "hidden";
+    const finish = (value: FillResult | "lost" | "back") => {
+      window.clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onChange);
+      signal.removeEventListener("abort", onAbort);
+      resolve(value);
+    };
+    const onChange = () => {
+      if (document.visibilityState === "hidden") hidden = true;
+      else if (hidden) finish("back");
+    };
+    const onAbort = () => finish("lost");
+    const timer = window.setTimeout(() => finish("lost"), ANSWER_TIMEOUT_MS);
+    document.addEventListener("visibilitychange", onChange);
+    signal.addEventListener("abort", onAbort);
+    answer.then(finish, () => finish("lost"));
+  });
+}
 
 /**
  * Resolves when it is time to ask again: after a short wait while the page
  * is on screen, and as soon as it is back if it was hidden — a phone put away
- * mid-answer asks the moment it is picked up, not before.
+ * asks the moment it is picked up, not before.
  */
-function askAgainSoon(): Promise<void> {
+function askAgainSoon(signal: AbortSignal): Promise<void> {
   return new Promise((resolve) => {
     const done = () => {
       window.clearTimeout(timer);
       document.removeEventListener("visibilitychange", onShow);
+      signal.removeEventListener("abort", done);
       resolve();
     };
     const onShow = () => {
@@ -530,6 +572,7 @@ function askAgainSoon(): Promise<void> {
     };
     const timer = window.setTimeout(onShow, ASK_AGAIN_MS);
     document.addEventListener("visibilitychange", onShow);
+    signal.addEventListener("abort", done);
   });
 }
 
