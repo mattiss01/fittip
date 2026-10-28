@@ -58,6 +58,7 @@ function proposal(...names: string[]): FillProposal {
     proposalId: id,
     isExample: true,
     summary: "A lower body day.",
+    askedNote: null,
     safetyConsiderations: [],
     activities: names.map(activity),
     rationales: names.map((name) => `Why ${name}.`),
@@ -150,13 +151,27 @@ describe("FillWithCoach", () => {
     );
   });
 
-  it("hands the summary over as the session's coach's note on Accept (ADR-040)", () => {
-    const open = proposal("Bench press");
+  it("hands what was asked and the summary over as the coach's note on Accept (ADR-040)", () => {
+    const open = {
+      ...proposal("Bench press"),
+      isExample: false,
+      askedNote: "A push session",
+    };
     const { onAccepted } = setup(open);
 
     fireEvent.click(within(box()).getByRole("button", { name: "Accept" }));
 
-    expect(onAccepted).toHaveBeenCalledExactlyOnceWith(open.summary);
+    expect(onAccepted).toHaveBeenCalledExactlyOnceWith(
+      'Asked: "A push session"\nA lower body day.',
+    );
+  });
+
+  it("leaves the coach's note alone when the example coach answered", () => {
+    const { onAccepted } = setup(proposal("Bench press"));
+
+    fireEvent.click(within(box()).getByRole("button", { name: "Accept" }));
+
+    expect(onAccepted).not.toHaveBeenCalled();
   });
 
   it("asks about the list and coach's note as they are on screen (ADR-040)", async () => {
@@ -370,6 +385,21 @@ describe("FillWithCoach", () => {
       expect(keys()).toHaveLength(2);
       expect(keys()[1]).toBe(keys()[0]);
       expect(within(box()).getByText("Push-up")).toBeTruthy();
+    });
+
+    it("takes a new key when the list changes after an unanswered ask (ADR-040)", async () => {
+      fillMock.mockResolvedValue({
+        status: "refused",
+        message: "Too slow.",
+        mayStillRun: true,
+      });
+      const { rerender } = setup();
+
+      await ask();
+      rerender(undefined, [PLANNED[0]]);
+      await ask();
+
+      expect(keys()[1]).not.toBe(keys()[0]);
     });
 
     it("keeps the key after a deadline, and takes a new one after a refusal", async () => {

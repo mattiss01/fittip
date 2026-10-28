@@ -179,6 +179,10 @@ export function FillWithCoach({
     return () => form.removeEventListener("submit", onSubmit);
   }, []);
 
+  // What the kept key was asked about. A different list or note is a
+  // different question (ADR-040), so it takes a new key, not a replay.
+  const keyAsked = useRef<string | null>(null);
+
   // Ends a running ask when the form goes, listeners and all.
   const asked = useRef<AbortController | null>(null);
   useEffect(() => () => asked.current?.abort(), []);
@@ -188,15 +192,24 @@ export function FillWithCoach({
   // answer lost it, though the server had kept it, and the owner had to ask
   // twice. The same key makes each ask a replay, never a second paid call.
   async function ask() {
+    // Taken once: every replay of this request carries what it first asked.
+    // A row added and not yet named is not part of the list yet; any other
+    // the plan would not save refuses the ask, as it would refuse the Save.
+    const onScreen = {
+      activities: JSON.stringify(
+        rows
+          .map((row) => row.value)
+          .filter((value) => value.name.trim() !== ""),
+      ),
+      coachNote,
+    };
+    const about = JSON.stringify(onScreen);
+    if (keyAsked.current !== about) requestKey.current = null;
+    keyAsked.current = about;
     const idempotencyKey = requestKey.current ?? crypto.randomUUID();
     requestKey.current = idempotencyKey;
     setMessage(null);
     setAsking(true);
-    // Taken once: every replay of this request carries what it first asked.
-    const onScreen = {
-      activities: JSON.stringify(rows.map((row) => row.value)),
-      coachNote,
-    };
     const controller = new AbortController();
     asked.current = controller;
     const { signal } = controller;
@@ -268,9 +281,10 @@ export function FillWithCoach({
       ...addedNow.map((row) => row.value),
     ];
     editor.current?.replace(list);
-    // The summary says what the session is for; it becomes the session's
-    // coach's note, which the owner may edit before Save (ADR-040).
-    onAccepted(open.proposal.summary);
+    // What was asked and what the coach made of it become the session's
+    // coach's note, which the owner may edit before Save (ADR-040). The
+    // example coach's disclaimer is not a note about the session.
+    if (!open.proposal.isExample) onAccepted(coachNoteFrom(open.proposal));
     // Only the list the editor now holds can be saved, so only its suggestion
     // is recorded: one accepted earlier was replaced by this one.
     setAccepted([open.proposal.proposalId]);
@@ -532,6 +546,13 @@ export function FillWithCoach({
       )}
     </>
   );
+}
+
+/** The coach's note an accepted suggestion leaves (ADR-040), within 1,000. */
+function coachNoteFrom(proposal: FillProposal): string {
+  const asked =
+    proposal.askedNote === null ? "" : `Asked: "${proposal.askedNote}"\n`;
+  return (asked + proposal.summary).slice(0, 1000);
 }
 
 /**

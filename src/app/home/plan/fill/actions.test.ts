@@ -233,6 +233,7 @@ describe("fillSessionActivitiesAction", () => {
         proposalId: PROPOSAL_ID,
         isExample: true,
         summary: "Squat-led lower body day.",
+        askedNote: null,
         safetyConsiderations: ["Stop if the knee hurts."],
         activities: [
           {

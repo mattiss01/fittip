@@ -26,16 +26,7 @@ import {
 export function readSubmittedActivities(
   formData: FormData,
 ): RollingPlanActivityInput[] {
-  const raw = formData.get("activities");
-  if (typeof raw !== "string") throw new RollingPlanValidationError();
-
-  let decoded: unknown;
-  try {
-    decoded = JSON.parse(raw);
-  } catch {
-    throw new RollingPlanValidationError();
-  }
-  return parseSubmittedActivities(decoded);
+  return parseActivitiesJson(formData.get("activities"));
 }
 
 /**

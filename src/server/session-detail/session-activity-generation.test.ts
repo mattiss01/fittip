@@ -96,7 +96,7 @@ describe("generateSessionActivities", () => {
 
     expect(requests.beginGeneration).toHaveBeenCalledExactlyOnceWith({
       idempotencyKey: "fill-key-000000000000001",
-      requestFingerprint: `session-activities.v1:${SESSION_ID}:2026-10-07:12:16:-1`,
+      requestFingerprint: `session-activities.v1:${SESSION_ID}:2026-10-07:12:16:-1:-1`,
       sessionId: SESSION_ID,
       expectedPlanRevision: 12,
       note: "Only 45 minutes.",

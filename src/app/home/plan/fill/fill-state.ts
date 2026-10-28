@@ -9,6 +9,8 @@ export type FillProposal = {
   /** Written by the built-in example coach rather than a live one. */
   isExample: boolean;
   summary: string;
+  /** The owner's note the coach answered, or null when they wrote none. */
+  askedNote: string | null;
   safetyConsiderations: string[];
   /** In the coach's order, ready to load into the editor as they are. */
   activities: ActivityValue[];

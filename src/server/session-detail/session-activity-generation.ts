@@ -75,9 +75,11 @@ export async function generateSessionActivities(
     input.sessionDate,
     String(input.expectedPlanRevision),
     String(input.note?.length ?? 0),
-    // The list on screen enters by length, as the note does (ADR-040): a
-    // reused key with a different list conflicts rather than replays.
+    // The list and coach's note on screen enter by length, as the note does
+    // (ADR-040): a reused key whose list or note grew or shrank conflicts
+    // rather than replays. The page takes a new key whenever either changes.
     String(input.draft?.activities.length ?? -1),
+    String(input.draft?.coachNote?.length ?? -1),
   ].join(":");
 
   const claim: SessionActivityClaim = await requests.beginGeneration({
