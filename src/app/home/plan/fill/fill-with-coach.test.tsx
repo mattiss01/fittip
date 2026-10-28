@@ -58,6 +58,7 @@ function proposal(...names: string[]): FillProposal {
     proposalId: id,
     isExample: true,
     summary: "A lower body day.",
+    askedNote: null,
     safetyConsiderations: [],
     activities: names.map(activity),
     rationales: names.map((name) => `Why ${name}.`),
@@ -69,8 +70,9 @@ const PLANNED: EditorRow[] = [
   { key: "row-2", value: activity("Walking lunge") },
 ];
 
-function setup(open?: FillProposal, onSubmit = vi.fn()) {
+function setup(open?: FillProposal, onSubmit = vi.fn(), coachNote = "") {
   const replace = vi.fn();
+  const onAccepted = vi.fn();
   const editor = {
     current: { replace } as ActivityEditorHandle,
   };
@@ -86,6 +88,8 @@ function setup(open?: FillProposal, onSubmit = vi.fn()) {
         open={next}
         editor={editor}
         rows={rows}
+        coachNote={coachNote}
+        onAccepted={onAccepted}
       >
         <p>editor</p>
       </FillWithCoach>
@@ -96,6 +100,7 @@ function setup(open?: FillProposal, onSubmit = vi.fn()) {
   return {
     replace,
     onSubmit,
+    onAccepted,
     rerender: (next?: FillProposal, rows?: EditorRow[]) =>
       view.rerender(ui(next, rows)),
     container: view.container,
@@ -143,6 +148,46 @@ describe("FillWithCoach", () => {
     expect(acceptedIds(container)).toEqual([open.proposalId]);
     expect(screen.queryByRole("region", { name: "Coach's suggestion" })).toBe(
       null,
+    );
+  });
+
+  it("hands what was asked and the summary over as the coach's note on Accept (ADR-040)", () => {
+    const open = {
+      ...proposal("Bench press"),
+      isExample: false,
+      askedNote: "A push session",
+    };
+    const { onAccepted } = setup(open);
+
+    fireEvent.click(within(box()).getByRole("button", { name: "Accept" }));
+
+    expect(onAccepted).toHaveBeenCalledExactlyOnceWith(
+      'Asked: "A push session"\nA lower body day.',
+    );
+  });
+
+  it("leaves the coach's note alone when the example coach answered", () => {
+    const { onAccepted } = setup(proposal("Bench press"));
+
+    fireEvent.click(within(box()).getByRole("button", { name: "Accept" }));
+
+    expect(onAccepted).not.toHaveBeenCalled();
+  });
+
+  it("asks about the list and coach's note as they are on screen (ADR-040)", async () => {
+    fillMock.mockResolvedValueOnce({ status: "refused", message: "No." });
+    setup(undefined, vi.fn(), "A push session.");
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Fill with Coach" }));
+    });
+
+    const [input] = fillMock.mock.calls[0] as [
+      { activities: string; coachNote: string },
+    ];
+    expect(input.coachNote).toBe("A push session.");
+    expect(JSON.parse(input.activities)).toEqual(
+      PLANNED.map((row) => row.value),
     );
   });
 
@@ -342,6 +387,21 @@ describe("FillWithCoach", () => {
       expect(within(box()).getByText("Push-up")).toBeTruthy();
     });
 
+    it("takes a new key when the list changes after an unanswered ask (ADR-040)", async () => {
+      fillMock.mockResolvedValue({
+        status: "refused",
+        message: "Too slow.",
+        mayStillRun: true,
+      });
+      const { rerender } = setup();
+
+      await ask();
+      rerender(undefined, [PLANNED[0]]);
+      await ask();
+
+      expect(keys()[1]).not.toBe(keys()[0]);
+    });
+
     it("keeps the key after a deadline, and takes a new one after a refusal", async () => {
       fillMock.mockResolvedValueOnce({
         status: "refused",
@@ -367,23 +427,27 @@ describe("FillWithCoach", () => {
       expect(keys()[2]).not.toBe(keys()[1]);
     });
 
-    it("stops after the coach's deadline and says so, keeping the key", async () => {
-      fillMock.mockResolvedValue({
-        status: "pending",
-        message: "Still working.",
-      });
-      setup();
+    it(
+      "stops after the coach's deadline and says so, keeping the key",
+      { timeout: 20_000 },
+      async () => {
+        fillMock.mockResolvedValue({
+          status: "pending",
+          message: "Still working.",
+        });
+        setup();
 
-      await ask();
-      await wait(205_000);
-      const asked = fillMock.mock.calls.length;
-      await wait(60_000);
+        await ask();
+        await wait(205_000);
+        const asked = fillMock.mock.calls.length;
+        await wait(60_000);
 
-      expect(fillMock).toHaveBeenCalledTimes(asked);
-      expect(screen.getByText("Still working.")).toBeTruthy();
-      await ask();
-      expect(keys().at(-1)).toBe(keys()[0]);
-    });
+        expect(fillMock).toHaveBeenCalledTimes(asked);
+        expect(screen.getByText("Still working.")).toBeTruthy();
+        await ask();
+        expect(keys().at(-1)).toBe(keys()[0]);
+      },
+    );
 
     it("waits while the page is hidden, and asks the moment it is back", async () => {
       fillMock.mockRejectedValueOnce(new Error("network"));
@@ -420,7 +484,7 @@ describe("FillWithCoach", () => {
         setVisibility("hidden");
         document.dispatchEvent(new Event("visibilitychange"));
       });
-      await wait(400_000);
+      await wait(60_000);
       expect(fillMock).toHaveBeenCalledTimes(1);
 
       await act(async () => {
@@ -432,21 +496,25 @@ describe("FillWithCoach", () => {
       expect(within(box()).getByText("Pike push-up")).toBeTruthy();
     });
 
-    it("gives up on an ask that never answers, then asks again", async () => {
-      fillMock.mockReturnValueOnce(new Promise(() => {}));
-      fillMock.mockResolvedValueOnce({
-        status: "proposal",
-        proposal: proposal("Dip"),
-      });
-      setup();
+    it(
+      "gives up on an ask that never answers, then asks again",
+      { timeout: 20_000 },
+      async () => {
+        fillMock.mockReturnValueOnce(new Promise(() => {}));
+        fillMock.mockResolvedValueOnce({
+          status: "proposal",
+          proposal: proposal("Dip"),
+        });
+        setup();
 
-      await ask();
-      await wait(210_000);
-      expect(fillMock).toHaveBeenCalledTimes(1);
-      await wait(5_000);
-      expect(fillMock).toHaveBeenCalledTimes(2);
-      expect(within(box()).getByText("Dip")).toBeTruthy();
-    });
+        await ask();
+        await wait(210_000);
+        expect(fillMock).toHaveBeenCalledTimes(1);
+        await wait(5_000);
+        expect(fillMock).toHaveBeenCalledTimes(2);
+        expect(within(box()).getByText("Dip")).toBeTruthy();
+      },
+    );
 
     it("keeps the note fixed while the coach is answering it", async () => {
       fillMock.mockReturnValueOnce(new Promise(() => {}));

@@ -23,6 +23,7 @@ const plannedSession: RollingPlanSession = {
   seriesId: null,
   occurrenceDate: null,
   hasDiverged: false,
+  coachNote: "A tempo day.",
   activities: [
     {
       id: "77000000-0000-4000-8000-0000000000a1",
@@ -31,6 +32,7 @@ const plannedSession: RollingPlanSession = {
       name: "Tempo blocks",
       sport: "Running",
       instructions: "3 x 8 minutes",
+      rationale: "The session's main work.",
       measurementMode: "duration_intensity",
       target: { duration_minutes: 24, intensity: "hard" },
     },
@@ -95,6 +97,8 @@ describe("saving a planned session into the library", () => {
       "seriesId",
       "occurrenceDate",
       "hasDiverged",
+      // ADR-040: the coach's note and reasons were about that day.
+      "coachNote",
     ]) {
       expect(draft).not.toHaveProperty(key);
     }

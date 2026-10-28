@@ -24,6 +24,7 @@ export type PlanSeriesView = {
   expectedDurationMinutes: number | null;
   startTime: string | null;
   note: string | null;
+  coachNote: string | null;
 };
 
 export type RecurringSessionView = {
@@ -35,6 +36,7 @@ export type RecurringSessionView = {
   expectedDurationMinutes: number | null;
   startTime: string | null;
   note: string | null;
+  coachNote: string | null;
   activities: ActivityValue[];
   /** A coach's suggestion for this occurrence still waiting for an answer. */
   openFill?: FillProposal;
@@ -355,6 +357,7 @@ function draftOf(
     | "expectedDurationMinutes"
     | "startTime"
     | "note"
+    | "coachNote"
   >,
 ) {
   return {
@@ -367,5 +370,6 @@ function draftOf(
         : String(value.expectedDurationMinutes),
     startTime: value.startTime ?? "",
     note: value.note ?? "",
+    coachNote: value.coachNote ?? "",
   };
 }

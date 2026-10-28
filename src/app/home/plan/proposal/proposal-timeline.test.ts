@@ -317,6 +317,7 @@ function planned(
     intent: null,
     startTime: null,
     note: null,
+    coachNote: null,
     activities: [],
     seriesId: null,
     ...overrides,

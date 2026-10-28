@@ -143,6 +143,8 @@ Finally, "memoryCandidates": zero to four durable facts, constraints, preference
 
 Return the whole list the session should hold, in order, one to twelve activities. If the session already has activities, they are the athlete's starting point: keep what fits, change what should change, add what is missing, and say why in each "rationale". The athlete sees your list beside theirs and chooses.
 
+"sessionDetail.session.coachNote", when present, is what this session was asked for and built to do in an earlier answer, as the athlete kept it. Keep to it unless "planningNote" says otherwise: a note like "more" or "another" builds on it. An activity's "rationale" there is why it was chosen before.
+
 Prefer the athlete's own activities. Where one in "library" fits, copy its "id" into "personalActivityId" and use its measurement mode; do not invent a near-duplicate under another name. "savedSessions" are sessions the athlete wrote themselves and are the best evidence of how they like this kind of session built. Use a new activity, with "personalActivityId" null, only where nothing in the library fits.
 
 Set targets from "recentActuals" where they exist: the numbers the athlete actually did, newest first. Progress in small steps from those, never from nothing. A result more than a few weeks old says where the athlete was, not where they are: start below it. Where there is no history for an activity, choose a conservative target and say so. Fit the whole list inside the session's duration and respect the rest of "week": do not load the same thing hard on consecutive days.
@@ -155,7 +157,7 @@ Measurement modes and the "target" fields each uses (every other target field is
 - "unmeasured": "target" is null.
 "target" may also be null in any mode when a number would be a guess.
 
-"instructions" are how to perform it, briefly, or null. "summary" tells the athlete what the list is built to do and the main choice you made, in one or two short sentences.
+"instructions" are how to perform it, briefly, or null. "summary" becomes the session's coach's note if the athlete accepts: in one or two short sentences, what the session is for, including what they asked for here and in "coachNote", and the main choice you made.
 
 "trainingHistory" here covers only the last seven days and lists what was logged; it does not list missed sessions, and a quiet week in it is not evidence of a break. "recentSafetyFlags" reaches four weeks back: each is a day on which the athlete reported pain, illness, injury or severe fatigue, with nothing else of that day. Treat each as the safety rules treat a signal.
 
@@ -657,7 +659,7 @@ const SESSION_ACTIVITIES_SCHEMA = {
     summary: {
       type: "string",
       description:
-        "What the list is built to do and the main choice made. At most 320 characters.",
+        "Becomes the session's coach's note: what it is for, including what the athlete asked, and the main choice made. At most 320 characters.",
     },
     activities: {
       type: "array",

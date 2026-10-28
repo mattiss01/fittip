@@ -1666,6 +1666,7 @@ export type Database = {
           personal_activity_id: string | null;
           plan_id: string;
           position: number;
+          rationale: string | null;
           session_id: string;
           sport: string;
           target: Json | null;
@@ -1681,6 +1682,7 @@ export type Database = {
           personal_activity_id?: string | null;
           plan_id: string;
           position: number;
+          rationale?: string | null;
           session_id: string;
           sport: string;
           target?: Json | null;
@@ -1696,6 +1698,7 @@ export type Database = {
           personal_activity_id?: string | null;
           plan_id?: string;
           position?: number;
+          rationale?: string | null;
           session_id?: string;
           sport?: string;
           target?: Json | null;
@@ -1861,6 +1864,7 @@ export type Database = {
       };
       rolling_plan_series: {
         Row: {
+          coach_note: string | null;
           created_at: string;
           end_date: string | null;
           expected_duration_minutes: number | null;
@@ -1881,6 +1885,7 @@ export type Database = {
           weekdays: number[] | null;
         };
         Insert: {
+          coach_note?: string | null;
           created_at?: string;
           end_date?: string | null;
           expected_duration_minutes?: number | null;
@@ -1901,6 +1906,7 @@ export type Database = {
           weekdays?: number[] | null;
         };
         Update: {
+          coach_note?: string | null;
           created_at?: string;
           end_date?: string | null;
           expected_duration_minutes?: number | null;
@@ -1946,6 +1952,7 @@ export type Database = {
           name: string;
           personal_activity_id: string | null;
           position: number;
+          rationale: string | null;
           series_id: string;
           sport: string;
           target: Json | null;
@@ -1960,6 +1967,7 @@ export type Database = {
           name: string;
           personal_activity_id?: string | null;
           position: number;
+          rationale?: string | null;
           series_id: string;
           sport: string;
           target?: Json | null;
@@ -1974,6 +1982,7 @@ export type Database = {
           name?: string;
           personal_activity_id?: string | null;
           position?: number;
+          rationale?: string | null;
           series_id?: string;
           sport?: string;
           target?: Json | null;
@@ -2033,6 +2042,7 @@ export type Database = {
         Row: {
           active_position: number | null;
           cancelled_at: string | null;
+          coach_note: string | null;
           created_at: string;
           expected_duration_minutes: number | null;
           has_diverged: boolean;
@@ -2054,6 +2064,7 @@ export type Database = {
         Insert: {
           active_position?: number | null;
           cancelled_at?: string | null;
+          coach_note?: string | null;
           created_at?: string;
           expected_duration_minutes?: number | null;
           has_diverged?: boolean;
@@ -2075,6 +2086,7 @@ export type Database = {
         Update: {
           active_position?: number | null;
           cancelled_at?: string | null;
+          coach_note?: string | null;
           created_at?: string;
           expected_duration_minutes?: number | null;
           has_diverged?: boolean;

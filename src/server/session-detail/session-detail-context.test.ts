@@ -108,9 +108,92 @@ describe("selectSessionDetailRecords", () => {
       intent: "Heavy, low reps",
       durationMinutes: 60,
       note: "Gym opens at 7",
+      coachNote: null,
       activities: [],
     });
     expect(JSON.stringify(records)).not.toContain("isLocked");
+  });
+
+  it("sends the saved coach's note and each activity's reason, cut short", () => {
+    const records = select({
+      planSessions: [
+        planSession({
+          coachNote: "A push session: chest, shoulders, triceps.",
+          activities: [
+            {
+              id: "a1",
+              position: 0,
+              name: "Bench press",
+              sport: "Strength",
+              rationale: "R".repeat(300),
+              measurementMode: "unmeasured",
+            },
+          ],
+        }),
+      ],
+    }) as SessionDetailRecords;
+
+    expect(records.session.coachNote).toBe(
+      "A push session: chest, shoulders, triceps.",
+    );
+    expect(records.session.activities[0].rationale).toHaveLength(160);
+  });
+
+  it("reads the list and note on screen in place of the saved ones (ADR-040)", () => {
+    const records = select({
+      planSessions: [
+        planSession({
+          coachNote: "Saved note",
+          activities: [
+            {
+              id: "a1",
+              position: 0,
+              name: "Saved row",
+              sport: "Strength",
+              measurementMode: "unmeasured",
+            },
+          ],
+        }),
+      ],
+      draft: {
+        coachNote: "A push session.",
+        activities: [
+          {
+            position: 0,
+            name: "Bench press",
+            sport: "Strength",
+            rationale: "The main press.",
+            measurementMode: "unmeasured",
+          },
+          {
+            position: 1,
+            name: "Dips",
+            sport: "Strength",
+            measurementMode: "unmeasured",
+          },
+        ],
+      },
+    }) as SessionDetailRecords;
+
+    expect(records.session.coachNote).toBe("A push session.");
+    expect(
+      records.session.activities.map((activity) => [
+        activity.name,
+        activity.rationale,
+      ]),
+    ).toEqual([
+      ["Bench press", "The main press."],
+      ["Dips", null],
+    ]);
+  });
+
+  it("sends no note when the one on screen was cleared", () => {
+    const records = select({
+      planSessions: [planSession({ coachNote: "Saved note" })],
+      draft: { coachNote: null, activities: [] },
+    }) as SessionDetailRecords;
+
+    expect(records.session.coachNote).toBeNull();
   });
 
   it("reads the week as the other active sessions three days either side", () => {
@@ -370,7 +453,12 @@ describe("buildSessionDetailContext", () => {
         intent: "😀".repeat(500),
         durationMinutes: 600,
         note: "😀".repeat(2_000),
-        activities: Array.from({ length: 50 }, (_, index) => activity(index)),
+        coachNote: "😀".repeat(1_000),
+        // Each with the longest reason a row may keep (ADR-040).
+        activities: Array.from({ length: 50 }, (_, index) => ({
+          ...activity(index),
+          rationale: "😀".repeat(300),
+        })),
       },
       week: Array.from({ length: 30 }, () => ({
         localDate: "2026-10-06",
@@ -490,12 +578,15 @@ describe("session detail review follow-ups", () => {
           sport: control.repeat(80),
           intent: control.repeat(500),
           note: control.repeat(2_000),
+          coachNote: control.repeat(1_000),
         }),
       ],
     }) as SessionDetailRecords;
 
     const context = buildSessionDetailContext(records).context;
+    // The owner's note goes first, then the coach's (ADR-040).
     expect(context.session.note).toBeNull();
+    expect(context.session.coachNote).toBeNull();
     expect(
       new TextEncoder().encode(JSON.stringify(context.session)).length,
     ).toBeLessThanOrEqual(SESSION_DETAIL_BYTES.session);

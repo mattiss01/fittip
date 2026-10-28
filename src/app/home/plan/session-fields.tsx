@@ -44,6 +44,11 @@ export function SessionFields({
   const [sport, setSport] = useState(draft?.sport ?? "");
   const editor = useRef<ActivityEditorHandle>(null);
   const [rows, setRows] = useState<readonly EditorRow[]>([]);
+  // What the session was asked for and built to do (ADR-040, owner's design
+  // of 28 Oct 2026): written by Accept from the coach's summary, the owner's
+  // to edit or clear, and read by the next ask. Shown only once there is one.
+  const [coachNote, setCoachNote] = useState(draft?.coachNote ?? "");
+  const [showCoachNote, setShowCoachNote] = useState(coachNote !== "");
   return (
     <>
       <div className={styles.field}>
@@ -110,6 +115,22 @@ export function SessionFields({
           defaultValue={draft?.note ?? ""}
         />
       </div>
+      {showCoachNote ? (
+        <div className={styles.field}>
+          <label htmlFor={`${idPrefix}-coach-note`}>Coach&apos;s note</label>
+          <textarea
+            id={`${idPrefix}-coach-note`}
+            name="coachNote"
+            maxLength={1000}
+            value={coachNote}
+            onChange={(event) => setCoachNote(event.target.value)}
+          />
+          <p className={styles.fieldHint}>
+            From the coach&apos;s last accepted suggestion. The next Fill with
+            Coach reads it; clear it to start over.
+          </p>
+        </div>
+      ) : null}
       {fill === undefined ? (
         <ActivityEditor
           idPrefix={idPrefix}
@@ -122,6 +143,11 @@ export function SessionFields({
           open={fill.open}
           editor={editor}
           rows={rows}
+          coachNote={coachNote}
+          onAccepted={(summary) => {
+            setCoachNote(summary);
+            setShowCoachNote(true);
+          }}
         >
           <ActivityEditor
             idPrefix={idPrefix}

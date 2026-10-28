@@ -46,6 +46,8 @@ export type PlanActionDraft = {
   /** `HH:MM` or empty. */
   startTime: string;
   note: string;
+  /** The coach's note on the session (ADR-040), or empty. */
+  coachNote: string;
 };
 
 export type PlanActionState = {

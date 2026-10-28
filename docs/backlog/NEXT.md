@@ -49,6 +49,14 @@ Ordered by dependency. A lane is named where it is not the build lane.
 
 **Coach and records.**
 
+- [ ] **Fill reads the session on screen and keeps the coach's note — careful lane.**
+      Owner, 28 Oct 2026: "give me more exercises" after accepting a push suggestion lost
+      the push, because the coach reads the session as saved and nothing of its answer
+      survived but the activities. The ask sends the editor's rows (checked by the plan's
+      save validator) and a new "Coach's note"; Accept writes the summary into that note
+      and each activity keeps its reason, both visible and editable, both read by the next
+      ask (owner's choice over a request log). Migration re-issues the plan functions as
+      start times did. ADR-040; no paid call to verify.
 - [ ] **A fill's sources are recorded and never checked.** A suggestion names the
       logs, library entries and saved sessions it was built from, and since ADR-023
       the logs whose flags it was sent. Nothing compares them, so a flag corrected

@@ -46,6 +46,7 @@ class SessionSource implements CoachAIContextSource {
           intent: null,
           durationMinutes: 45,
           note: null,
+          coachNote: null,
           activities: [],
         },
         week: [],

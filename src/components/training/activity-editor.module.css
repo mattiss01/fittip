@@ -101,6 +101,7 @@
 
 .summary {
   flex: 1 1 auto;
+  min-width: 0;
   display: grid;
   gap: 0.15rem;
   margin: 0;
@@ -127,6 +128,33 @@
   color: var(--ledger-muted);
   font: 0.85rem/1.35 var(--font-sans);
   overflow-wrap: anywhere;
+}
+
+/* The coach's reason, kept from an accepted suggestion (ADR-040): one line
+   here, whole in the open row. */
+.summaryWhy {
+  overflow: hidden;
+  color: var(--ledger-muted);
+  font: italic 0.8rem/1.35 var(--font-sans);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reason {
+  display: grid;
+  gap: 0.4rem;
+  justify-items: start;
+}
+
+.reason p {
+  margin: 0;
+  color: var(--ledger-ink);
+  font: 0.85rem/1.4 var(--font-sans);
+}
+
+.reason span {
+  color: var(--ledger-muted);
+  font-weight: 600;
 }
 
 .remove {

@@ -292,6 +292,7 @@ async function loadProposalState() {
     intent: session.intent ?? null,
     startTime: session.startTime ?? null,
     note: session.note ?? null,
+    coachNote: session.coachNote ?? null,
     activities: session.activities.map(toActivityValue),
     seriesId: session.seriesId ?? null,
   })) satisfies (PlannedSessionSummary & { localDate: string })[];

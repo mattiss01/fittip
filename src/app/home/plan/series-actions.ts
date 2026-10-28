@@ -464,6 +464,9 @@ function readContent(formData: FormData) {
     ...(optionalText(formData, "note") === undefined
       ? {}
       : { note: requiredText(formData, "note") }),
+    ...(optionalText(formData, "coachNote") === undefined
+      ? {}
+      : { coachNote: requiredText(formData, "coachNote") }),
   };
 }
 

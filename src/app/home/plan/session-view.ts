@@ -19,6 +19,8 @@ export type PlanSessionView = {
   /** `HH:MM`, or null when untimed. */
   startTime: string | null;
   note: string | null;
+  /** What the coach and the owner settled the session is for (ADR-040). */
+  coachNote: string | null;
   status: "active" | "cancelled";
   /** The rows the edit form binds, and the list the card prints. */
   activities: ActivityValue[];
@@ -133,6 +135,7 @@ export function draftOf(session: PlanSessionView): PlanActionDraft {
         : String(session.expectedDurationMinutes),
     startTime: session.startTime ?? "",
     note: session.note ?? "",
+    coachNote: session.coachNote ?? "",
   };
 }
 

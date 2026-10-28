@@ -83,6 +83,7 @@ function planned(
     intent: "Conversational throughout.",
     startTime: null,
     note: "Left knee was tight last week.",
+    coachNote: null,
     activities: [],
     seriesId: null,
     ...overrides,

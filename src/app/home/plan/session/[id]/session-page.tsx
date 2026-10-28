@@ -324,6 +324,7 @@ export function SessionPage({
     expectedDurationMinutes: session.expectedDurationMinutes,
     startTime: session.startTime,
     note: session.note,
+    coachNote: session.coachNote,
     activities: session.activities,
     openFill: session.openFill,
   };
@@ -513,12 +514,19 @@ export function SessionPage({
         {session.note === null ? null : (
           <p className={page.text}>{session.note}</p>
         )}
+        {session.coachNote === null ? null : (
+          <div className={page.coachNote} data-coach-note>
+            <p className={page.coachNoteLabel}>Coach&apos;s note</p>
+            <p className={page.text}>{session.coachNote}</p>
+          </div>
+        )}
         <ActivityList
           label="Activities"
           items={session.activities.map((activity, index) => ({
             key: String(index),
             name: activity.name,
             detail: describeMeasurement(activity.target),
+            why: activity.rationale ?? null,
           }))}
         />
         {cancelled && coachCancellation !== null ? (

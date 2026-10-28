@@ -50,6 +50,7 @@ function input() {
     sessionDate: "2026-10-07",
     expectedPlanRevision: 12,
     note: "Only 45 minutes.",
+    draft: null,
     idempotencyKey: "fill-key-000000000000001",
   };
 }
@@ -95,7 +96,7 @@ describe("generateSessionActivities", () => {
 
     expect(requests.beginGeneration).toHaveBeenCalledExactlyOnceWith({
       idempotencyKey: "fill-key-000000000000001",
-      requestFingerprint: `session-activities.v1:${SESSION_ID}:2026-10-07:12:16`,
+      requestFingerprint: `session-activities.v1:${SESSION_ID}:2026-10-07:12:16:-1:-1`,
       sessionId: SESSION_ID,
       expectedPlanRevision: 12,
       note: "Only 45 minutes.",
@@ -103,6 +104,7 @@ describe("generateSessionActivities", () => {
     expect(createServiceMock).toHaveBeenCalledExactlyOnceWith({
       owner: OWNER,
       sessionId: SESSION_ID,
+      sessionDraft: null,
       spendLedger: LEDGER,
     });
     expect(propose.mock.calls[0][0].compose).toEqual({

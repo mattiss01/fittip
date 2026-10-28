@@ -164,6 +164,7 @@ export function CreateSession({
                 // A saved session is a template, not a day: it has no time.
                 startTime: "",
                 note: startFrom.note ?? "",
+                coachNote: "",
               }
             : refusedDraft
         }

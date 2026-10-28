@@ -34,6 +34,7 @@ import {
   type CoachAITelemetrySink,
 } from "@/server/ai/telemetry";
 import { readRuntimePolicy } from "@/lib/auth/runtime-policy";
+import type { SessionDetailDraft } from "@/server/session-detail/session-detail-context";
 
 /**
  * The composition root: the first place in FitTip that constructs a real
@@ -91,6 +92,8 @@ export type CoachAICompositionInput = {
   requestIds?: () => string;
   /** `fill_session_activities` only: the planned session the source reads. */
   sessionId?: string;
+  /** `fill_session_activities` only: that session as it is on screen. */
+  sessionDraft?: SessionDetailDraft | null;
 };
 
 export type CoachAIComposition = {
@@ -183,6 +186,7 @@ function createCoachAIService(
       operation,
       clock,
       sessionId: input.sessionId ?? null,
+      sessionDraft: input.sessionDraft ?? null,
     });
 
   if (mode === "fixture") {

@@ -12,6 +12,7 @@ export function toFillProposal(
     proposalId: proposal.id,
     isExample: isExampleProposal(proposal.providerCode),
     summary: proposal.content.summary,
+    askedNote: proposal.note,
     safetyConsiderations: proposal.content.safetyConsiderations ?? [],
     activities: proposal.content.activities.map(toActivityValue),
     rationales: proposal.content.activities.map(

@@ -31,6 +31,8 @@ export type PlannedSessionSummary = {
   /** Kept by the same edit form, for the same reason. */
   startTime: string | null;
   note: string | null;
+  /** Kept by the same edit form, for the same reason (ADR-040). */
+  coachNote: string | null;
   /**
    * The session's activities, library links included, in order. The edit form
    * submits the whole list and the plan's edit replaces the stored one with

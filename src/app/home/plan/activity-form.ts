@@ -26,9 +26,16 @@ import {
 export function readSubmittedActivities(
   formData: FormData,
 ): RollingPlanActivityInput[] {
-  const raw = formData.get("activities");
-  if (typeof raw !== "string") throw new RollingPlanValidationError();
+  return parseActivitiesJson(formData.get("activities"));
+}
 
+/**
+ * The list a session editor holds, as one JSON string — what Fill with Coach
+ * sends of the session on screen (ADR-040). Checked exactly as a Save is, so
+ * a list the coach is asked about is one the plan would take.
+ */
+export function parseActivitiesJson(raw: unknown): RollingPlanActivityInput[] {
+  if (typeof raw !== "string") throw new RollingPlanValidationError();
   let decoded: unknown;
   try {
     decoded = JSON.parse(raw);

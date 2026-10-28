@@ -657,6 +657,7 @@ describe("PlanManager", () => {
         expectedDurationMinutes: "",
         startTime: "",
         note: "",
+        coachNote: "",
       },
     });
     expect(screen.getByRole("dialog")).toBeVisible();

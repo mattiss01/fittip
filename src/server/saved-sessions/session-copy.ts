@@ -50,10 +50,14 @@ export function toSavedSessionDraft(
       : { expectedDurationMinutes: session.expectedDurationMinutes }),
     ...(session.note === undefined ? {} : { note: session.note }),
     // `id`, `localDate`, `position`, `status` and `cancelledAt` all belong to
-    // the planned session and stop here. So does each activity's own identity.
+    // the planned session and stop here. So does each activity's own identity,
+    // and the coach's reason for it on that day (ADR-040): a template keeps
+    // none, and the library's validator refuses one. The coach's note stays
+    // with the day for the same reason.
     activities: session.activities.map(
-      ({ id, ...activity }): SavedSessionActivity => {
+      ({ id, rationale, ...activity }): SavedSessionActivity => {
         void id;
+        void rationale;
         return activity;
       },
     ),
