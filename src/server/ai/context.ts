@@ -552,16 +552,17 @@ export const COACH_AI_CONTEXT_LIMITS = {
       // Twenty days of at most 123 bytes with their separators are 2,481.
       recentSafetyFlags: 2_600,
       // 16,000 until ADR-023 decisions 16 and 17 gave the week 1,600 more and
-      // the library 4,500 more.
-      sessionDetail: 22_100,
-      // The sum of the parts (50,402) and about 1,000 for the envelope:
+      // the library 4,500 more; 22,100 until ADR-040 gave the session part
+      // 4,000 more for the coach's note and each activity's reason.
+      sessionDetail: 26_100,
+      // The sum of the parts (54,402) and about 1,000 for the envelope:
       //
-      //   prefix 8,450 + wrapper 64 + context 51,450 = 59,964 characters
-      //   ceil(59,964 / 4) = 14,991  against the 15,000 this was sized to
-      //   (the prefix grew 100 with ADR-038's mode lines and 150 with the
-      //   safety rule for a health condition, 21 Oct 2026);
-      //   maxInputTokens is 18,000 since ADR-028, for the roadmap call.
-      total: 51_450,
+      //   prefix 8,850 + wrapper 64 + context 55,450 = 64,364 characters
+      //   ceil(64,364 / 4) = 16,091  against maxInputTokens 20,000
+      //   (ADR-034). The prefix grew 100 with ADR-038's mode lines, 150 with
+      //   the safety rule for a health condition (21 Oct 2026) and 400 with
+      //   ADR-040's lines on the coach's note.
+      total: 55_450,
     },
   },
 } as const satisfies Record<CoachAIOperation, CoachAIContextLimits>;

@@ -17,6 +17,8 @@ export type RollingPlanActivityInput = {
   name: string;
   sport: string;
   instructions?: string;
+  /** The coach's reason for it, kept from an accepted suggestion (ADR-040). */
+  rationale?: string;
   measurementMode: TrainingMeasurementMode;
   target?: TrainingMeasurement;
 };
@@ -29,6 +31,11 @@ export type RollingPlanSessionContent = {
   /** `HH:MM`, absent when the session is untimed. */
   startTime?: string;
   note?: string;
+  /**
+   * What the session was asked for and built to do, from an accepted Fill
+   * with Coach suggestion; the owner's to edit or clear (ADR-040).
+   */
+  coachNote?: string;
   activities: RollingPlanActivityInput[];
 };
 
@@ -62,6 +69,8 @@ export type RollingPlanSeriesInput = {
   /** Every occurrence starts at it; absent when they are untimed. */
   startTime?: string;
   note?: string;
+  /** Every occurrence carries it, as it carries the template's activities. */
+  coachNote?: string;
   activities: RollingPlanSeriesActivityInput[];
 };
 
@@ -578,6 +587,7 @@ function parseSeries(value: unknown): RollingPlanSeriesInput {
     "expectedDurationMinutes",
     "startTime",
     "note",
+    "coachNote",
     "activities",
   ]);
   const frequency = readChoice(record.frequency, ["daily", "weekly"] as const);
@@ -618,6 +628,7 @@ function parseSeries(value: unknown): RollingPlanSeriesInput {
         }),
     ...optionalStartTime(record.startTime),
     ...optionalString("note", record.note, 2000),
+    ...optionalString("coachNote", record.coachNote, 1000),
     activities,
   };
 }
@@ -670,6 +681,7 @@ function parseSession(value: unknown, withPlacement: boolean) {
     "expectedDurationMinutes",
     "startTime",
     "note",
+    "coachNote",
     "activities",
   ];
   assertOnlyKeys(
@@ -702,6 +714,7 @@ function parseSession(value: unknown, withPlacement: boolean) {
         }),
     ...optionalStartTime(record.startTime),
     ...optionalString("note", record.note, 2000),
+    ...optionalString("coachNote", record.coachNote, 1000),
     activities,
   };
   if (!withPlacement) return content;
@@ -745,6 +758,7 @@ function parseActivity(value: unknown): RollingPlanActivityInput {
     "name",
     "sport",
     "instructions",
+    "rationale",
     "measurementMode",
     "target",
   ]);
@@ -771,6 +785,7 @@ function parseActivity(value: unknown): RollingPlanActivityInput {
     name: readRequiredString(record.name, 120),
     sport: readRequiredString(record.sport, 80),
     ...optionalString("instructions", record.instructions, 2000),
+    ...optionalString("rationale", record.rationale, 300),
     measurementMode,
     ...(target === undefined ? {} : { target }),
   };

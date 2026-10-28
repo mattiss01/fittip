@@ -223,6 +223,8 @@ export function ActivityEditor({
       name: row.name.trim(),
       sport: row.sport.trim(),
       instructions: trimmedInstructions(row.instructions),
+      // The coach's reason travels with its row (ADR-040); none is sent blank.
+      ...(row.rationale ? { rationale: row.rationale } : {}),
       measurementMode: row.measurementMode,
       target: build.ok ? build.measurement : null,
     })),
@@ -246,6 +248,7 @@ export function ActivityEditor({
           name: row.name,
           sport: row.sport,
           instructions: row.instructions,
+          ...(row.rationale ? { rationale: row.rationale } : {}),
           measurementMode: row.measurementMode,
           target: build.ok ? build.measurement : row.target,
         },
@@ -486,6 +489,9 @@ function ActivityRow({
           <span className={styles.summaryTarget}>
             {problem ?? preview ?? ACTIVITY_COPY.noTarget}
           </span>
+          {row.rationale ? (
+            <span className={styles.summaryWhy}>Why: {row.rationale}</span>
+          ) : null}
         </button>
         <button className={styles.remove} type="button" onClick={onRemove}>
           {ACTIVITY_COPY.remove}
@@ -499,6 +505,20 @@ function ActivityRow({
           problem={problem}
           onChange={onChange}
         />
+        {row.rationale ? (
+          <div className={styles.reason}>
+            <p>
+              <span>Coach&apos;s reason</span> {row.rationale}
+            </p>
+            <button
+              className={styles.add}
+              type="button"
+              onClick={() => onChange({ rationale: null })}
+            >
+              Remove reason
+            </button>
+          </div>
+        ) : null}
         {named ? (
           <LibraryRowActions
             {...library}

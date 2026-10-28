@@ -111,6 +111,103 @@ beforeEach(() => {
   });
 });
 
+describe("fillSessionActivitiesAction with the session on screen (ADR-040)", () => {
+  const bench = {
+    personalActivityId: null,
+    name: "Bench press",
+    sport: "Strength",
+    instructions: null,
+    rationale: "The main press.",
+    measurementMode: "unmeasured",
+    target: null,
+  };
+
+  it("sends the list and the coach's note as the editor holds them", async () => {
+    await fillSessionActivitiesAction({
+      sessionId: SESSION_ID,
+      note: "more exercises",
+      idempotencyKey: KEY,
+      activities: JSON.stringify([bench]),
+      coachNote: "  A push session.  ",
+    });
+
+    expect(generateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        draft: {
+          coachNote: "A push session.",
+          activities: [
+            {
+              position: 0,
+              name: "Bench press",
+              sport: "Strength",
+              rationale: "The main press.",
+              measurementMode: "unmeasured",
+            },
+          ],
+        },
+      }),
+      { requests: repository },
+    );
+  });
+
+  it("sends no coach's note when the field is empty, and asks about the saved session without a list", async () => {
+    await fillSessionActivitiesAction({
+      sessionId: SESSION_ID,
+      note: "",
+      idempotencyKey: KEY,
+      activities: "[]",
+      coachNote: "   ",
+    });
+    expect(generateMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ draft: { coachNote: null, activities: [] } }),
+      { requests: repository },
+    );
+
+    await fillSessionActivitiesAction({
+      sessionId: SESSION_ID,
+      note: "",
+      idempotencyKey: KEY,
+    });
+    expect(generateMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ draft: null }),
+      { requests: repository },
+    );
+  });
+
+  it("refuses a list the plan would not save, before anything is claimed", async () => {
+    const result = await fillSessionActivitiesAction({
+      sessionId: SESSION_ID,
+      note: "",
+      idempotencyKey: KEY,
+      activities: JSON.stringify([{ ...bench, name: "" }]),
+      coachNote: "",
+    });
+
+    expect(result).toEqual({
+      status: "refused",
+      message:
+        "An activity in your list is not complete yet. Fix or remove it, then ask again.",
+    });
+    expect(generateMock).not.toHaveBeenCalled();
+  });
+
+  it("refuses a coach's note over 1,000 characters, before anything is claimed", async () => {
+    const result = await fillSessionActivitiesAction({
+      sessionId: SESSION_ID,
+      note: "",
+      idempotencyKey: KEY,
+      activities: "[]",
+      coachNote: "x".repeat(1_001),
+    });
+
+    expect(result).toEqual({
+      status: "refused",
+      message: "The coach's note can be at most 1,000 characters.",
+    });
+    expect(generateMock).not.toHaveBeenCalled();
+  });
+});
+
 describe("fillSessionActivitiesAction", () => {
   it("asks about the session as the plan has it and answers the proposal for the editor", async () => {
     const result = await fillSessionActivitiesAction({
@@ -143,6 +240,8 @@ describe("fillSessionActivitiesAction", () => {
             name: "Goblet squat",
             sport: "Strength",
             instructions: null,
+            // Carried into the editor, so Accept keeps it (ADR-040).
+            rationale: "Keeps the pattern with less load.",
             measurementMode: "sets_reps_load",
             target: { groups: [{ sets: 3, reps: 8 }] },
           },

@@ -23,6 +23,12 @@ export type ActivityValue = {
   name: string;
   sport: string;
   instructions: string | null;
+  /**
+   * The coach's reason for it, on a planned activity from an accepted
+   * suggestion (ADR-040). Absent elsewhere: a saved session or a log keeps
+   * none, and an editor that never had one submits none.
+   */
+  rationale?: string | null;
   measurementMode: TrainingMeasurementMode;
   target: TrainingMeasurement | null;
 };
@@ -38,6 +44,7 @@ export function toActivityValue(activity: {
   name: string;
   sport: string;
   instructions?: string | null;
+  rationale?: string | null;
   measurementMode: TrainingMeasurementMode;
   target?: TrainingMeasurement | null;
 }): ActivityValue {
@@ -46,6 +53,7 @@ export function toActivityValue(activity: {
     name: activity.name,
     sport: activity.sport,
     instructions: activity.instructions ?? null,
+    ...(activity.rationale ? { rationale: activity.rationale } : {}),
     measurementMode: activity.measurementMode,
     target: activity.target ?? null,
   };

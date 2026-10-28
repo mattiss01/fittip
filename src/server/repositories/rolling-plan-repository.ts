@@ -43,10 +43,10 @@ type RollingPlanClient = SupabaseClient<Database> | ServerUserClient;
 
 const ROLLING_PLAN_SERIES_COLUMNS = `
   id, predecessor_series_id, frequency, interval_count, weekdays, start_date,
-  end_date, title, sport, intent, expected_duration_minutes, start_time, note, created_at,
-  skipped_occurrence_dates,
+  end_date, title, sport, intent, expected_duration_minutes, start_time, note,
+  coach_note, created_at, skipped_occurrence_dates,
   rolling_plan_series_activities (
-    personal_activity_id, position, name, sport, instructions,
+    personal_activity_id, position, name, sport, instructions, rationale,
     measurement_mode, target
   )
 ` as const;
@@ -363,6 +363,7 @@ function parseSession(value: unknown): RollingPlanSession {
     ) ||
     !(session.startTime === null || isStartTime(session.startTime)) ||
     !(session.note === null || typeof session.note === "string") ||
+    !isOptionalText(session.coachNote) ||
     !(session.status === "active" || session.status === "cancelled") ||
     !(
       session.cancelledAt === null || typeof session.cancelledAt === "string"
@@ -390,6 +391,9 @@ function parseSession(value: unknown): RollingPlanSession {
       : { expectedDurationMinutes: session.expectedDurationMinutes }),
     ...(session.startTime === null ? {} : { startTime: session.startTime }),
     ...(session.note === null ? {} : { note: session.note }),
+    ...(typeof session.coachNote === "string"
+      ? { coachNote: session.coachNote }
+      : {}),
     status: session.status,
     cancelledAt: session.cancelledAt,
     seriesId: session.seriesId,
@@ -458,6 +462,7 @@ function parseActivity(value: unknown): RollingPlanActivity {
       activity.instructions === null ||
       typeof activity.instructions === "string"
     ) ||
+    !isOptionalText(activity.rationale) ||
     !TRAINING_MEASUREMENT_MODES.includes(
       activity.measurementMode as (typeof TRAINING_MEASUREMENT_MODES)[number],
     )
@@ -485,6 +490,9 @@ function parseActivity(value: unknown): RollingPlanActivity {
     ...(activity.instructions === null
       ? {}
       : { instructions: activity.instructions }),
+    ...(typeof activity.rationale === "string"
+      ? { rationale: activity.rationale }
+      : {}),
     measurementMode,
     ...(target === undefined ? {} : { target }),
   };
@@ -517,6 +525,7 @@ function parseSeries(value: unknown): RollingPlanSeries {
     ) ||
     !(series.start_time === null || isTableTime(series.start_time)) ||
     !(series.note === null || typeof series.note === "string") ||
+    !isOptionalText(series.coach_note) ||
     !Array.isArray(series.skipped_occurrence_dates) ||
     !series.skipped_occurrence_dates.every(isIsoDate) ||
     !Array.isArray(activities)
@@ -550,6 +559,9 @@ function parseSeries(value: unknown): RollingPlanSeries {
       ? {}
       : { startTime: series.start_time.slice(0, 5) }),
     ...(series.note === null ? {} : { note: series.note }),
+    ...(typeof series.coach_note === "string"
+      ? { coachNote: series.coach_note }
+      : {}),
     skippedOccurrenceDates: [...series.skipped_occurrence_dates].toSorted(),
     activities: activities
       .map(parseSeriesActivity)
@@ -571,6 +583,7 @@ function parseSeriesActivity(value: unknown): RollingPlanSeriesActivityInput {
       activity.instructions === null ||
       typeof activity.instructions === "string"
     ) ||
+    !isOptionalText(activity.rationale) ||
     !TRAINING_MEASUREMENT_MODES.includes(
       activity.measurement_mode as (typeof TRAINING_MEASUREMENT_MODES)[number],
     )
@@ -597,9 +610,17 @@ function parseSeriesActivity(value: unknown): RollingPlanSeriesActivityInput {
     ...(activity.instructions === null
       ? {}
       : { instructions: activity.instructions }),
+    ...(typeof activity.rationale === "string"
+      ? { rationale: activity.rationale }
+      : {}),
     measurementMode,
     ...(target === undefined ? {} : { target }),
   };
+}
+
+/** Text, or nothing: null in a row, or absent from a read written before it. */
+function isOptionalText(value: unknown): boolean {
+  return value === undefined || value === null || typeof value === "string";
 }
 
 function readRecord(value: unknown): Record<string, unknown> {

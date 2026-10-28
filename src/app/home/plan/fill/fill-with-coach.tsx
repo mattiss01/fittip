@@ -93,6 +93,8 @@ export function FillWithCoach({
   open: initiallyOpen,
   editor,
   rows,
+  coachNote,
+  onAccepted,
   children,
 }: {
   sessionId: string;
@@ -101,6 +103,13 @@ export function FillWithCoach({
   editor: RefObject<ActivityEditorHandle | null>;
   /** The activity list as it is now. */
   rows: readonly EditorRow[];
+  /**
+   * The session's coach's note as the form holds it (ADR-040). An ask sends
+   * it with the list, saved or not, so the coach reads the session on screen.
+   */
+  coachNote: string;
+  /** Accept hands the suggestion's summary over as the new coach's note. */
+  onAccepted: (summary: string) => void;
   children: React.ReactNode;
 }) {
   const [note, setNote] = useState("");
@@ -183,6 +192,11 @@ export function FillWithCoach({
     requestKey.current = idempotencyKey;
     setMessage(null);
     setAsking(true);
+    // Taken once: every replay of this request carries what it first asked.
+    const onScreen = {
+      activities: JSON.stringify(rows.map((row) => row.value)),
+      coachNote,
+    };
     const controller = new AbortController();
     asked.current = controller;
     const { signal } = controller;
@@ -191,7 +205,13 @@ export function FillWithCoach({
       for (;;) {
         const sent = Date.now();
         const answer = await answerOrInterruption(
-          fillSessionActivitiesAction({ sessionId, note, idempotencyKey }),
+          fillSessionActivitiesAction({
+            sessionId,
+            note,
+            idempotencyKey,
+            activities: onScreen.activities,
+            coachNote: onScreen.coachNote,
+          }),
           signal,
         );
         if (signal.aborted) return;
@@ -248,6 +268,9 @@ export function FillWithCoach({
       ...addedNow.map((row) => row.value),
     ];
     editor.current?.replace(list);
+    // The summary says what the session is for; it becomes the session's
+    // coach's note, which the owner may edit before Save (ADR-040).
+    onAccepted(open.proposal.summary);
     // Only the list the editor now holds can be saved, so only its suggestion
     // is recorded: one accepted earlier was replaced by this one.
     setAccepted([open.proposal.proposalId]);

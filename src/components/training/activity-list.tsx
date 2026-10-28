@@ -6,6 +6,8 @@ export type ActivityListItem = {
   name: string;
   /** A target or an actual, in words; null when there is nothing to say. */
   detail: string | null;
+  /** The coach's reason for a planned one (ADR-040); absent when none. */
+  why?: string | null;
 };
 
 /**
@@ -37,6 +39,9 @@ export function ActivityList({
             {item.detail === null ? null : (
               <span className={styles.detail}>{item.detail}</span>
             )}
+            {item.why ? (
+              <span className={styles.why}>Why: {item.why}</span>
+            ) : null}
           </li>
         ))}
       </ol>

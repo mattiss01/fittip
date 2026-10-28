@@ -240,9 +240,16 @@ export async function changeLibraryAction(
     }
 
     // The editor submits the whole list, so an edit replaces it.
+    // A saved session is a template: the coach's reasons for one day's
+    // list stay with that day (ADR-040).
     const session = () => ({
       ...readContent(formData),
-      activities: readSubmittedTemplateActivities(formData),
+      activities: readSubmittedTemplateActivities(formData).map(
+        ({ rationale, ...activity }) => {
+          void rationale;
+          return activity;
+        },
+      ),
     });
     await library.applyChange(
       operation === "delete"

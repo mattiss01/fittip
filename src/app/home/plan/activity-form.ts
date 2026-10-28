@@ -38,6 +38,22 @@ export function readSubmittedActivities(
   return parseSubmittedActivities(decoded);
 }
 
+/**
+ * The list a session editor holds, as one JSON string — what Fill with Coach
+ * sends of the session on screen (ADR-040). Checked exactly as a Save is, so
+ * a list the coach is asked about is one the plan would take.
+ */
+export function parseActivitiesJson(raw: unknown): RollingPlanActivityInput[] {
+  if (typeof raw !== "string") throw new RollingPlanValidationError();
+  let decoded: unknown;
+  try {
+    decoded = JSON.parse(raw);
+  } catch {
+    throw new RollingPlanValidationError();
+  }
+  return parseSubmittedActivities(decoded);
+}
+
 /** The same list for a template — a series or a library entry. */
 export function readSubmittedTemplateActivities(
   formData: FormData,

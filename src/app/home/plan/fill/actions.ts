@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import type { DismissResult, FillResult } from "./fill-state";
 import { toFillProposal } from "./open-proposals";
+import { parseActivitiesJson } from "../activity-form";
 import { readPlanWindow } from "../plan-window";
 
 import { createServerUserClient } from "@/lib/supabase/server-user-client";
@@ -23,8 +24,12 @@ import {
   SessionActivityAuthenticationError,
   SessionActivityConflictError,
 } from "@/server/repositories/session-activity-repository";
-import { RollingPlanTimezoneRequiredError } from "@/server/rolling-plan/rolling-plan";
+import {
+  RollingPlanTimezoneRequiredError,
+  RollingPlanValidationError,
+} from "@/server/rolling-plan/rolling-plan";
 import { generateSessionActivities } from "@/server/session-detail/session-activity-generation";
+import type { SessionDetailDraft } from "@/server/session-detail/session-detail-context";
 
 /**
  * Fill with coach, from a session's Edit panel (A7-4).
@@ -47,6 +52,13 @@ export async function fillSessionActivitiesAction(input: {
   sessionId: string;
   note: string;
   idempotencyKey: string;
+  /**
+   * The session as it is on screen (ADR-040): the editor's list as JSON, and
+   * the coach's note field. Absent from a page loaded before they were sent,
+   * which then asks about the saved session.
+   */
+  activities?: string;
+  coachNote?: string;
 }): Promise<FillResult> {
   try {
     if (
@@ -56,6 +68,24 @@ export async function fillSessionActivitiesAction(input: {
       return refused(COPY.invalid);
     }
     const note = parseSessionFillNote(input.note);
+    let draft: SessionDetailDraft | null = null;
+    if (input.activities !== undefined) {
+      const coachNote = (input.coachNote ?? "").trim();
+      if (coachNote.length > COACH_NOTE_MAX_LENGTH) {
+        return refused(COPY.coachNoteTooLong);
+      }
+      try {
+        draft = {
+          activities: parseActivitiesJson(input.activities),
+          coachNote: coachNote === "" ? null : coachNote,
+        };
+      } catch (error) {
+        if (error instanceof RollingPlanValidationError) {
+          return refused(COPY.draftInvalid);
+        }
+        throw error;
+      }
+    }
 
     const [owner, plan, window, requests] = await Promise.all([
       createServerUserClient().then(verifyCoachAIOwner),
@@ -80,6 +110,7 @@ export async function fillSessionActivitiesAction(input: {
         sessionDate: session.localDate,
         expectedPlanRevision: slice.revision,
         note,
+        draft,
         idempotencyKey: input.idempotencyKey,
       },
       { requests },
@@ -133,6 +164,9 @@ export async function dismissSessionActivitiesAction(
   }
 }
 
+/** The column's bound (ADR-040); the field's `maxLength` says the same. */
+const COACH_NOTE_MAX_LENGTH = 1000;
+
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -148,6 +182,9 @@ const COPY = {
     "The coach is still working on this request. Try again in a moment to see its answer.",
   failed: "The coach could not suggest activities this time. Nothing changed.",
   noteTooLong: "The note for the coach can be at most 500 characters.",
+  coachNoteTooLong: "The coach's note can be at most 1,000 characters.",
+  draftInvalid:
+    "An activity in your list is not complete yet. Fix or remove it, then ask again.",
   session: "Your session ended. Sign in again, then try again.",
   // ADR-023: the two sources the owner can shorten are named.
   goalsTooLarge:

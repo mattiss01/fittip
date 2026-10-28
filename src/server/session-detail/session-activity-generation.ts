@@ -13,6 +13,7 @@ import type {
   SessionActivityClaim,
   SessionActivityRepository,
 } from "@/server/repositories/session-activity-repository";
+import type { SessionDetailDraft } from "@/server/session-detail/session-detail-context";
 
 /**
  * Filling one session: the boundaries in order, as the plan and roadmap put
@@ -45,6 +46,8 @@ export type SessionActivityGenerationInput = {
   expectedPlanRevision: number;
   /** The owner's note for this one request, at most 500 characters. */
   note: string | null;
+  /** The session as it is on screen (ADR-040), or null to read the saved one. */
+  draft: SessionDetailDraft | null;
   /** Stable across an uncertain retry of the same request. */
   idempotencyKey: string;
 };
@@ -72,6 +75,9 @@ export async function generateSessionActivities(
     input.sessionDate,
     String(input.expectedPlanRevision),
     String(input.note?.length ?? 0),
+    // The list on screen enters by length, as the note does (ADR-040): a
+    // reused key with a different list conflicts rather than replays.
+    String(input.draft?.activities.length ?? -1),
   ].join(":");
 
   const claim: SessionActivityClaim = await requests.beginGeneration({
@@ -100,6 +106,7 @@ export async function generateSessionActivities(
     const composition = createSessionActivitiesCoachAIService({
       owner: input.owner,
       sessionId: input.sessionId,
+      sessionDraft: input.draft,
       spendLedger: await createAISpendRepository(),
     });
     binding = composition.binding;

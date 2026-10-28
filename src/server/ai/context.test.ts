@@ -1916,6 +1916,7 @@ describe("fill_session_activities assembly", () => {
         intent: null,
         durationMinutes: 60,
         note: null,
+        coachNote: null,
         activities: [],
         ...overrides,
       },

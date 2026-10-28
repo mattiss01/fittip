@@ -13,7 +13,10 @@ import type {
 } from "@/server/ai/contracts";
 import type { Completion } from "@/server/completions/completion-log";
 import type { PersonalActivity } from "@/server/personal-activities/personal-activities";
-import type { RollingPlanSession } from "@/server/rolling-plan/rolling-plan";
+import type {
+  RollingPlanActivityInput,
+  RollingPlanSession,
+} from "@/server/rolling-plan/rolling-plan";
 import type { SavedSession } from "@/server/saved-sessions/saved-sessions";
 
 /**
@@ -58,6 +61,10 @@ export const SESSION_DETAIL_WEEK_ACTIVITY_NAME_MAX_LENGTH = 60;
  */
 export const SESSION_DETAIL_NOTE_MAX_LENGTH = 300;
 export const SESSION_DETAIL_INTENT_MAX_LENGTH = 200;
+/** The whole of what the owner may keep (ADR-040). */
+export const SESSION_DETAIL_COACH_NOTE_MAX_LENGTH = 1000;
+/** Enough of each reason to say why, twelve of them within the share. */
+export const SESSION_DETAIL_RATIONALE_MAX_LENGTH = 160;
 
 /**
  * The byte allocation of each part, summing under the operation's
@@ -75,7 +82,9 @@ export const SESSION_DETAIL_INTENT_MAX_LENGTH = 200;
  * - an actual is about 110 bytes per entry, three entries per activity.
  */
 export const SESSION_DETAIL_BYTES = {
-  session: 3_500,
+  // 3_500 until ADR-040 added the coach's note (1,000 characters) and each
+  // activity's reason (cut to 160): 4,000 more.
+  session: 7_500,
   // 800 until ADR-023 decision 16 put the neighbours' activity names in.
   week: 2_400,
   // 3_500 until decision 17: fewer than thirty of sixty entries fitted.
@@ -85,6 +94,21 @@ export const SESSION_DETAIL_BYTES = {
 } as const;
 
 export type SessionDetailActivityRecord = CoachAIActivityReference;
+
+/** One of the session's own, with the coach's reason when it has one. */
+export type SessionDetailSessionActivityRecord = SessionDetailActivityRecord & {
+  rationale?: string | null;
+};
+
+/**
+ * The session as the ask found it on screen (ADR-040): its activity list,
+ * checked by the plan's own save validator, and its coach's note. Either may
+ * differ from what is saved; neither is stored by being sent.
+ */
+export type SessionDetailDraft = {
+  activities: readonly RollingPlanActivityInput[];
+  coachNote: string | null;
+};
 
 /** What the source hands assembly: selected and field-copied, not yet sized. */
 export type SessionDetailRecords = {
@@ -97,7 +121,8 @@ export type SessionDetailRecords = {
     intent: string | null;
     durationMinutes: number | null;
     note: string | null;
-    activities: SessionDetailActivityRecord[];
+    coachNote: string | null;
+    activities: SessionDetailSessionActivityRecord[];
   };
   week: {
     localDate: string;
@@ -161,6 +186,8 @@ export function selectSessionDetailRecords(input: {
   savedSessions: readonly SavedSession[];
   /** Newest first, as `CompletionLog.list` returns them. */
   completions: readonly Completion[];
+  /** The list and note on screen, in place of the saved ones (ADR-040). */
+  draft?: SessionDetailDraft | null;
 }): SessionDetailRecords | null {
   const session = input.planSessions.find(
     (candidate) => candidate.id === input.sessionId,
@@ -219,7 +246,22 @@ export function selectSessionDetailRecords(input: {
     ),
   ].slice(0, SESSION_DETAIL_MAX_SAVED_SESSIONS);
 
-  const sessionActivities = session.activities.map(toActivityRecord);
+  // A draft's links go as they are, like the saved list's: the coach may
+  // only link an entry it was sent, and `validateSessionActivitiesCandidate`
+  // turns any other id it keeps into a session-only row.
+  const sessionActivities = (input.draft?.activities ?? session.activities).map(
+    (activity) => ({
+      ...toActivityRecord(activity),
+      rationale: truncate(
+        activity.rationale ?? null,
+        SESSION_DETAIL_RATIONALE_MAX_LENGTH,
+      ),
+    }),
+  );
+  const coachNote =
+    input.draft === undefined || input.draft === null
+      ? (session.coachNote ?? null)
+      : input.draft.coachNote;
   const savedRecords = savedSessions.map((saved) => ({
     id: saved.id,
     title: saved.title,
@@ -299,6 +341,7 @@ export function selectSessionDetailRecords(input: {
       intent: session.intent ?? null,
       durationMinutes: session.expectedDurationMinutes ?? null,
       note: session.note ?? null,
+      coachNote,
       activities: sessionActivities,
     },
     week,
@@ -324,6 +367,10 @@ export function buildSessionDetailContext(
     SESSION_DETAIL_INTENT_MAX_LENGTH,
   );
   let note = truncate(records.session.note, SESSION_DETAIL_NOTE_MAX_LENGTH);
+  let coachNote = truncate(
+    records.session.coachNote,
+    SESSION_DETAIL_COACH_NOTE_MAX_LENGTH,
+  );
   const envelopeOf = () => ({
     localDate: records.session.localDate,
     title: records.session.title,
@@ -331,6 +378,7 @@ export function buildSessionDetailContext(
     intent,
     durationMinutes: records.session.durationMinutes,
     note,
+    coachNote,
     activities: [],
     activitiesWithheld: records.session.activities.length,
   });
@@ -339,6 +387,7 @@ export function buildSessionDetailContext(
   // and refuse, the free text goes first — note, then intent — and the title,
   // sport and date, which the owner can see and which bound the request, stay.
   if (jsonBytes(envelopeOf()) > bytes.session) note = null;
+  if (jsonBytes(envelopeOf()) > bytes.session) coachNote = null;
   if (jsonBytes(envelopeOf()) > bytes.session) intent = null;
   const envelope = envelopeOf();
   const activities = fit(
@@ -409,6 +458,7 @@ export function buildSessionDetailContext(
       intent,
       durationMinutes: records.session.durationMinutes,
       note,
+      coachNote,
       activities,
       activitiesWithheld: records.session.activities.length - activities.length,
     },

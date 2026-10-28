@@ -153,6 +153,24 @@
   line-height: 1.45;
 }
 
+/* What the session was asked for and built to do (ADR-040). */
+.coachNote {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.7rem 0.85rem;
+  border-left: 3px solid var(--fern);
+  border-radius: var(--radius-control);
+  background: var(--sage);
+}
+
+.coachNoteLabel {
+  margin: 0;
+  color: var(--pine-soft);
+  font: 700 0.78rem var(--font-sans);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
 /* "Bring it back" inside a sentence (ADR-033): a text-weight control with a
    full touch target, not a second main action. */
 .inlineAction {

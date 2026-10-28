@@ -49,3 +49,10 @@
   font: 0.74rem var(--font-mono);
   overflow-wrap: anywhere;
 }
+
+/* The coach's reason, under the target (ADR-040). */
+.why {
+  color: var(--pine-soft);
+  font: italic 0.8rem/1.4 var(--font-sans);
+  overflow-wrap: anywhere;
+}

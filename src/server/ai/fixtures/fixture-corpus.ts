@@ -199,6 +199,7 @@ export const COACH_AI_FIXTURE_SESSION_CONTEXT: CoachAIContext = {
       intent: "Heavy, low reps",
       durationMinutes: 60,
       note: null,
+      coachNote: null,
       activities: [],
       activitiesWithheld: 0,
     },

@@ -40,7 +40,9 @@ export const COACH_AI_PROMPT_VERSIONS = {
   // professional).
   create_roadmap: "roadmap-v4.3-2026-10-21",
   create_seven_day_plan: "seven-day-plan-v2.1-2026-10-21",
-  fill_session_activities: "session-activities-v1.2-2026-10-21",
+  // 28 Oct 2026 (ADR-040): the session's coach's note and each activity's
+  // reason are read, and the summary becomes that note.
+  fill_session_activities: "session-activities-v1.3-2026-10-28",
 } as const satisfies Record<CoachAIOperation, string>;
 
 /** The two runtimes ADR-006 and M0-06A permit. Nothing else may ever call out. */
@@ -338,6 +340,14 @@ export type CoachAIActivityReference = {
 };
 
 /**
+ * One of the session's own activities: a reference, and the coach's reason
+ * for it when it came from an accepted suggestion (ADR-040), cut short.
+ */
+export type CoachAISessionActivityReference = CoachAIActivityReference & {
+  rationale?: string | null;
+};
+
+/**
  * What `fill_session_activities` reads about the one session it fills, within
  * ADR-020. Every list that can outgrow its allocation is trimmed from the end
  * and says how much it withheld, for ADR-013's reason: a coach that silently
@@ -351,8 +361,16 @@ export type CoachAISessionDetailContext = {
     intent: string | null;
     durationMinutes: number | null;
     note: string | null;
-    /** What the session holds now; the coach proposes a revised whole list. */
-    activities: CoachAIActivityReference[];
+    /**
+     * What the session was asked for and built to do, written from an
+     * accepted suggestion's summary and the owner's to edit (ADR-040).
+     */
+    coachNote: string | null;
+    /**
+     * What the session holds now — as it is on screen when the ask carried
+     * it, saved or not (ADR-040); the coach proposes a revised whole list.
+     */
+    activities: CoachAISessionActivityReference[];
     activitiesWithheld: number;
   };
   /**

@@ -128,13 +128,14 @@ describe("what every prompt says about the athlete's data (ADR-023)", () => {
       18_141,
     );
     // 14,929 until timed sets and intervals joined the mode lines (ADR-038);
-    // 14,954 until the safety rule for a health condition (21 Oct 2026).
+    // 14,954 until the safety rule for a health condition (21 Oct 2026);
+    // 14,991 until the coach's note and each activity's reason (ADR-040).
     expect(
       tokens(
         "fill_session_activities",
         SESSION_ACTIVITIES_STATIC_PREFIX_BUDGET,
       ),
-    ).toBe(14_991);
+    ).toBe(16_091);
   });
 });
 
@@ -488,8 +489,13 @@ describe("the plan response grammar", () => {
  * and with the safety rule for a health condition (21 Oct 2026):
  *
  *   8,450 + 64 + 51,450 = 59,964   ceil(59,964 / 4) = 14,991  vs  15,000
+ *
+ * and with the coach's note and each activity's reason (ADR-040), which
+ * also gave the session part of the context 4,000 more bytes:
+ *
+ *   8,850 + 64 + 55,450 = 64,364   ceil(64,364 / 4) = 16,091  vs  20,000
  */
-const SESSION_ACTIVITIES_STATIC_PREFIX_BUDGET = 8_450;
+const SESSION_ACTIVITIES_STATIC_PREFIX_BUDGET = 8_850;
 
 describe("the session activities prompt", () => {
   it("says what ADR-023 gave a fill to read, and how to read it", () => {

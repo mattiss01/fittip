@@ -41,6 +41,7 @@ import type {
 import {
   selectSessionDetailRecords,
   SESSION_DETAIL_ACTUALS_WINDOW_DAYS,
+  type SessionDetailDraft,
 } from "@/server/session-detail/session-detail-context";
 import {
   FORWARD_PLAN_WINDOW_DAYS,
@@ -115,17 +116,24 @@ export type OwnedRecordsContextSourceOptions = {
    * composition root, never by the request, and required for that operation.
    */
   sessionId?: string | null;
+  /**
+   * `fill_session_activities` only: the list and note on screen (ADR-040),
+   * already checked by the plan's own validator. Absent reads the saved ones.
+   */
+  sessionDraft?: SessionDetailDraft | null;
 };
 
 export class OwnedRecordsCoachAIContextSource implements CoachAIContextSource {
   readonly #operation: CoachAIOperation;
   readonly #clock: () => Date;
   readonly #sessionId: string | null;
+  readonly #sessionDraft: SessionDetailDraft | null;
 
   constructor(options: OwnedRecordsContextSourceOptions) {
     this.#operation = options.operation;
     this.#clock = options.clock ?? (() => new Date());
     this.#sessionId = options.sessionId ?? null;
+    this.#sessionDraft = options.sessionDraft ?? null;
     // One operation reads a session and the others read none, so a session id
     // on any other operation is a wiring mistake rather than extra context.
     if (
@@ -346,6 +354,7 @@ export class OwnedRecordsCoachAIContextSource implements CoachAIContextSource {
             library,
             savedSessions,
             completions: completionsForResults,
+            draft: this.#sessionDraft,
           });
 
     return {

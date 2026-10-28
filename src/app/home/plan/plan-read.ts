@@ -35,6 +35,7 @@ export function toSessionView(session: RollingPlanSession): PlanSessionView {
     expectedDurationMinutes: session.expectedDurationMinutes ?? null,
     startTime: session.startTime ?? null,
     note: session.note ?? null,
+    coachNote: session.coachNote ?? null,
     status: session.status,
     activities: session.activities.map(toActivityValue),
     seriesId: session.seriesId,
@@ -72,6 +73,7 @@ export function toSeriesView(series: RollingPlanSeries): PlanSeriesView {
     expectedDurationMinutes: series.expectedDurationMinutes ?? null,
     startTime: series.startTime ?? null,
     note: series.note ?? null,
+    coachNote: series.coachNote ?? null,
   };
 }
 

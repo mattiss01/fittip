@@ -380,6 +380,9 @@ function buildChanges(
             ? {}
             : { startTime: session.startTime }),
           ...(session.note === undefined ? {} : { note: session.note }),
+          ...(session.coachNote === undefined
+            ? {}
+            : { coachNote: session.coachNote }),
           localDate,
           position: nextPlanPosition(slice, localDate),
           activities: session.activities.map(({ id, ...activity }) => {
@@ -441,6 +444,9 @@ function readContent(formData: FormData) {
     ...(optionalText(formData, "note") === undefined
       ? {}
       : { note: text(formData, "note").trim() }),
+    ...(optionalText(formData, "coachNote") === undefined
+      ? {}
+      : { coachNote: text(formData, "coachNote").trim() }),
   };
 }
 
@@ -466,6 +472,7 @@ type FingerprintableSession = Pick<
   | "expectedDurationMinutes"
   | "startTime"
   | "note"
+  | "coachNote"
 > & {
   /** The stored side carries an `id` the submitted side has no reason to. */
   activities: readonly (RollingPlanActivityInput & { id?: string })[];
@@ -479,12 +486,14 @@ function sessionFingerprint(content: FingerprintableSession): string {
     expectedDurationMinutes: content.expectedDurationMinutes ?? null,
     startTime: content.startTime ?? null,
     note: content.note ?? null,
+    coachNote: content.coachNote ?? null,
     activities: content.activities.map((activity) => ({
       personalActivityId: activity.personalActivityId ?? null,
       position: activity.position,
       name: activity.name,
       sport: activity.sport,
       instructions: activity.instructions ?? null,
+      rationale: activity.rationale ?? null,
       measurementMode: activity.measurementMode,
       target: activity.target ?? null,
     })),
@@ -550,6 +559,7 @@ function draftFrom(formData: FormData): PlanActionDraft {
     ),
     startTime: stringValue(formData.get("startTime")),
     note: stringValue(formData.get("note")),
+    coachNote: stringValue(formData.get("coachNote")),
   };
 }
 

@@ -673,6 +673,7 @@ function PlannedSession({
                     startTime: session.startTime ?? "",
                     intent: session.intent ?? "",
                     note: session.note ?? "",
+                    coachNote: session.coachNote ?? "",
                   }}
                   activities={session.activities}
                 />

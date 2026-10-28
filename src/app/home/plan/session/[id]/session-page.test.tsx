@@ -78,6 +78,7 @@ function session(overrides: Partial<PlanSessionView> = {}): PlanSessionView {
     expectedDurationMinutes: 60,
     startTime: null,
     note: null,
+    coachNote: null,
     status: "active",
     activities: [],
     seriesId: null,
@@ -101,6 +102,7 @@ function series(overrides: Partial<PlanSeriesView> = {}): PlanSeriesView {
     expectedDurationMinutes: 60,
     startTime: null,
     note: null,
+    coachNote: null,
     ...overrides,
   };
 }
