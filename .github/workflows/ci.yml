@@ -26,7 +26,9 @@ concurrency:
 jobs:
   static:
     name: Lint, types, unit tests, build
-    runs-on: ubuntu-latest
+    # Every job is pinned, not latest: on 28 Oct 2026 latest became 26.04, where
+    # Playwright 1.58 cannot install Chromium, and every browser shard failed.
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     env:
       # Shape-valid placeholders only. No Supabase project exists behind these;
@@ -61,7 +63,7 @@ jobs:
 
   database:
     name: Migrations, RLS, advisors, concurrency
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     # The Supabase CLI pulls its images from AWS's public registry by default,
     # whose anonymous data limit ("toomanyrequests: Data limit exceeded")
@@ -145,7 +147,7 @@ jobs:
 
   browser:
     name: 390px production browser flows (${{ matrix.shard }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     # The Supabase CLI pulls its images from AWS's public registry by default,
     # whose anonymous data limit ("toomanyrequests: Data limit exceeded")
