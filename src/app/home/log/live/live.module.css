@@ -134,6 +134,28 @@
   background: color-mix(in srgb, var(--paper) 70%, var(--fern));
 }
 
+/* Held and dragged by its head (owner, 28 Oct 2026): it rises off the list. */
+.card {
+  transition:
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+}
+
+.cardDragging {
+  position: relative;
+  z-index: 1;
+  box-shadow: var(--shadow-raised);
+  outline: 2px solid var(--fern);
+  transform: scale(1.02);
+}
+
+/* A long press there lifts the card, not a word or the phone's menu. */
+.cardHead,
+.foldToggle {
+  -webkit-touch-callout: none;
+  user-select: none;
+}
+
 .cardHead {
   display: flex;
   align-items: flex-start;
@@ -244,6 +266,7 @@
 
 .nameInput {
   width: 100%;
+  user-select: text;
   min-height: 2.75rem;
   padding: 0.5rem 0.7rem;
   border: 1px solid var(--rule);
@@ -380,6 +403,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .card,
   .tick,
   .tickOn {
     transition: none;

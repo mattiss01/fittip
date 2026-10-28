@@ -72,6 +72,29 @@ test.describe("logging a session live", () => {
       await expect(stretching.getByLabel("Minutes")).toHaveValue("10");
       await expectNoHorizontalOverflow(page);
 
+      // Held by its head and dragged above bench press, stretching goes first.
+      const grip = await stretching
+        .getByRole("heading", { name: "Stretching" })
+        .boundingBox();
+      const target = await bench.boundingBox();
+      if (grip === null || target === null) throw new Error("No card boxes.");
+      await page.mouse.move(grip.x + 20, grip.y + grip.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(grip.x + 20, grip.y - 20, { steps: 4 });
+      await page.mouse.move(grip.x + 20, target.y + 10, { steps: 8 });
+      await page.mouse.up();
+      const order = page.locator("[data-live-activity]");
+      await expect(order.first()).toHaveAttribute(
+        "data-live-activity",
+        "Stretching",
+      );
+      // The drag ends without folding the card it was held by.
+      await expect(stretching.getByLabel("Minutes")).toBeVisible();
+      await expect(page.locator("[data-live-workout]")).toHaveAttribute(
+        "data-live-save",
+        "saved",
+      );
+
       // ---- Leave it: Today offers it to continue, not a second start. ----
       await page.goto("/home/today");
       // Continue is where Track live was; nothing else can be started.
@@ -91,6 +114,10 @@ test.describe("logging a session live", () => {
         bench.getByRole("button", { name: "Set 1 done" }),
       ).toHaveAttribute("aria-pressed", "true");
       await expect(bench.getByLabel("Set 1 reps (reps)")).toHaveValue("6");
+      // The order it was dragged into was stored with the rest.
+      await expect(
+        page.locator("[data-live-activity]").first(),
+      ).toHaveAttribute("data-live-activity", "Stretching");
 
       // ---- Finish: the log steps open filled in, and saving ends it. ----
       await page.getByRole("button", { name: "Finish and log" }).click();
