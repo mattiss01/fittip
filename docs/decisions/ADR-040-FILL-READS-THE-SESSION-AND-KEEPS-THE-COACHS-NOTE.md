@@ -36,10 +36,11 @@ something on the session itself.
    key with a different list conflicts rather than replays.
 2. **A session keeps a coach's note** (owner's choice, 28 Oct 2026). `coach_note` on
    `rolling_plan_sessions` and `rolling_plan_series`, at most 1,000 characters. Accept
-   writes the suggestion's summary into the form's "Coach's note" field; Save stores it
-   with the rest. The owner edits or clears it like any other field. The prompt asks for
-   the summary to say what the session is for, including what the athlete asked for, so
-   the note carries the ask forward.
+   writes the owner's note for that ask, verbatim as `Asked: "…"`, followed by the
+   suggestion's summary into the form's "Coach's note" field; Save stores it with the rest.
+   The owner edits or clears it like any other field. The prompt asks for the summary to
+   say what the session is for, including what was asked, so earlier asks carry forward
+   too. The example coach's answer writes no note.
 3. **Each activity keeps the coach's reason.** `rationale` on `rolling_plan_activities`
    and `rolling_plan_series_activities`, at most 300 characters, carried into the editor
    with the accepted activities and removable per row. A saved session (a template) keeps
@@ -59,8 +60,9 @@ something on the session itself.
 - Every function that writes or reads a planned session's fields was re-issued with the two
   keys added (`20261028141230_session_coach_note`), as start times were; every form that
   edits a session carries the note, so an edit made elsewhere does not clear it.
-- What the owner typed for one ask reaches later asks only as far as the coach's summary
-  repeats it, and the owner can see and change exactly that.
+- The owner's note for the accepted ask is stored with the session and sent with every
+  later ask for it, not only the one it was written for; the owner sees it as the first
+  line of the coach's note and can edit or remove it there.
 - An unsaved list can be asked about, and its suggestion is still only a draft beside it.
 - The earlier asks themselves stay where they were, in `session_activity_proposals`, read
   by nothing new.
