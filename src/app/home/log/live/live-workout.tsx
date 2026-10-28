@@ -183,15 +183,21 @@ export function LiveWorkout({
     );
   }
 
-  /** Moves an activity to another place in the list (owner, 28 Oct 2026). */
-  function moveTo(key: string, to: number) {
+  /**
+   * Moves an activity to another place in the list (owner, 28 Oct 2026);
+   * false when it is already there or there is no such place.
+   */
+  function moveTo(key: string, to: number): boolean {
     const current = latest.current;
     const from = current.findIndex((activity) => activity.key === key);
-    if (from < 0 || to < 0 || to >= current.length || from === to) return;
+    if (from < 0 || to < 0 || to >= current.length || from === to) {
+      return false;
+    }
     const next = [...current];
     const [held] = next.splice(from, 1);
     next.splice(to, 0, held);
     change(next);
+    return true;
   }
 
   useEffect(() => {
@@ -277,10 +283,11 @@ export function LiveWorkout({
             idPrefix={`${prefix}-${index}`}
             activity={activity}
             dragging={dragging === activity.key}
-            hold={activities.length < 2 ? undefined : hold(activity.key)}
+            hold={activities.length < 2 ? undefined : hold(activity.key, index)}
             onMove={(delta) => {
-              refocus.current = activity.key;
-              moveTo(activity.key, index + delta);
+              if (moveTo(activity.key, index + delta)) {
+                refocus.current = activity.key;
+              }
             }}
             onChange={(edit) => update(activity.key, edit)}
             onRemove={
@@ -452,7 +459,6 @@ function ActivityCard({
         data-live-activity={activity.name}
         data-live-key={activity.key}
         data-live-folded
-        data-live-dragging={dragging || undefined}
       >
         <button
           type="button"
@@ -478,7 +484,6 @@ function ActivityCard({
       className={cardClass}
       data-live-activity={activity.name}
       data-live-key={activity.key}
-      data-live-dragging={dragging || undefined}
     >
       <div className={styles.cardHead} {...hold}>
         <div className={styles.cardName}>

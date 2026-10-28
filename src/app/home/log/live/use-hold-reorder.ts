@@ -31,8 +31,9 @@ export type HoldProps = {
  * a finger rests on a card's head for a moment to lift it, so a swipe still
  * scrolls; a mouse lifts it on the first few pixels of a drag. The lifted
  * card takes the place under the pointer as it moves, the page scrolls when
- * the pointer nears an edge, and letting go leaves it there. A tap is still
- * a tap.
+ * the pointer nears an edge, and letting go leaves it there; Escape puts it
+ * back. A tap is still a tap. Each card in the list carries its key as
+ * `data-live-key`, which is how the lifted one is told from the others.
  */
 export function useHoldReorder(
   list: RefObject<HTMLOListElement | null>,
@@ -43,6 +44,7 @@ export function useHoldReorder(
   const pointerY = useRef(0);
   const pending = useRef<{
     key: string;
+    index: number;
     pointerId: number;
     startX: number;
     startY: number;
@@ -50,6 +52,8 @@ export function useHoldReorder(
   } | null>(null);
   // The click that ends a hold lands on the card's head; it must not fold it.
   const swallowClick = useRef(false);
+  // Where the lifted card was, for Escape to put it back.
+  const origin = useRef(0);
   const moveRef = useRef(onMoveTo);
   useEffect(() => {
     moveRef.current = onMoveTo;
@@ -60,19 +64,21 @@ export function useHoldReorder(
     setDragging(key);
   }, []);
 
-  /** Moves the lifted card to the place under the pointer. */
+  /**
+   * Moves the lifted card to the place under the pointer: after every other
+   * card whose middle is above it. The lifted card itself is not counted, or
+   * a short card held over a tall one would swap with it on every move.
+   */
   const place = useCallback(() => {
     const key = draggingRef.current;
     const items = list.current?.children;
     if (key === null || !items) return;
     const y = pointerY.current;
-    let index = items.length - 1;
-    for (const [position, item] of [...items].entries()) {
+    let index = 0;
+    for (const item of items) {
+      if ((item as HTMLElement).dataset.liveKey === key) continue;
       const box = item.getBoundingClientRect();
-      if (y < box.top + box.height / 2) {
-        index = position;
-        break;
-      }
+      if (y > box.top + box.height / 2) index += 1;
     }
     moveRef.current(key, index);
   }, [list]);
@@ -84,6 +90,7 @@ export function useHoldReorder(
       if (held.timer !== null) window.clearTimeout(held.timer);
       pending.current = null;
       swallowClick.current = true;
+      origin.current = held.index;
       pointerY.current = y;
       navigator.vibrate?.(10);
       drag(held.key);
@@ -127,6 +134,8 @@ export function useHoldReorder(
     }
     function onCancel() {
       cancelPending();
+      const key = draggingRef.current;
+      if (key !== null) moveRef.current(key, origin.current);
       drag(null);
     }
     function onKey(event: KeyboardEvent) {
@@ -155,6 +164,7 @@ export function useHoldReorder(
     document.addEventListener("click", onClick, true);
     document.addEventListener("contextmenu", onContextMenu);
     return () => {
+      cancelPending();
       document.removeEventListener("pointermove", onMove);
       document.removeEventListener("pointerup", onUp);
       document.removeEventListener("pointercancel", onCancel);
@@ -189,15 +199,18 @@ export function useHoldReorder(
   }, [dragging, list, place]);
 
   const hold = useCallback(
-    (key: string): HoldProps => ({
+    (key: string, index: number): HoldProps => ({
       onPointerDown(event: ReactPointerEvent<HTMLElement>) {
-        if (event.button !== 0 || draggingRef.current !== null) return;
+        // One finger lifts a card; a second one on the screen is ignored.
+        if (!event.isPrimary || event.button !== 0) return;
+        if (draggingRef.current !== null || pending.current !== null) return;
         // The name being typed keeps its own long press.
         if ((event.target as Element).closest("input, textarea")) return;
         swallowClick.current = false;
         const { clientX, clientY, pointerId, pointerType } = event;
         pending.current = {
           key,
+          index,
           pointerId,
           startX: clientX,
           startY: clientY,

@@ -76,18 +76,23 @@ test.describe("logging a session live", () => {
       const grip = await stretching
         .getByRole("heading", { name: "Stretching" })
         .boundingBox();
-      const target = await bench.boundingBox();
-      if (grip === null || target === null) throw new Error("No card boxes.");
+      const clockBox = await page
+        .locator("[data-live-workout] header")
+        .boundingBox();
+      if (grip === null || clockBox === null) throw new Error("No boxes.");
+      // Bench press may be scrolled away under the sticky clock: held just
+      // below the clock, the page scrolls up until stretching is first.
+      const top = clockBox.y + clockBox.height + 10;
       await page.mouse.move(grip.x + 20, grip.y + grip.height / 2);
       await page.mouse.down();
       await page.mouse.move(grip.x + 20, grip.y - 20, { steps: 4 });
-      await page.mouse.move(grip.x + 20, target.y + 10, { steps: 8 });
-      await page.mouse.up();
+      await page.mouse.move(grip.x + 20, top, { steps: 8 });
       const order = page.locator("[data-live-activity]");
       await expect(order.first()).toHaveAttribute(
         "data-live-activity",
         "Stretching",
       );
+      await page.mouse.up();
       // The drag ends without folding the card it was held by.
       await expect(stretching.getByLabel("Minutes")).toBeVisible();
       await expect(page.locator("[data-live-workout]")).toHaveAttribute(
