@@ -59,44 +59,27 @@
   min-width: 0;
 }
 
+/* Lifted by a hold on its head, as the live workout's cards are. */
 .rowDragging {
+  position: relative;
+  z-index: 1;
   border-color: var(--ledger-ink);
-  box-shadow: 0 0 0 2px var(--ledger-wash);
+  box-shadow: var(--shadow-raised);
+  transform: scale(1.02);
 }
 
+/*
+ * Held to drag the row: a finger resting here lifts it rather than selecting
+ * the name or opening the phone's menu, and a vertical swipe still scrolls.
+ */
 .rowHead {
   display: flex;
   align-items: stretch;
   gap: 0;
   min-width: 0;
-}
-
-/*
- * 44px of touch target on a phone. The handle is a button rather than a bare
- * icon so it takes focus and answers the arrow keys — a drag nobody can do
- * without a pointer is a reorder some people cannot do at all.
- */
-.handle {
-  flex: 0 0 auto;
-  width: 2.75rem;
-  min-height: 2.75rem;
-  margin: 0;
-  border: none;
-  border-right: 1px solid var(--line);
-  border-radius: 0;
-  background: var(--ledger-wash);
-  color: var(--ledger-muted);
-  font-size: 1rem;
-  cursor: grab;
-  touch-action: none;
-}
-
-.handle:hover {
-  background: var(--line);
-}
-
-.handle:active {
-  cursor: grabbing;
+  -webkit-touch-callout: none;
+  user-select: none;
+  touch-action: pan-y;
 }
 
 .summary {
@@ -226,7 +209,6 @@
 .definition input:focus-visible,
 .definition select:focus-visible,
 .definition textarea:focus-visible,
-.handle:focus-visible,
 .summary:focus-visible,
 .remove:focus-visible,
 .add:focus-visible,
@@ -344,6 +326,11 @@
   .row {
     transition: none;
   }
+
+  .rowDragging,
+  .groupRowDragging {
+    transform: none;
+  }
 }
 
 /*
@@ -371,7 +358,7 @@
 .groupHeadings,
 .groupRow {
   display: grid;
-  grid-template-columns: 2.75rem 1fr 1fr 1fr 2.75rem;
+  grid-template-columns: 1.5rem 1fr 1fr 1fr 2.75rem;
   gap: 0.35rem;
   align-items: center;
   min-width: 0;
@@ -382,23 +369,36 @@
   font: 700 0.8rem var(--font-sans);
 }
 
-.groupHandle {
-  width: 2.75rem;
-  height: 2.75rem;
-  min-height: 0;
-  margin: 0;
-  border: 1px solid var(--ledger-rule);
+/*
+ * A group is held anywhere but its fields to drag it, as an activity's head
+ * is; its number is the widest place to hold. A swipe still scrolls.
+ */
+.groupRow {
+  -webkit-touch-callout: none;
+  user-select: none;
+  touch-action: pan-y;
   border-radius: 0.65rem;
-  background: var(--ledger-wash);
-  color: var(--ledger-muted);
-  font-size: 0.9rem;
-  line-height: 1;
-  cursor: grab;
-  touch-action: none;
 }
 
-.groupHandle:active {
-  cursor: grabbing;
+.groupRow input {
+  user-select: text;
+}
+
+.groupRowDragging {
+  position: relative;
+  z-index: 1;
+  background: var(--ledger-paper);
+  box-shadow: var(--shadow-raised);
+  transform: scale(1.02);
+}
+
+.groupNumber {
+  align-self: stretch;
+  display: grid;
+  place-items: center;
+  color: var(--ledger-muted);
+  font: 700 0.85rem var(--font-sans);
+  cursor: grab;
 }
 
 .groupRemove {
@@ -440,7 +440,6 @@
 }
 
 .groupAdd:hover,
-.groupHandle:hover,
 .groupRemove:hover {
   background: var(--ledger-rule);
 }
@@ -455,7 +454,6 @@
   width: 7rem;
 }
 
-.groupHandle:focus-visible,
 .groupRemove:focus-visible,
 .groupAdd:focus-visible {
   outline: 3px solid var(--ledger-ink);

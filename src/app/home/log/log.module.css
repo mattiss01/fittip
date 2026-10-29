@@ -556,36 +556,30 @@
   text-decoration: line-through;
 }
 
-.activityTop {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  align-items: start;
-  gap: 0.6rem;
-  min-width: 0;
-}
-
 /*
- * 44px of touch target, as the plan editor's handle. `touch-action: none` is
- * what lets a thumb drag the row instead of scrolling the page.
+ * Held to drag the row, as the plan editor's head is: a finger resting here
+ * lifts it rather than selecting the name, and a vertical swipe still scrolls.
  */
-.activityHandle {
-  width: 2.75rem;
-  height: 2.75rem;
-  border: 1px solid var(--ledger-rule);
-  background: var(--ledger-wash);
-  color: var(--ledger-muted);
-  font-size: 1rem;
+.activityTop {
+  min-width: 0;
+  -webkit-touch-callout: none;
+  user-select: none;
+  touch-action: pan-y;
   cursor: grab;
-  touch-action: none;
-}
-
-.activityHandle:active {
-  cursor: grabbing;
 }
 
 .activityRowDragging {
+  position: relative;
+  z-index: 1;
   border-color: var(--ledger-ink);
-  box-shadow: 0 0 0 2px var(--ledger-wash);
+  box-shadow: var(--shadow-raised);
+  transform: scale(1.02);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .activityRowDragging {
+    transform: none;
+  }
 }
 
 .activityHead {

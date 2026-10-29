@@ -98,8 +98,6 @@ export const ACTIVITY_COPY = {
   nameTaken: (name: string) =>
     `${name} is already in your library. Rename this one to save it as a new activity.`,
   remove: "Remove",
-  /** Read by a screen reader in place of the drag handle's picture. */
-  reorderHint: "Drag to reorder, or use the arrow keys.",
   noTarget: "No target",
   sportHint: "Taken from the session. Change it if this one differs.",
   derivedPace: "Worked out from the time and the distance.",
