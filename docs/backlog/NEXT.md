@@ -21,12 +21,6 @@ that reset untouched.
 
 Ordered by dependency. A lane is named where it is not the build lane.
 
-- [~] **A coach's reason survives a number edit — careful lane (prompt).** Owner,
-      29 Oct 2026: deleting a reason because one number changed is worse than a stale one.
-      The fill asks for "why this activity, here", not "and this target", so a reason holds
-      at 3×8 or 4×10; the prompt version bumps, no migration. In the editor, renaming an
-      activity or picking another library entry drops its reason; sets, reps, load or time
-      keep it; "Remove reason" stays. No paid call by the agent.
 - [ ] **Coach start times — careful lane.** The coach gives a start time
       only when the note or memory says when (owner's choice); proposal items carry it, an
       accepted proposal writes it, a replaced session's own time is kept when the proposal
