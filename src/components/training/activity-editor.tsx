@@ -46,6 +46,8 @@ type Row = ActivityValue & {
   /** Stable across reorders, which is what keeps inputs from swapping. */
   key: string;
   draft: MeasurementDraft;
+  /** See `reasonOf`. */
+  reasonGivenFor: string | null;
 };
 
 let nextKey = 0;
@@ -224,7 +226,7 @@ export function ActivityEditor({
       sport: row.sport.trim(),
       instructions: trimmedInstructions(row.instructions),
       // The coach's reason travels with its row (ADR-040); none is sent blank.
-      ...(row.rationale ? { rationale: row.rationale } : {}),
+      ...withReason(row),
       measurementMode: row.measurementMode,
       target: build.ok ? build.measurement : null,
     })),
@@ -248,7 +250,7 @@ export function ActivityEditor({
           name: row.name,
           sport: row.sport,
           instructions: row.instructions,
-          ...(row.rationale ? { rationale: row.rationale } : {}),
+          ...withReason(row),
           measurementMode: row.measurementMode,
           target: build.ok ? build.measurement : row.target,
         },
@@ -365,6 +367,7 @@ export function ActivityEditor({
                   measurementMode: mode,
                   target: null,
                   draft: emptyDraft(mode),
+                  reasonGivenFor: null,
                 },
               ];
             })
@@ -407,6 +410,7 @@ export function ActivityEditor({
                   option.measurementMode,
                   option.target,
                 ),
+                reasonGivenFor: null,
               },
             ]);
             setPicking(false);
@@ -451,6 +455,7 @@ function ActivityRow({
   onRemove,
 }: ActivityRowProps) {
   const [expanded, setExpanded] = useState(row.name === "");
+  const reason = reasonOf(row);
 
   // A row that cannot be built is open whatever the owner last chose, rather
   // than being forced open by an effect: the browser is about to refuse the
@@ -489,8 +494,8 @@ function ActivityRow({
           <span className={styles.summaryTarget}>
             {problem ?? preview ?? ACTIVITY_COPY.noTarget}
           </span>
-          {row.rationale ? (
-            <span className={styles.summaryWhy}>Why: {row.rationale}</span>
+          {reason ? (
+            <span className={styles.summaryWhy}>Why: {reason}</span>
           ) : null}
         </button>
         <button className={styles.remove} type="button" onClick={onRemove}>
@@ -505,10 +510,10 @@ function ActivityRow({
           problem={problem}
           onChange={onChange}
         />
-        {row.rationale ? (
+        {reason ? (
           <div className={styles.reason}>
             <p>
-              <span>Coach&apos;s reason</span> {row.rationale}
+              <span>Coach&apos;s reason</span> {reason}
             </p>
             <button
               className={styles.add}
@@ -536,7 +541,29 @@ function toRow(activity: ActivityValue, origin: string): Row {
     ...activity,
     key: `${origin}-${nextKey++}`,
     draft: draftFromMeasurement(activity.measurementMode, activity.target),
+    reasonGivenFor: activity.rationale ? activity.name : null,
   };
+}
+
+/**
+ * The coach's reason while the row is still the activity it was given for.
+ * Owner, 29 Oct 2026: a changed number keeps it — the coach is asked why this
+ * activity, not why this target — but a rename makes it a different activity,
+ * so the reason is neither shown nor saved. Derived rather than deleted, so a
+ * rename typed and undone before saving brings it back.
+ */
+function reasonOf(row: Row): string | null {
+  if (!row.rationale || row.reasonGivenFor === null) return null;
+  return sameName(row.name, row.reasonGivenFor) ? row.rationale : null;
+}
+
+function withReason(row: Row): { rationale?: string } {
+  const reason = reasonOf(row);
+  return reason ? { rationale: reason } : {};
+}
+
+function sameName(a: string, b: string): boolean {
+  return a.trim().toLowerCase() === b.trim().toLowerCase();
 }
 
 /** A row's values as a library definition would hold them. */
