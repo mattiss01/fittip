@@ -46,8 +46,8 @@ type Row = ActivityValue & {
   /** Stable across reorders, which is what keeps inputs from swapping. */
   key: string;
   draft: MeasurementDraft;
-  /** The name the coach's reason was given for; see `reasonOf`. */
-  reasonFor: string | null;
+  /** See `reasonOf`. */
+  reasonGivenFor: string | null;
 };
 
 let nextKey = 0;
@@ -367,7 +367,7 @@ export function ActivityEditor({
                   measurementMode: mode,
                   target: null,
                   draft: emptyDraft(mode),
-                  reasonFor: null,
+                  reasonGivenFor: null,
                 },
               ];
             })
@@ -410,7 +410,7 @@ export function ActivityEditor({
                   option.measurementMode,
                   option.target,
                 ),
-                reasonFor: null,
+                reasonGivenFor: null,
               },
             ]);
             setPicking(false);
@@ -541,7 +541,7 @@ function toRow(activity: ActivityValue, origin: string): Row {
     ...activity,
     key: `${origin}-${nextKey++}`,
     draft: draftFromMeasurement(activity.measurementMode, activity.target),
-    reasonFor: activity.rationale ? activity.name : null,
+    reasonGivenFor: activity.rationale ? activity.name : null,
   };
 }
 
@@ -553,8 +553,8 @@ function toRow(activity: ActivityValue, origin: string): Row {
  * rename typed and undone before saving brings it back.
  */
 function reasonOf(row: Row): string | null {
-  if (!row.rationale || row.reasonFor === null) return null;
-  return sameName(row.name, row.reasonFor) ? row.rationale : null;
+  if (!row.rationale || row.reasonGivenFor === null) return null;
+  return sameName(row.name, row.reasonGivenFor) ? row.rationale : null;
 }
 
 function withReason(row: Row): { rationale?: string } {

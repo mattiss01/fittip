@@ -63,9 +63,16 @@ describe("ActivityEditor and the activity library", () => {
   // Owner, 29 Oct 2026: a changed number keeps the coach's reason, a rename
   // drops it, and a rename undone before saving brings it back.
   it("keeps the coach's reason through a number edit and drops it on a rename", () => {
+    // What Fill with Coach sends the coach, beside what the form saves.
+    const onRowsChange = vi.fn();
+    const sentToCoach = () =>
+      (
+        onRowsChange.mock.lastCall?.[0] as { value: unknown }[] | undefined
+      )?.map((row) => row.value);
     const { container } = render(
       <ActivityEditor
         idPrefix="t"
+        onRowsChange={onRowsChange}
         initial={[
           {
             personalActivityId: null,
@@ -96,12 +103,16 @@ describe("ActivityEditor and the activity library", () => {
     expect(submitted(container)).toEqual([
       expect.not.objectContaining({ rationale: expect.anything() }),
     ]);
+    expect(sentToCoach()).toEqual([
+      expect.not.objectContaining({ rationale: expect.anything() }),
+    ]);
     expect(screen.queryByText(/Flushes/)).toBeNull();
 
     fireEvent.change(screen.getByLabelText("Name"), {
       target: { value: "easy spin " },
     });
     expect(submitted(container)).toEqual([expect.objectContaining(reason)]);
+    expect(sentToCoach()).toEqual([expect.objectContaining(reason)]);
   });
 
   it("offers no picker when the library is empty", () => {
