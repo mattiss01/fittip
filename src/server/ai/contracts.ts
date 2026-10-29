@@ -42,7 +42,7 @@ export const COACH_AI_PROMPT_VERSIONS = {
   create_seven_day_plan: "seven-day-plan-v2.1-2026-10-21",
   // 28 Oct 2026 (ADR-040): the session's coach's note and each activity's
   // reason are read, and the summary becomes that note.
-  fill_session_activities: "session-activities-v1.3-2026-10-28",
+  fill_session_activities: "session-activities-v1.4-2026-10-29",
 } as const satisfies Record<CoachAIOperation, string>;
 
 /** The two runtimes ADR-006 and M0-06A permit. Nothing else may ever call out. */

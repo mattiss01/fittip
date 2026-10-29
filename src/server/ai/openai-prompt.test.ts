@@ -129,13 +129,14 @@ describe("what every prompt says about the athlete's data (ADR-023)", () => {
     );
     // 14,929 until timed sets and intervals joined the mode lines (ADR-038);
     // 14,954 until the safety rule for a health condition (21 Oct 2026);
-    // 14,991 until the coach's note and each activity's reason (ADR-040).
+    // 14,991 until the coach's note and each activity's reason (ADR-040);
+    // 16,091 until a reason was asked to hold whatever the numbers.
     expect(
       tokens(
         "fill_session_activities",
         SESSION_ACTIVITIES_STATIC_PREFIX_BUDGET,
       ),
-    ).toBe(16_091);
+    ).toBe(16_129);
   });
 });
 
@@ -494,8 +495,12 @@ describe("the plan response grammar", () => {
  * also gave the session part of the context 4,000 more bytes:
  *
  *   8,850 + 64 + 55,450 = 64,364   ceil(64,364 / 4) = 16,091  vs  20,000
+ *
+ * and with a reason that holds whatever the numbers (29 Oct 2026):
+ *
+ *   9,000 + 64 + 55,450 = 64,514   ceil(64,514 / 4) = 16,129  vs  20,000
  */
-const SESSION_ACTIVITIES_STATIC_PREFIX_BUDGET = 8_850;
+const SESSION_ACTIVITIES_STATIC_PREFIX_BUDGET = 9_000;
 
 describe("the session activities prompt", () => {
   it("says what ADR-023 gave a fill to read, and how to read it", () => {
@@ -512,6 +517,10 @@ describe("the session activities prompt", () => {
     expect(prefix).toContain("it never overrides a safety signal");
     // Decision 18: an old result is not a starting point.
     expect(prefix).toContain("start below it");
+    // Owner, 29 Oct 2026: a reason outlives an edit to the numbers.
+    expect(prefix).toContain(
+      "A rationale says why this activity belongs in this session, not why its sets, reps, load or time",
+    );
     // And none of it is told to the other two calls.
     expect(coachAIStaticPrefix("create_seven_day_plan")).not.toContain(
       "recentSafetyFlags",

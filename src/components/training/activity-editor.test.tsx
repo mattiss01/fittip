@@ -60,6 +60,50 @@ describe("ActivityEditor and the activity library", () => {
     ]);
   });
 
+  // Owner, 29 Oct 2026: a changed number keeps the coach's reason, a rename
+  // drops it, and a rename undone before saving brings it back.
+  it("keeps the coach's reason through a number edit and drops it on a rename", () => {
+    const { container } = render(
+      <ActivityEditor
+        idPrefix="t"
+        initial={[
+          {
+            personalActivityId: null,
+            name: "Easy spin",
+            sport: "Cycling",
+            instructions: null,
+            rationale: "Flushes the legs after yesterday's intervals.",
+            measurementMode: "duration_intensity",
+            target: { duration_minutes: 20 },
+          },
+        ]}
+      />,
+    );
+    const reason = {
+      rationale: "Flushes the legs after yesterday's intervals.",
+    };
+
+    fireEvent.click(screen.getByRole("button", { name: /Easy spin/ }));
+    fireEvent.change(screen.getByLabelText("Minutes"), {
+      target: { value: "30" },
+    });
+    expect(submitted(container)).toEqual([expect.objectContaining(reason)]);
+    expect(screen.getByText(/Why: Flushes/)).toBeTruthy();
+
+    fireEvent.change(screen.getByLabelText("Name"), {
+      target: { value: "Tempo ride" },
+    });
+    expect(submitted(container)).toEqual([
+      expect.not.objectContaining({ rationale: expect.anything() }),
+    ]);
+    expect(screen.queryByText(/Flushes/)).toBeNull();
+
+    fireEvent.change(screen.getByLabelText("Name"), {
+      target: { value: "easy spin " },
+    });
+    expect(submitted(container)).toEqual([expect.objectContaining(reason)]);
+  });
+
   it("offers no picker when the library is empty", () => {
     render(<ActivityEditor idPrefix="t" />);
     expect(

@@ -141,7 +141,7 @@ Finally, "memoryCandidates": zero to four durable facts, constraints, preference
 
   fill_session_activities: `Fill in the activities for one planned session: "sessionDetail.session", on "horizonStartDate". The session's title, sport, length and intent are the athlete's; do not change them. Your job is what happens inside it.
 
-Return the whole list the session should hold, in order, one to twelve activities. If the session already has activities, they are the athlete's starting point: keep what fits, change what should change, add what is missing, and say why in each "rationale". The athlete sees your list beside theirs and chooses.
+Return the whole list the session should hold, in order, one to twelve activities. If the session already has activities, they are the athlete's starting point: keep what fits, change what should change, add what is missing, and say why in each "rationale". A rationale says why this activity belongs in this session, not why its sets, reps, load or time: the athlete adjusts the numbers and keeps your reason, so it must stay true when they do. The athlete sees your list beside theirs and chooses.
 
 "sessionDetail.session.coachNote", when present, is what this session was asked for and built to do in an earlier answer, as the athlete kept it. Keep to it unless "planningNote" says otherwise: a note like "more" or "another" builds on it. An activity's "rationale" there is why it was chosen before.
 
@@ -702,7 +702,7 @@ const SESSION_ACTIVITIES_SCHEMA = {
           rationale: {
             type: "string",
             description:
-              "Why this activity and this target. At most 250 characters.",
+              "Why this activity belongs in this session, true whatever its numbers. At most 250 characters.",
           },
         },
       },
