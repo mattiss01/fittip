@@ -3,6 +3,7 @@
 import {
   useCallback,
   useEffect,
+  useId,
   useRef,
   useState,
   type KeyboardEvent as ReactKeyboardEvent,
@@ -22,6 +23,7 @@ const SCROLL_PX = 10;
 export type KeyMoveProps = {
   "data-hold-move": true;
   "aria-keyshortcuts": string;
+  "aria-describedby": string;
   onKeyDown: (event: ReactKeyboardEvent<HTMLElement>) => void;
 };
 
@@ -35,7 +37,9 @@ export type KeyMoveProps = {
  * Each item, a direct child of `list`, carries its stable key as
  * `data-hold-key`. Without a pointer, the arrow keys on any control given
  * `keys(key)` move its item, and focus follows it: moving an element in the
- * page takes the focus off it.
+ * page takes the focus off it. A screen reader hears so from `hint`, which
+ * the list renders hidden beside itself (not inside: its children are the
+ * items).
  *
  * `top` is where the screen's own top edge is for scrolling, below anything
  * sticky; the window's top when absent.
@@ -45,6 +49,7 @@ export function useHoldReorder(
   onMoveTo: (key: string, index: number) => void,
   top?: () => number,
 ) {
+  const hintId = useId();
   const [dragging, setDragging] = useState<string | null>(null);
   const draggingRef = useRef<string | null>(null);
   const pointerY = useRef(0);
@@ -141,6 +146,7 @@ export function useHoldReorder(
     (key: string): KeyMoveProps => ({
       "data-hold-move": true,
       "aria-keyshortcuts": "ArrowUp ArrowDown",
+      "aria-describedby": hintId,
       onKeyDown(event: ReactKeyboardEvent<HTMLElement>) {
         if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
         event.preventDefault();
@@ -158,10 +164,16 @@ export function useHoldReorder(
         moveRef.current(key, to);
       },
     }),
-    [list],
+    [list, hintId],
   );
 
-  return { dragging, hold, keys };
+  const hint = {
+    id: hintId,
+    hidden: true,
+    children: "Arrow up or down moves this one in the list.",
+  };
+
+  return { dragging, hold, keys, hint };
 }
 
 /** The list's items, each carrying its key as `data-hold-key`. */

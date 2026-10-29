@@ -279,7 +279,7 @@ export function ActivityEditor({
     });
   }
   const list = useRef<HTMLOListElement>(null);
-  const { dragging, hold, keys } = useHoldReorder(list, moveTo);
+  const { dragging, hold, keys, hint } = useHoldReorder(list, moveTo);
 
   /** The row's library buttons, by the rule every session editor shares. */
   function libraryActions(
@@ -304,6 +304,7 @@ export function ActivityEditor({
 
       <input type="hidden" name={name} value={serialized} />
 
+      <p {...hint} />
       {rows.length === 0 ? (
         <p className={styles.empty}>{ACTIVITY_COPY.empty}</p>
       ) : (

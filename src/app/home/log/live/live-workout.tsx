@@ -82,7 +82,7 @@ export function LiveWorkout({
   const latest = useRef(workout.state.activities);
   const list = useRef<HTMLOListElement>(null);
   // The page scrolls under a lifted card once it nears the sticky clock.
-  const { dragging, hold, keys } = useHoldReorder(
+  const { dragging, hold, keys, hint } = useHoldReorder(
     list,
     moveTo,
     () =>
@@ -262,6 +262,7 @@ export function LiveWorkout({
         </p>
       ) : null}
 
+      <p {...hint} />
       <ol className={styles.activities} ref={list}>
         {activities.map((activity, index) => (
           <ActivityCard

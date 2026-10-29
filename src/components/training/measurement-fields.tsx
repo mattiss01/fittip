@@ -140,6 +140,7 @@ export function MeasurementFields({
           <span>Load</span>
           <span />
         </div>
+        <p {...reorder.hint} />
         <ol className={styles.groupRows} ref={groupListRef}>
           {groups.map((group, index) => {
             const key = groupKeys[index];

@@ -248,7 +248,7 @@ export function ActualActivities({
     });
   }
   const list = useRef<HTMLOListElement>(null);
-  const { dragging, hold, keys } = useHoldReorder(list, moveTo);
+  const { dragging, hold, keys, hint } = useHoldReorder(list, moveTo);
 
   return (
     <fieldset
@@ -264,6 +264,7 @@ export function ActualActivities({
           : "Add what you did, one activity at a time, in the order you did it."}
       </p>
       <input type="hidden" name={name} value={serialized} />
+      <p {...hint} />
       {rows.length === 0 ? null : (
         <ol className={styles.activityRows} ref={list}>
           {built.map(({ row, build }, index) => (

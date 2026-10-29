@@ -60,6 +60,7 @@ export function useHoldGesture<T>(gesture: HoldGesture<T>) {
     pending.current = null;
     swallowClick.current = true;
     lifted.current = true;
+    document.addEventListener("touchmove", holdPage, { passive: false });
     navigator.vibrate?.(10);
     gestureRef.current.onLift(held.item, x, y);
   }, []);
@@ -96,20 +97,21 @@ export function useHoldGesture<T>(gesture: HoldGesture<T>) {
         swallowClick.current = false;
       }, 50);
       if (!lifted.current) return;
-      lifted.current = false;
+      settle();
       gestureRef.current.onDrop();
     }
     function onCancel() {
       cancelPending();
       if (!lifted.current) return;
-      lifted.current = false;
+      settle();
       gestureRef.current.onCancel();
     }
     function onKey(event: KeyboardEvent) {
       if (event.key === "Escape") onCancel();
     }
-    function onTouchMove(event: TouchEvent) {
-      if (lifted.current) event.preventDefault();
+    function settle() {
+      lifted.current = false;
+      document.removeEventListener("touchmove", holdPage);
     }
     function onClick(event: MouseEvent) {
       if (!swallowClick.current) return;
@@ -124,7 +126,6 @@ export function useHoldGesture<T>(gesture: HoldGesture<T>) {
     document.addEventListener("pointerup", onUp);
     document.addEventListener("pointercancel", onCancel);
     document.addEventListener("keydown", onKey);
-    document.addEventListener("touchmove", onTouchMove, { passive: false });
     document.addEventListener("click", onClick, true);
     document.addEventListener("contextmenu", onContextMenu);
     return () => {
@@ -133,7 +134,7 @@ export function useHoldGesture<T>(gesture: HoldGesture<T>) {
       document.removeEventListener("pointerup", onUp);
       document.removeEventListener("pointercancel", onCancel);
       document.removeEventListener("keydown", onKey);
-      document.removeEventListener("touchmove", onTouchMove);
+      if (lifted.current) document.removeEventListener("touchmove", holdPage);
       document.removeEventListener("click", onClick, true);
       document.removeEventListener("contextmenu", onContextMenu);
     };
@@ -168,4 +169,13 @@ export function useHoldGesture<T>(gesture: HoldGesture<T>) {
     }),
     [lift],
   );
+}
+
+/**
+ * Keeps the page still under a finger carrying an item. Listened for only
+ * while one is lifted: a non-passive touchmove on the page makes the browser
+ * wait on it before every scroll.
+ */
+function holdPage(event: TouchEvent) {
+  event.preventDefault();
 }

@@ -7,7 +7,10 @@ import {
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { useHoldGesture, type HoldGesture } from "./use-hold-gesture";
+import {
+  useHoldGesture,
+  type HoldGesture,
+} from "@/components/hold/use-hold-gesture";
 
 afterEach(() => {
   cleanup();
