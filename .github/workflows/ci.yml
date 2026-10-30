@@ -24,10 +24,37 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
 
 jobs:
-  static:
-    name: Lint, types, unit tests, build
+  # Skips the suites for code a green run already tested: a merge to `master`
+  # whose ticket passed, or a push of Markdown alone. The rule and its numbers
+  # are in the script.
+  gate:
+    name: Already tested?
     # Every job is pinned, not latest: on 28 Oct 2026 latest became 26.04, where
     # Playwright 1.58 cannot install Chromium, and every browser shard failed.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      # Listing this workflow's green runs.
+      actions: read
+    outputs:
+      run: ${{ steps.decide.outputs.run }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # The commits of earlier runs, to compare this one against.
+          fetch-depth: 0
+
+      - id: decide
+        run: bash .github/scripts/already-tested.sh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+
+  static:
+    name: Lint, types, unit tests, build
+    needs: gate
+    if: needs.gate.outputs.run == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     env:
@@ -63,6 +90,8 @@ jobs:
 
   database:
     name: Migrations, RLS, advisors, concurrency
+    needs: gate
+    if: needs.gate.outputs.run == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     # The Supabase CLI pulls its images from AWS's public registry by default,
@@ -147,6 +176,8 @@ jobs:
 
   browser:
     name: 390px production browser flows (${{ matrix.shard }})
+    needs: gate
+    if: needs.gate.outputs.run == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     # The Supabase CLI pulls its images from AWS's public registry by default,
