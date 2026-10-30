@@ -21,11 +21,6 @@ that reset untouched.
 
 Ordered by dependency. A lane is named where it is not the build lane.
 
-- [~] **Press and hold to reorder everywhere.** Owner, 28 Oct 2026: the Edit session
-      activities, the log's "What you did" and a strength activity's set groups lose their
-      ⠿ handles for the live screen's hold-to-drag. First one shared gesture hook for the
-      plan's day drag and these lists (the live one copies `plan-drag.tsx` today), so a fix
-      found on the phone lands in all of them.
 - [ ] **A7-5 — Size the fill before its first live run.** Measure output tokens on a
       twelve-activity answer: the grammar pads each target with fourteen nullable keys
       against an 11,500-token ceiling. Needs a provider key, so it waits for one; each run
