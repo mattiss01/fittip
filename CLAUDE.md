@@ -76,7 +76,8 @@ For anything visible or behavioral that the careful lane does not cover:
    run in the background (`gh run watch <id> --exit-status`), say that it is running, and
    take the owner's next task on a new branch from `master`.
 6. When the run is green, merge to `master`, add the log row to
-   `docs/backlog/LOG-<year>.md`, and push the two together so `master` runs once. When it
+   `docs/backlog/LOG-<year>.md`, and push the two together. `master` then skips the suites
+   when its code is the ticket's green code (see Continuous integration). When it
    is red, say so straight away and fix it before the next merge.
 
 No subagents, no ticket document, no validation record, no Preview wait. Add tests where the
@@ -169,6 +170,11 @@ Three jobs, about four minutes: `static` (Prettier, ESLint, TypeScript, `test:ru
 is about two minutes of that on each runner and is the floor. A browser flow runs only if
 a shard in `ci.yml` names it.
 
+- A `gate` job runs first and skips the suites when a green run already tested the same
+  code, Markdown in `docs/` and `CLAUDE.md` aside (owner, 30 Oct 2026): a merge whose ticket
+  passed, or a docs-only push. If `master` moved since the ticket's run, the merge differs
+  and runs in full. A run with skipped suites is green and cites nothing new; the log row
+  cites the ticket's run. `gh run rerun` and a manual dispatch always run the suites.
 - Green CI for the commit being merged is the automated-test evidence. Don't re-run the
   suites by hand to produce a report; the local checks before a push are there to keep the
   one run green, not to stand in for it.
