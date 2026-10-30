@@ -237,9 +237,12 @@ describe("ActualActivities", () => {
       <ActualActivities activities={[SQUAT, SERVES]} sessionSport="Strength" />,
     );
 
+    // The arrow keys on a row's own controls move it, as holding it does.
     fireEvent.keyDown(
-      screen.getByRole("button", { name: /Serve practice, 2 of 2/ }),
-      { key: "ArrowUp" },
+      screen.getAllByRole("checkbox", { name: "Didn't do this" })[1],
+      {
+        key: "ArrowUp",
+      },
     );
 
     expect(submitted().map(({ position, name }) => [position, name])).toEqual([

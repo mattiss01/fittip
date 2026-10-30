@@ -18,8 +18,12 @@ import {
   useLibraryRowActions,
   type LibraryRowActionProps,
 } from "./library-row-actions";
-import { ReorderHandle } from "./reorder-handle";
 
+import {
+  useHoldReorder,
+  type HoldProps,
+  type KeyMoveProps,
+} from "@/components/hold/use-hold-reorder";
 import { SportInput } from "@/components/sports/sport-input";
 import type { ActivityValue } from "@/lib/training/activity-value";
 import { describeMeasurement } from "@/lib/training/describe-measurement";
@@ -190,7 +194,6 @@ export function ActivityEditor({
   const [rows, setRows] = useState<Row[]>(() =>
     (initial ?? []).map((activity) => toRow(activity, "initial")),
   );
-  const [dragging, setDragging] = useState<string | null>(null);
   const {
     activities: library,
     modes,
@@ -264,17 +267,19 @@ export function ActivityEditor({
     );
   }
 
-  function move(key: string, delta: number) {
+  function moveTo(key: string, to: number) {
     setRows((current) => {
       const from = current.findIndex((row) => row.key === key);
-      const to = from + delta;
-      if (from < 0 || to < 0 || to >= current.length) return current;
+      if (from < 0 || to < 0 || to >= current.length || from === to)
+        return current;
       const next = [...current];
       const [held] = next.splice(from, 1);
       next.splice(to, 0, held);
       return next;
     });
   }
+  const list = useRef<HTMLOListElement>(null);
+  const { dragging, hold, keys, hint } = useHoldReorder(list, moveTo);
 
   /** The row's library buttons, by the rule every session editor shares. */
   function libraryActions(
@@ -299,40 +304,27 @@ export function ActivityEditor({
 
       <input type="hidden" name={name} value={serialized} />
 
+      <p {...hint} />
       {rows.length === 0 ? (
         <p className={styles.empty}>{ACTIVITY_COPY.empty}</p>
       ) : (
-        <ol className={styles.rows}>
+        <ol className={styles.rows} ref={list}>
           {built.map(({ row, build }, index) => (
             <ActivityRow
               key={row.key}
               idPrefix={`${prefix}-activity-${index}`}
               row={row}
               index={index}
-              total={rows.length}
               problem={build.ok ? null : build.message}
               preview={build.ok ? describeMeasurement(build.measurement) : null}
               dragging={dragging === row.key}
-              onDragStateChange={setDragging}
+              hold={rows.length < 2 ? undefined : hold(row.key)}
+              move={rows.length < 2 ? undefined : keys(row.key)}
               library={libraryActions(
                 row,
                 build.ok ? build.measurement : undefined,
               )}
               onChange={(change) => update(row.key, change)}
-              onMove={(delta) => move(row.key, delta)}
-              onMoveTo={(to) =>
-                setRows((current) => {
-                  const from = current.findIndex(
-                    (item) => item.key === row.key,
-                  );
-                  if (from < 0 || to < 0 || to >= current.length || from === to)
-                    return current;
-                  const next = [...current];
-                  const [held] = next.splice(from, 1);
-                  next.splice(to, 0, held);
-                  return next;
-                })
-              }
               onRemove={() =>
                 setRows((current) =>
                   current.filter((item) => item.key !== row.key),
@@ -426,16 +418,16 @@ type ActivityRowProps = {
   idPrefix: string;
   row: Row;
   index: number;
-  total: number;
   problem: string | null;
   preview: string | null;
   dragging: boolean;
-  onDragStateChange: (key: string | null) => void;
+  /** Holding the row's head drags it; absent while it is alone. */
+  hold?: HoldProps;
+  /** The arrow keys on the row's summary; absent while it is alone. */
+  move?: KeyMoveProps;
   /** The row's library buttons; empty when it has none. */
   library: LibraryRowActionProps;
   onChange: (change: Partial<Row>) => void;
-  onMove: (delta: number) => void;
-  onMoveTo: (index: number) => void;
   onRemove: () => void;
 };
 
@@ -443,15 +435,13 @@ function ActivityRow({
   idPrefix,
   row,
   index,
-  total,
   problem,
   preview,
   dragging,
-  onDragStateChange,
+  hold,
+  move,
   library,
   onChange,
-  onMove,
-  onMoveTo,
   onRemove,
 }: ActivityRowProps) {
   const [expanded, setExpanded] = useState(row.name === "");
@@ -472,21 +462,15 @@ function ActivityRow({
     <li
       className={dragging ? `${styles.row} ${styles.rowDragging}` : styles.row}
       data-activity-row={index}
+      data-hold-key={row.key}
     >
-      <div className={styles.rowHead}>
-        <ReorderHandle
-          label={`${ACTIVITY_COPY.reorderHint} Activity ${index + 1} of ${total}.`}
-          onDragStateChange={(active) =>
-            onDragStateChange(active ? row.key : null)
-          }
-          onMove={onMove}
-          onMoveTo={onMoveTo}
-        />
+      <div className={styles.rowHead} {...hold}>
         <button
           className={styles.summary}
           type="button"
           aria-expanded={open}
           onClick={() => setExpanded((current) => !current)}
+          {...move}
         >
           <span className={styles.summaryName}>
             {row.name.trim() === "" ? "New activity" : row.name}

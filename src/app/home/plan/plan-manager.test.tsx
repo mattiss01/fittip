@@ -146,7 +146,11 @@ describe("PlanManager", () => {
         button: 0,
         ...init,
       });
-      Object.assign(event, { pointerId: 1, pointerType: "mouse" });
+      Object.assign(event, {
+        pointerId: 1,
+        pointerType: "mouse",
+        isPrimary: true,
+      });
       fireEvent(target as Element, event);
     };
     const dragTo = (target: HTMLElement) => {

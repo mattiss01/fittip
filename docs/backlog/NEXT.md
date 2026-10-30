@@ -21,12 +21,7 @@ that reset untouched.
 
 Ordered by dependency. A lane is named where it is not the build lane.
 
-- [ ] **Coach start times — careful lane.** The coach gives a start time
-      only when the note or memory says when (owner's choice); proposal items carry it, an
-      accepted proposal writes it, a replaced session's own time is kept when the proposal
-      gives none. One paid call to judge, on the owner's click.
-
-- [ ] **Press and hold to reorder everywhere.** Owner, 28 Oct 2026: the Edit session
+- [~] **Press and hold to reorder everywhere.** Owner, 28 Oct 2026: the Edit session
       activities, the log's "What you did" and a strength activity's set groups lose their
       ⠿ handles for the live screen's hold-to-drag. First one shared gesture hook for the
       plan's day drag and these lists (the live one copies `plan-drag.tsx` today), so a fix
@@ -97,6 +92,15 @@ Not worth their own slot; do them when work lands nearby.
 
 ## Later
 
+- **A global FitTip session and activity library — idea.** Owner, 29 Oct 2026: sessions
+  and activities FitTip provides, beside each person's own. Today's rule says otherwise:
+  `CLAUDE.md` keeps activities personal and rules out a global library for v1, so this
+  starts with the owner changing that invariant. Then careful lane: who writes the shared
+  entries, how a copy taken from one relates to it, and what the coach may pick from.
+- **Coach start times — idea.** Owner, 29 Oct 2026: not for now. The coach would give a
+  start time only when the note or memory says when; proposal items carry it, an accepted
+  proposal writes it, and a replaced session keeps its own time when the proposal gives
+  none. Careful lane (the AI contracts); one paid call to judge.
 - **How much the coach thinks — idea.** Owner, 17 Oct 2026: keep the default for now.
   `gpt-6-luna` takes `reasoning_effort` (none … max; FitTip sends none, so "medium");
   lower is faster and cheaper, and weighs less at once (knee, pain rule, the days after).

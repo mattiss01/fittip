@@ -1,11 +1,10 @@
 "use client";
 
-import { useRef } from "react";
-import { flushSync } from "react-dom";
+import { useRef, useState } from "react";
 
 import styles from "./activity-editor.module.css";
-import { ReorderHandle } from "./reorder-handle";
 
+import { useHoldReorder } from "@/components/hold/use-hold-reorder";
 import {
   DISTANCE_UNITS,
   INTENSITIES,
@@ -92,6 +91,16 @@ export function MeasurementFields({
   onBlocksChange?: (blocks: IntervalBlockDraft[]) => void;
 }) {
   const groupListRef = useRef<HTMLOListElement>(null);
+  const [groupKeys, setGroupKeys] = useGroupKeys(draft.groups.length);
+  // A ramp is read top to bottom, so its order is the owner's to set. The
+  // inputs are controlled, so moving a draft moves its values with it.
+  const moveGroup = (key: string, to: number) => {
+    const from = groupKeys.indexOf(key);
+    if (from < 0 || to < 0 || to >= draft.groups.length || from === to) return;
+    setGroupKeys(moved(groupKeys, from, to));
+    onGroupsChange(moved(draft.groups, from, to));
+  };
+  const reorder = useHoldReorder(groupListRef, moveGroup);
   const bind = (field: string) => ({
     id: `${idPrefix}-${field}`,
     value: draft.fields[field] ?? "",
@@ -121,31 +130,9 @@ export function MeasurementFields({
           position === index ? { ...group, ...change } : group,
         ),
       );
-    // A ramp is read top to bottom, so its order is the owner's to set. The
-    // inputs are controlled, so moving a draft moves its values with it.
-    const moveGroup = (from: number, to: number) => {
-      if (to < 0 || to >= groups.length || from === to) return;
-      const next = [...groups];
-      const [held] = next.splice(from, 1);
-      next.splice(to, 0, held);
-      onGroupsChange(next);
-    };
-    // Rows are keyed by position, so after a keyboard move the focused handle
-    // would belong to the other group and the next arrow would swap them back.
-    // Focus follows the group instead, as it does for an activity.
-    const moveGroupByKey = (from: number, delta: number) => {
-      const to = from + delta;
-      if (to < 0 || to >= groups.length) return;
-      flushSync(() => moveGroup(from, to));
-      groupListRef.current
-        ?.querySelectorAll<HTMLButtonElement>(
-          ":scope > li > button:first-child",
-        )
-        [to]?.focus();
-    };
     return (
       <div className={styles.groupBox}>
-        {/* Outside the list: `ReorderHandle` counts the list's items as rows. */}
+        {/* Outside the list, whose items are what a held group moves among. */}
         <div className={styles.groupHeadings} aria-hidden="true">
           <span />
           <span>Sets</span>
@@ -153,102 +140,120 @@ export function MeasurementFields({
           <span>Load</span>
           <span />
         </div>
+        <p {...reorder.hint} />
         <ol className={styles.groupRows} ref={groupListRef}>
-          {groups.map((group, index) => (
-            <li className={styles.groupRow} key={index}>
-              <ReorderHandle
-                className={styles.groupHandle}
-                label={`${ACTIVITY_COPY.reorderHint} Set group ${index + 1} of ${groups.length}.`}
-                onMove={(delta) => moveGroupByKey(index, delta)}
-                onMoveTo={(to) => moveGroup(index, to)}
-              />
-              <input
-                aria-label={`Sets, group ${index + 1}`}
-                id={`${idPrefix}-group-${index}-sets`}
-                ref={index === 0 ? validityRef : undefined}
-                value={group.sets}
-                inputMode="numeric"
-                placeholder="3"
-                onChange={(event) =>
-                  setGroup(index, { sets: event.target.value })
+          {groups.map((group, index) => {
+            const key = groupKeys[index];
+            // Held anywhere but its fields to drag it; alone, it stays put.
+            const alone = groups.length < 2;
+            return (
+              <li
+                className={
+                  reorder.dragging === key
+                    ? `${styles.groupRow} ${styles.groupRowDragging}`
+                    : styles.groupRow
                 }
-              />
-              {/* Counted in reps or held for a time (ADR-038), per group: a
-                  circuit can mix the two. */}
-              <span className={styles.amount}>
-                {group.by === "time" ? (
-                  <input
-                    aria-label={`Time per set, group ${index + 1}`}
-                    id={`${idPrefix}-group-${index}-time`}
-                    value={group.time}
-                    inputMode="text"
-                    placeholder="0:45"
-                    onChange={(event) =>
-                      setGroup(index, { time: event.target.value })
-                    }
-                  />
-                ) : (
-                  <input
-                    aria-label={`Reps, group ${index + 1}`}
-                    id={`${idPrefix}-group-${index}-reps`}
-                    value={group.reps}
-                    inputMode="numeric"
-                    placeholder="5"
-                    onChange={(event) =>
-                      setGroup(index, { reps: event.target.value })
-                    }
-                  />
-                )}
-                <button
-                  className={styles.amountSwitch}
-                  type="button"
-                  aria-label={
-                    group.by === "time"
-                      ? `Group ${index + 1} is held for a time. Count reps instead`
-                      : `Group ${index + 1} counts reps. Hold for a time instead`
-                  }
-                  onClick={() =>
-                    setGroup(index, {
-                      by: group.by === "time" ? "reps" : "time",
-                    })
-                  }
-                >
-                  {group.by === "time" ? "time" : "reps"}
-                </button>
-              </span>
-              <input
-                aria-label={`Load, group ${index + 1}`}
-                id={`${idPrefix}-group-${index}-load`}
-                value={group.load}
-                inputMode="decimal"
-                placeholder="60"
-                onChange={(event) =>
-                  setGroup(index, { load: event.target.value })
-                }
-              />
-              <button
-                className={styles.groupRemove}
-                type="button"
-                aria-label={`${ACTIVITY_COPY.removeGroup} ${index + 1}`}
-                // The last row is never removable: the editor always shows one,
-                // and an empty one means no target, so there is nothing a
-                // removal could express that clearing the fields does not.
-                disabled={groups.length === 1}
-                onClick={() =>
-                  onGroupsChange(groups.filter((_, at) => at !== index))
-                }
+                key={key}
+                data-hold-key={key}
+                {...(alone ? {} : reorder.hold(key))}
               >
-                <span aria-hidden="true">&times;</span>
-              </button>
-            </li>
-          ))}
+                <span className={styles.groupNumber} aria-hidden="true">
+                  {index + 1}
+                </span>
+                <input
+                  aria-label={`Sets, group ${index + 1}`}
+                  id={`${idPrefix}-group-${index}-sets`}
+                  ref={index === 0 ? validityRef : undefined}
+                  value={group.sets}
+                  inputMode="numeric"
+                  placeholder="3"
+                  onChange={(event) =>
+                    setGroup(index, { sets: event.target.value })
+                  }
+                />
+                {/* Counted in reps or held for a time (ADR-038), per group: a
+                  circuit can mix the two. */}
+                <span className={styles.amount}>
+                  {group.by === "time" ? (
+                    <input
+                      aria-label={`Time per set, group ${index + 1}`}
+                      id={`${idPrefix}-group-${index}-time`}
+                      value={group.time}
+                      inputMode="text"
+                      placeholder="0:45"
+                      onChange={(event) =>
+                        setGroup(index, { time: event.target.value })
+                      }
+                    />
+                  ) : (
+                    <input
+                      aria-label={`Reps, group ${index + 1}`}
+                      id={`${idPrefix}-group-${index}-reps`}
+                      value={group.reps}
+                      inputMode="numeric"
+                      placeholder="5"
+                      onChange={(event) =>
+                        setGroup(index, { reps: event.target.value })
+                      }
+                    />
+                  )}
+                  <button
+                    className={styles.amountSwitch}
+                    type="button"
+                    aria-label={
+                      group.by === "time"
+                        ? `Group ${index + 1} is held for a time. Count reps instead`
+                        : `Group ${index + 1} counts reps. Hold for a time instead`
+                    }
+                    onClick={() =>
+                      setGroup(index, {
+                        by: group.by === "time" ? "reps" : "time",
+                      })
+                    }
+                    {...(alone ? {} : reorder.keys(key))}
+                  >
+                    {group.by === "time" ? "time" : "reps"}
+                  </button>
+                </span>
+                <input
+                  aria-label={`Load, group ${index + 1}`}
+                  id={`${idPrefix}-group-${index}-load`}
+                  value={group.load}
+                  inputMode="decimal"
+                  placeholder="60"
+                  onChange={(event) =>
+                    setGroup(index, { load: event.target.value })
+                  }
+                />
+                <button
+                  className={styles.groupRemove}
+                  type="button"
+                  aria-label={`${ACTIVITY_COPY.removeGroup} ${index + 1}`}
+                  // The last row is never removable: the editor always shows one,
+                  // and an empty one means no target, so there is nothing a
+                  // removal could express that clearing the fields does not.
+                  disabled={groups.length === 1}
+                  onClick={() => {
+                    setGroupKeys(groupKeys.filter((_, at) => at !== index));
+                    onGroupsChange(groups.filter((_, at) => at !== index));
+                  }}
+                  {...(alone ? {} : reorder.keys(key))}
+                >
+                  <span aria-hidden="true">&times;</span>
+                </button>
+              </li>
+            );
+          })}
         </ol>
         <div className={styles.groupFoot}>
           <button
             className={styles.groupAdd}
             type="button"
             disabled={groups.length >= 20}
-            onClick={() => onGroupsChange([...groups, emptySetGroup()])}
+            onClick={() => {
+              setGroupKeys([...groupKeys, newGroupKey()]);
+              onGroupsChange([...groups, emptySetGroup()]);
+            }}
           >
             {ACTIVITY_COPY.addGroup}
           </button>
@@ -459,4 +464,32 @@ export function MeasurementFields({
       </div>
     </div>
   );
+}
+
+let nextGroupKey = 0;
+const newGroupKey = () => `group-${nextGroupKey++}`;
+
+/**
+ * Set groups have no identity of their own, and a held one has to be followed
+ * as it moves, so each is given a key here. This component keeps them in step
+ * with every change it makes; a list that arrives at another length from
+ * outside (a new mode, a new target) is given fresh ones.
+ */
+function useGroupKeys(count: number) {
+  const [keys, setKeys] = useState(() =>
+    Array.from({ length: count }, newGroupKey),
+  );
+  if (keys.length !== count) {
+    const fresh = Array.from({ length: count }, newGroupKey);
+    setKeys(fresh);
+    return [fresh, setKeys] as const;
+  }
+  return [keys, setKeys] as const;
+}
+
+function moved<T>(items: readonly T[], from: number, to: number): T[] {
+  const next = [...items];
+  const [held] = next.splice(from, 1);
+  next.splice(to, 0, held);
+  return next;
 }

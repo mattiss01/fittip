@@ -4,6 +4,11 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 
 import styles from "./log.module.css";
 
+import {
+  useHoldReorder,
+  type HoldProps,
+  type KeyMoveProps,
+} from "@/components/hold/use-hold-reorder";
 import type {
   LibraryActivityOption,
   SaveToLibrary,
@@ -19,7 +24,6 @@ import {
   MeasurementModeField,
 } from "@/components/training/measurement-fields";
 import { SportInput } from "@/components/sports/sport-input";
-import { ReorderHandle } from "@/components/training/reorder-handle";
 import type { ActivityValue } from "@/lib/training/activity-value";
 import { describeMeasurement } from "@/lib/training/describe-measurement";
 import { ACTIVITY_COPY } from "@/lib/training/measurement-copy";
@@ -232,8 +236,6 @@ export function ActualActivities({
     );
   }
 
-  const [dragging, setDragging] = useState<string | null>(null);
-
   function moveTo(key: string, to: number) {
     setRows((current) => {
       const from = current.findIndex((row) => row.key === key);
@@ -245,6 +247,8 @@ export function ActualActivities({
       return next;
     });
   }
+  const list = useRef<HTMLOListElement>(null);
+  const { dragging, hold, keys, hint } = useHoldReorder(list, moveTo);
 
   return (
     <fieldset
@@ -260,8 +264,9 @@ export function ActualActivities({
           : "Add what you did, one activity at a time, in the order you did it."}
       </p>
       <input type="hidden" name={name} value={serialized} />
+      <p {...hint} />
       {rows.length === 0 ? null : (
-        <ol className={styles.activityRows}>
+        <ol className={styles.activityRows} ref={list}>
           {built.map(({ row, build }, index) => (
             <ActualRow
               key={row.key}
@@ -269,7 +274,6 @@ export function ActualActivities({
               row={row}
               hasPlan={hasPlan}
               index={index}
-              total={rows.length}
               problem={row.done && !build.ok ? build.message : null}
               actual={build.ok ? describeMeasurement(build.measurement) : null}
               library={
@@ -282,11 +286,8 @@ export function ActualActivities({
               }
               onChange={(change) => update(row.key, change)}
               dragging={dragging === row.key}
-              onDragStateChange={(active) =>
-                setDragging(active ? row.key : null)
-              }
-              onMove={(delta) => moveTo(row.key, index + delta)}
-              onMoveTo={(to) => moveTo(row.key, to)}
+              hold={rows.length < 2 ? undefined : hold(row.key)}
+              move={rows.length < 2 ? undefined : keys(row.key)}
               onRemove={() =>
                 setRows((current) =>
                   current.filter((item) => item.key !== row.key),
@@ -363,15 +364,13 @@ function ActualRow({
   row,
   hasPlan,
   index,
-  total,
   problem,
   actual,
   dragging,
-  onDragStateChange,
+  hold,
+  move,
   library,
   onChange,
-  onMove,
-  onMoveTo,
   onRemove,
 }: {
   idPrefix: string;
@@ -380,14 +379,14 @@ function ActualRow({
   /** The row's library buttons; empty when it has none. */
   library: LibraryRowActionProps;
   index: number;
-  total: number;
   problem: string | null;
   actual: string | null;
   dragging: boolean;
-  onDragStateChange: (dragging: boolean) => void;
+  /** Holding the row's name drags it; absent while it is alone. */
+  hold?: HoldProps;
+  /** The arrow keys on the row's buttons; absent while it is alone. */
+  move?: KeyMoveProps;
   onChange: (change: Partial<Row>) => void;
-  onMove: (delta: number) => void;
-  onMoveTo: (index: number) => void;
   onRemove: () => void;
 }) {
   const added = row.planned === null;
@@ -414,15 +413,9 @@ function ActualRow({
         dragging ? styles.activityRowDragging : "",
       ].join(" ")}
       data-log-activity={index}
+      data-hold-key={row.key}
     >
-      <div className={styles.activityTop}>
-        <ReorderHandle
-          className={styles.activityHandle}
-          label={`Drag to reorder, or use the arrow keys. ${label}, ${index + 1} of ${total}.`}
-          onDragStateChange={onDragStateChange}
-          onMove={onMove}
-          onMoveTo={onMoveTo}
-        />
+      <div className={styles.activityTop} {...hold}>
         <div className={styles.activityHead}>
           <p className={styles.activityName}>{label}</p>
           {added && !hasPlan ? null : (
@@ -441,7 +434,12 @@ function ActualRow({
         {added ? (
           // Something the owner added and did not do is simply not there, so
           // it is removed rather than marked.
-          <button className={styles.secondary} type="button" onClick={onRemove}>
+          <button
+            className={styles.secondary}
+            type="button"
+            onClick={onRemove}
+            {...move}
+          >
             Remove
           </button>
         ) : (
@@ -450,6 +448,7 @@ function ActualRow({
               type="checkbox"
               checked={!row.done}
               onChange={(event) => onChange({ done: !event.target.checked })}
+              {...move}
             />
             <span>Didn&apos;t do this</span>
           </label>
@@ -464,6 +463,7 @@ function ActualRow({
             // says nothing it cannot do.
             disabled={forced}
             onClick={() => setExpanded((current) => !current)}
+            {...move}
           >
             {open ? "Done adjusting" : "Adjust"}
           </button>
