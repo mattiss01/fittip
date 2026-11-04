@@ -248,7 +248,7 @@ export function ActualActivities({
     });
   }
   const list = useRef<HTMLOListElement>(null);
-  const { dragging, hold, keys, hint } = useHoldReorder(list, moveTo);
+  const { hold, keys, hint } = useHoldReorder(list, moveTo);
 
   return (
     <fieldset
@@ -285,7 +285,6 @@ export function ActualActivities({
                   : {}
               }
               onChange={(change) => update(row.key, change)}
-              dragging={dragging === row.key}
               hold={rows.length < 2 ? undefined : hold(row.key)}
               move={rows.length < 2 ? undefined : keys(row.key)}
               onRemove={() =>
@@ -366,7 +365,6 @@ function ActualRow({
   index,
   problem,
   actual,
-  dragging,
   hold,
   move,
   library,
@@ -381,7 +379,6 @@ function ActualRow({
   index: number;
   problem: string | null;
   actual: string | null;
-  dragging: boolean;
   /** Holding the row's name drags it; absent while it is alone. */
   hold?: HoldProps;
   /** The arrow keys on the row's buttons; absent while it is alone. */
@@ -408,10 +405,7 @@ function ActualRow({
 
   return (
     <li
-      className={[
-        row.done ? styles.activityRow : styles.activityRowSkipped,
-        dragging ? styles.activityRowDragging : "",
-      ].join(" ")}
+      className={row.done ? styles.activityRow : styles.activityRowSkipped}
       data-log-activity={index}
       data-hold-key={row.key}
     >

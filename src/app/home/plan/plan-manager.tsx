@@ -17,7 +17,7 @@ import {
   type PlanActionState,
 } from "./action-state";
 import { changePlanAction } from "./actions";
-import { usePlanDrag, type PlanDragSession } from "./plan-drag";
+import { usePlanDrag, type PlanDragSession, type WeekStep } from "./plan-drag";
 import {
   SWIPE_EDIT_PX,
   SWIPE_OPEN_PX,
@@ -211,27 +211,6 @@ export function PlanManager({
     setSwiped(null);
     startTransition(() => trackedPlanAction(formData));
   };
-  const swipe = {
-    open: swiped,
-    enabled: !(pending || seriesPending),
-    onOpen: (id: string, side: SwipeSide) => setSwiped({ id, side }),
-    onClose: () => setSwiped(null),
-    onCancel: (id: string) => sendSessionChange("cancel", id),
-    onDelete: (session: PlanCardView) => {
-      setSwiped(null);
-      setDeleting(session);
-    },
-  };
-
-  // Dropping a card on another day moves it there (owner, 19 Oct 2026).
-  const drag = usePlanDrag((sessionId, localDate) => {
-    const formData = new FormData();
-    formData.set("operation", "move");
-    formData.set("sessionId", sessionId);
-    formData.set("localDate", localDate);
-    formData.set("expectedRevision", String(expectedRevision));
-    startTransition(() => trackedPlanAction(formData));
-  });
 
   const weeks = planWeeks(today, lastPlaceableDate, repeatsThrough, firstDate);
   // The weeks before this one sit ahead of it in the list (owner, 2 Oct
@@ -257,6 +236,39 @@ export function PlanManager({
     },
     [weekIndex],
   );
+
+  // Dropping a card on another day moves it there (owner, 19 Oct 2026);
+  // held at an edge, it turns the week first (owner, 4 Nov 2026).
+  const drag = usePlanDrag(
+    (sessionId, localDate) => {
+      const formData = new FormData();
+      formData.set("operation", "move");
+      formData.set("sessionId", sessionId);
+      formData.set("localDate", localDate);
+      formData.set("expectedRevision", String(expectedRevision));
+      startTransition(() => trackedPlanAction(formData));
+    },
+    (step) => {
+      const target = weekIndex + step;
+      if (target < 0 || target >= weeks.length) return false;
+      goToWeek(target);
+      return true;
+    },
+  );
+
+  const swipe = {
+    open: swiped,
+    // Not while a session is held to drag: a finger carrying it sideways to
+    // turn the week is not a swipe (owner, 4 Nov 2026).
+    enabled: !(pending || seriesPending || drag.holding),
+    onOpen: (id: string, side: SwipeSide) => setSwiped({ id, side }),
+    onClose: () => setSwiped(null),
+    onCancel: (id: string) => sendSessionChange("cancel", id),
+    onDelete: (session: PlanCardView) => {
+      setSwiped(null);
+      setDeleting(session);
+    },
+  };
   // Some forty weeks of tiles scroll sideways, so the one being shown is
   // brought into view: the strip otherwise opens on its oldest week with
   // nothing marked. Instant, so there is no motion to reduce.
@@ -363,7 +375,9 @@ export function PlanManager({
           <WeekArrow
             label="Previous week"
             glyph="‹"
+            step={-1}
             target={weekIndex > 0 ? weekIndex - 1 : null}
+            aimed={drag.aimed === -1}
             onGo={goToWeek}
           />
           <div className={w.weekTitle}>
@@ -400,7 +414,9 @@ export function PlanManager({
           <WeekArrow
             label="Next week"
             glyph="›"
+            step={1}
             target={weekIndex < weeks.length - 1 ? weekIndex + 1 : null}
+            aimed={drag.aimed === 1}
             onGo={goToWeek}
           />
         </header>
@@ -610,12 +626,18 @@ function useSheetClosedOnSave(
 function WeekArrow({
   label,
   glyph,
+  step,
   target,
+  aimed,
   onGo,
 }: {
   label: string;
   glyph: string;
+  /** Which way a dragged session rested on it turns the week. */
+  step: WeekStep;
   target: number | null;
+  /** A dragged session rests on it, or on its side of the screen. */
+  aimed: boolean;
   onGo: (index: number) => void;
 }) {
   if (target === null) return <span className={w.arrow} aria-hidden="true" />;
@@ -624,6 +646,8 @@ function WeekArrow({
       type="button"
       className={w.arrow}
       aria-label={label}
+      data-week-step={step}
+      data-aimed={aimed || undefined}
       onClick={() => onGo(target)}
     >
       {glyph}

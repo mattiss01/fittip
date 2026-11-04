@@ -24,16 +24,30 @@ beforeEach(() => {
   // jsdom lays nothing out: each item is a 50px row at its place in the list.
   vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(
     function (this: HTMLElement) {
-      const index = [...(this.parentElement?.children ?? [])].indexOf(this);
       return DOMRect.fromRect({
         x: 0,
-        y: index * ROW_PX,
+        y: placeOf(this) * ROW_PX,
         width: 300,
         height: ROW_PX,
       });
     },
   );
+  vi.spyOn(HTMLElement.prototype, "offsetTop", "get").mockImplementation(
+    function (this: HTMLElement) {
+      return placeOf(this) * ROW_PX;
+    },
+  );
+  vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(
+    ROW_PX,
+  );
 });
+
+function placeOf(element: HTMLElement) {
+  return Math.max(
+    0,
+    [...(element.parentElement?.children ?? [])].indexOf(element),
+  );
+}
 
 function List() {
   const [items, setItems] = useState(["a", "b", "c"]);
@@ -72,26 +86,78 @@ function order() {
 }
 
 describe("useHoldReorder", () => {
-  it("puts the held item after every other one whose middle it passes", () => {
+  it("lifts the held item and moves it to the place nearest its own middle", () => {
+    render(<List />);
+    const a = screen.getByText("a").closest("li");
+
+    // Held 10px below its top edge, so its middle is 15px below the finger.
+    pointer(screen.getByText("a"), "pointerdown", 10);
+    act(() => vi.advanceTimersByTime(350));
+    expect(a).toHaveAttribute("data-hold-lifted");
+    // Its middle at 55: nearer b's (75) than its own place's (25).
+    pointer(document, "pointermove", 40);
+    expect(order()).toEqual(["b", "a", "c"]);
+    // At 125, c's place.
+    pointer(document, "pointermove", 110);
+    expect(order()).toEqual(["b", "c", "a"]);
+    // Back over the middle place, and no further: it does not overshoot.
+    pointer(document, "pointermove", 60);
+    expect(order()).toEqual(["b", "a", "c"]);
+    pointer(document, "pointerup", 60);
+    expect(order()).toEqual(["b", "a", "c"]);
+    expect(a).not.toHaveAttribute("data-hold-lifted");
+  });
+
+  it("keeps a short item below a tall one, not swapping back on every move", () => {
+    // a is 20px tall, b and c 100px: each sits below the ones before it.
+    const height = (element: HTMLElement) =>
+      element.dataset.holdKey === "a" ? 20 : 100;
+    const top = (element: HTMLElement) =>
+      [...(element.parentElement?.children ?? [])]
+        .slice(0, placeOf(element))
+        .reduce((sum, sibling) => sum + height(sibling as HTMLElement), 0);
+    vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockImplementation(
+      function (this: HTMLElement) {
+        return height(this);
+      },
+    );
+    vi.spyOn(HTMLElement.prototype, "offsetTop", "get").mockImplementation(
+      function (this: HTMLElement) {
+        return top(this);
+      },
+    );
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(
+      function (this: HTMLElement) {
+        return DOMRect.fromRect({
+          x: 0,
+          y: top(this),
+          width: 300,
+          height: height(this),
+        });
+      },
+    );
     render(<List />);
 
-    pointer(screen.getByText("a"), "pointerdown", 100);
+    // Held at its middle: a's middle follows the finger. Past 40, b's place
+    // (middle 70) is nearer than its own (10).
+    pointer(screen.getByText("a"), "pointerdown", 10);
     act(() => vi.advanceTimersByTime(350));
-    // Below b's middle (75) and c's (125); a's own row is not counted.
-    pointer(document, "pointermove", 130);
-    expect(order()).toEqual(["b", "c", "a"]);
-    pointer(document, "pointermove", 70);
+    pointer(document, "pointermove", 45);
     expect(order()).toEqual(["b", "a", "c"]);
-    pointer(document, "pointerup", 70);
+    // Now below b, it stays there while it is held over b's old place.
+    pointer(document, "pointermove", 46);
+    pointer(document, "pointermove", 47);
     expect(order()).toEqual(["b", "a", "c"]);
+    pointer(document, "pointermove", 30);
+    expect(order()).toEqual(["a", "b", "c"]);
   });
 
   it("puts it back where it was lifted from on Escape", () => {
     render(<List />);
 
-    pointer(screen.getByText("b"), "pointerdown", 100);
+    pointer(screen.getByText("b"), "pointerdown", 60);
     act(() => vi.advanceTimersByTime(350));
-    pointer(document, "pointermove", 140);
+    pointer(document, "pointermove", 110);
     expect(order()).toEqual(["a", "c", "b"]);
     fireEvent.keyDown(document, { key: "Escape" });
     expect(order()).toEqual(["a", "b", "c"]);

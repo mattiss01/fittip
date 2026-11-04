@@ -82,7 +82,7 @@ export function LiveWorkout({
   const latest = useRef(workout.state.activities);
   const list = useRef<HTMLOListElement>(null);
   // The page scrolls under a lifted card once it nears the sticky clock.
-  const { dragging, hold, keys, hint } = useHoldReorder(
+  const { hold, keys, hint } = useHoldReorder(
     list,
     moveTo,
     () =>
@@ -269,7 +269,6 @@ export function LiveWorkout({
             key={activity.key}
             idPrefix={`${prefix}-${index}`}
             activity={activity}
-            dragging={dragging === activity.key}
             hold={activities.length < 2 ? undefined : hold(activity.key)}
             move={activities.length < 2 ? undefined : keys(activity.key)}
             onChange={(edit) => update(activity.key, edit)}
@@ -370,7 +369,6 @@ function SaveLine({
 function ActivityCard({
   idPrefix,
   activity,
-  dragging,
   hold,
   move,
   onChange,
@@ -378,7 +376,6 @@ function ActivityCard({
 }: {
   idPrefix: string;
   activity: LiveActivity;
-  dragging: boolean;
   /** What lets the card's head be held and dragged; absent while alone. */
   hold?: HoldProps;
   /** The arrow keys on the card's fold button; absent while alone. */
@@ -416,11 +413,9 @@ function ActivityCard({
           ? "Done"
           : "";
   const named = activity.name !== "";
-  const cardClass = [
-    styles.card,
-    activity.done ? styles.cardDone : "",
-    dragging ? styles.cardDragging : "",
-  ].join(" ");
+  const cardClass = [styles.card, activity.done ? styles.cardDone : ""].join(
+    " ",
+  );
 
   if (!open && named) {
     const built = actualMeasurement(activity);

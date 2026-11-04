@@ -59,15 +59,6 @@
   min-width: 0;
 }
 
-/* Lifted by a hold on its head, as the live workout's cards are. */
-.rowDragging {
-  position: relative;
-  z-index: 1;
-  border-color: var(--ledger-ink);
-  box-shadow: var(--shadow-raised);
-  transform: scale(1.02);
-}
-
 /*
  * Held to drag the row: a finger resting here lifts it rather than selecting
  * the name or opening the phone's menu, and a vertical swipe still scrolls.
@@ -326,11 +317,6 @@
   .row {
     transition: none;
   }
-
-  .rowDragging,
-  .groupRowDragging {
-    transform: none;
-  }
 }
 
 /*
@@ -384,12 +370,9 @@
   user-select: text;
 }
 
-.groupRowDragging {
-  position: relative;
-  z-index: 1;
+/* Lifted (globals.css), it hides the rows it passes over. */
+.groupRow[data-hold-lifted] {
   background: var(--ledger-paper);
-  box-shadow: var(--shadow-raised);
-  transform: scale(1.02);
 }
 
 .groupNumber {
