@@ -39,6 +39,9 @@
   --shadow-card:
     0 1px 0 rgb(23 51 46 / 0.06), 0 12px 28px -14px rgb(23 51 46 / 0.22);
   --shadow-raised: 0 18px 40px -16px rgb(23 51 46 / 0.35);
+  /* Something held to drag: ringed in the accent, deep in shadow. */
+  --shadow-lifted:
+    0 0 0 2px var(--accent), 0 24px 44px -14px rgb(23 51 46 / 0.45);
   --line: var(--fern);
   --ease-out: cubic-bezier(0.2, 0.9, 0.3, 1);
 }
@@ -1160,9 +1163,7 @@ button:disabled {
   position: relative;
   z-index: 2;
   scale: 1.03;
-  box-shadow:
-    0 0 0 2px var(--accent),
-    0 24px 44px -14px rgb(23 51 46 / 0.45);
+  box-shadow: var(--shadow-lifted);
   cursor: grabbing;
 }
 

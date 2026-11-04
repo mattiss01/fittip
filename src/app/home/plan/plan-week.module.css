@@ -888,9 +888,7 @@ span.arrow {
   overflow: hidden;
   border-radius: 0.85rem;
   background: var(--paper);
-  box-shadow:
-    0 0 0 2px var(--accent),
-    0 24px 44px -14px rgb(23 51 46 / 0.45);
+  box-shadow: var(--shadow-lifted);
   color: var(--pine);
   font: 700 0.9rem var(--font-sans);
   white-space: nowrap;

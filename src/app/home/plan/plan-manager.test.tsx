@@ -112,6 +112,7 @@ describe("PlanManager", () => {
   afterEach(() => {
     cleanup();
     vi.useRealTimers();
+    Reflect.deleteProperty(document, "elementFromPoint");
   });
 
   it("shows one week from Monday, with a + only from today on", () => {
@@ -222,8 +223,40 @@ describe("PlanManager", () => {
     pointer(document, "pointerup");
     const sent = action.mock.calls[0][0] as FormData;
     expect(sent.get("localDate")).toBe(DATES[7]);
-    Reflect.deleteProperty(document, "elementFromPoint");
-    vi.useRealTimers();
+  });
+
+  it("turns the week at the screen's side, forgetting the day it was over", () => {
+    vi.useFakeTimers();
+    renderManager(INITIAL_PLAN_ACTION_STATE, [session()]);
+    const card = day(TODAY).querySelector<HTMLElement>("[data-draggable]")!;
+    document.elementFromPoint = vi.fn().mockReturnValue(day(DATES[2]));
+    const side = window.innerWidth - 5;
+    const pointer = (target: EventTarget, type: string, clientX: number) => {
+      const event = new MouseEvent(type, {
+        bubbles: true,
+        button: 0,
+        clientX,
+        clientY: 60,
+      });
+      Object.assign(event, {
+        pointerId: 1,
+        pointerType: "mouse",
+        isPrimary: true,
+      });
+      fireEvent(target as Element, event);
+    };
+
+    pointer(card, "pointerdown", side - 40);
+    pointer(document, "pointermove", side);
+    pointer(document, "pointermove", side + 1);
+    expect(screen.getByRole("button", { name: "Next week" })).toHaveAttribute(
+      "data-aimed",
+    );
+    act(() => vi.advanceTimersByTime(600));
+    expect(screen.getByRole("heading", { name: "Next week" })).toBeVisible();
+    // Let go without moving: the day it was over is in the week now gone.
+    pointer(document, "pointerup", side + 1);
+    expect(action).not.toHaveBeenCalled();
   });
 
   // Owner, 19 Oct 2026: a card swiped left offers Cancel and Delete.

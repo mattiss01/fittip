@@ -14,7 +14,7 @@ export type WeekStep = -1 | 1;
 /** How long a session rests at an edge before the week turns, and again. */
 const TURN_MS = 600;
 /** How near the screen's side counts as its edge. */
-const EDGE_PX = 28;
+const SIDE_PX = 28;
 
 type Drag = {
   session: PlanDragSession;
@@ -61,25 +61,32 @@ export function usePlanDrag(
   }, []);
 
   /** Starts, keeps or stops the wait before the week turns. */
-  const aimAt = useCallback((step: WeekStep | null) => {
-    if (aim.current?.step === step) return;
-    if (aim.current !== null) window.clearTimeout(aim.current.timer);
-    aim.current = null;
-    setAimed(step);
-    if (step === null) return;
-    const toward: WeekStep = step;
-    function wait() {
-      aim.current = { step: toward, timer: window.setTimeout(go, TURN_MS) };
-    }
-    function go() {
-      if (turnRef.current(toward)) wait();
-      else {
-        aim.current = null;
-        setAimed(null);
+  const aimAt = useCallback(
+    (step: WeekStep | null) => {
+      if (aim.current?.step === step) return;
+      if (aim.current !== null) window.clearTimeout(aim.current.timer);
+      aim.current = null;
+      setAimed(step);
+      if (step === null) return;
+      const toward: WeekStep = step;
+      function wait() {
+        aim.current = { step: toward, timer: window.setTimeout(go, TURN_MS) };
       }
-    }
-    wait();
-  }, []);
+      function go() {
+        if (turnRef.current(toward)) {
+          // The day it was over has left with the old week.
+          const current = dragRef.current;
+          if (current !== null) update({ ...current, overDate: null });
+          wait();
+        } else {
+          aim.current = null;
+          setAimed(null);
+        }
+      }
+      wait();
+    },
+    [update],
+  );
 
   useEffect(
     () => () => {
@@ -165,7 +172,7 @@ function edgeUnder(x: number, y: number): WeekStep | null {
     .elementFromPoint?.(x, y)
     ?.closest<HTMLElement>("[data-week-step]");
   if (arrow) return arrow.dataset.weekStep === "-1" ? -1 : 1;
-  if (x < EDGE_PX) return -1;
-  if (x > window.innerWidth - EDGE_PX) return 1;
+  if (x < SIDE_PX) return -1;
+  if (x > window.innerWidth - SIDE_PX) return 1;
   return null;
 }

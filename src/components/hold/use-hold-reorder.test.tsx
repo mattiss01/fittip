@@ -108,6 +108,50 @@ describe("useHoldReorder", () => {
     expect(a).not.toHaveAttribute("data-hold-lifted");
   });
 
+  it("keeps a short item below a tall one, not swapping back on every move", () => {
+    // a is 20px tall, b and c 100px: each sits below the ones before it.
+    const height = (element: HTMLElement) =>
+      element.dataset.holdKey === "a" ? 20 : 100;
+    const top = (element: HTMLElement) =>
+      [...(element.parentElement?.children ?? [])]
+        .slice(0, placeOf(element))
+        .reduce((sum, sibling) => sum + height(sibling as HTMLElement), 0);
+    vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockImplementation(
+      function (this: HTMLElement) {
+        return height(this);
+      },
+    );
+    vi.spyOn(HTMLElement.prototype, "offsetTop", "get").mockImplementation(
+      function (this: HTMLElement) {
+        return top(this);
+      },
+    );
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(
+      function (this: HTMLElement) {
+        return DOMRect.fromRect({
+          x: 0,
+          y: top(this),
+          width: 300,
+          height: height(this),
+        });
+      },
+    );
+    render(<List />);
+
+    // Held at its middle: a's middle follows the finger. Past 40, b's place
+    // (middle 70) is nearer than its own (10).
+    pointer(screen.getByText("a"), "pointerdown", 10);
+    act(() => vi.advanceTimersByTime(350));
+    pointer(document, "pointermove", 45);
+    expect(order()).toEqual(["b", "a", "c"]);
+    // Now below b, it stays there while it is held over b's old place.
+    pointer(document, "pointermove", 46);
+    pointer(document, "pointermove", 47);
+    expect(order()).toEqual(["b", "a", "c"]);
+    pointer(document, "pointermove", 30);
+    expect(order()).toEqual(["a", "b", "c"]);
+  });
+
   it("puts it back where it was lifted from on Escape", () => {
     render(<List />);
 

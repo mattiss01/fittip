@@ -141,11 +141,17 @@ function reorderMotion(page: {
   let pointerY = 0;
   // Where the lifted item was, for Escape to put it back.
   let origin = 0;
-  // Every item's resting place is read against the lifted one's at the lift:
-  // their own boxes are mid-slide while they make room.
-  let anchor = { client: 0, offset: 0, scroll: 0 };
+  // Every item's resting place is read from the list's own top, which moves
+  // with whatever scrolls it (the page, or a sheet), and the items' places in
+  // it: their own boxes are mid-slide while they make room. `base` turns an
+  // item's offsetTop into its distance below the list's top.
+  let base = 0;
   // From the item's top edge to the finger, so it does not jump to meet it.
   let grab = 0;
+  // The middle of each place below the list's top, as it stood at the lift. A place is chosen against these, not the list as it now stands: a
+  // short item moved below a tall one would otherwise sit nearer its old
+  // place again and swap back on every move.
+  let places: number[] = [];
   // How far the lifted item is drawn from its resting place.
   let shift = 0;
   // Each item's top on screen before a move, to slide from once it renders.
@@ -161,13 +167,12 @@ function reorderMotion(page: {
       ? undefined
       : items().find((item) => item.dataset.holdKey === key);
 
+  function listTop() {
+    return page.list()?.getBoundingClientRect().top ?? 0;
+  }
+
   function restingTop(item: HTMLElement) {
-    return (
-      anchor.client +
-      item.offsetTop -
-      anchor.offset -
-      (window.scrollY - anchor.scroll)
-    );
+    return listTop() + item.offsetTop - base;
   }
 
   /** Draws the lifted item under the finger. */
@@ -229,28 +234,33 @@ function reorderMotion(page: {
   }
 
   /**
-   * Moves the lifted item to the place whose middle is nearest its own, the
-   * way the others rest now. Measured from the item rather than the finger,
-   * so a card held by its head moves when it covers the next one.
+   * Moves the lifted item to the place whose middle is nearest its own.
+   * Measured from the item rather than the finger, so a card held by its head
+   * moves when it covers the next one.
    */
   function place() {
-    const all = items();
     const item = itemOf(lifted);
     if (lifted === null || item === undefined) return;
-    const middle = pointerY - grab + item.offsetHeight / 2;
-    const at = all.indexOf(item);
-    let nearest = at;
-    let distance = Infinity;
-    all.forEach((other, index) => {
-      const away = Math.abs(
-        restingTop(other) + other.offsetHeight / 2 - middle,
-      );
-      if (away < distance) {
-        distance = away;
+    const middle = pointerY - grab + item.offsetHeight / 2 - listTop();
+    let nearest = 0;
+    places.forEach((place, index) => {
+      if (Math.abs(place - middle) < Math.abs(places[nearest] - middle)) {
         nearest = index;
       }
     });
-    if (nearest !== at) moveSliding(lifted, nearest);
+    if (nearest !== items().indexOf(item)) moveSliding(lifted, nearest);
+  }
+
+  /** Clears what the slides left on the items, once they have finished. */
+  function tidyLater() {
+    if (tidy !== null) window.clearTimeout(tidy);
+    tidy = window.setTimeout(() => {
+      tidy = null;
+      for (const element of items()) {
+        element.style.transition = "";
+        element.style.translate = "";
+      }
+    }, SLIDE_MS + 50);
   }
 
   /** Lets the lifted item down where it rests, gliding the last of the way. */
@@ -265,13 +275,7 @@ function reorderMotion(page: {
       item.style.transition = reducedMotion() ? "none" : `${SLIDE}, ${LIFT}`;
       item.style.translate = "0 0";
     }
-    tidy = window.setTimeout(() => {
-      tidy = null;
-      for (const element of items()) {
-        element.style.transition = "";
-        element.style.translate = "";
-      }
-    }, SLIDE_MS + 50);
+    tidyLater();
   }
 
   return {
@@ -280,13 +284,18 @@ function reorderMotion(page: {
       if (item === undefined) return;
       if (tidy !== null) window.clearTimeout(tidy);
       tidy = null;
+      slide = null;
+      // One still gliding from the last drop is measured where it rests.
+      for (const element of items()) {
+        element.style.transition = "none";
+        element.style.translate = "";
+      }
       const box = item.getBoundingClientRect();
-      anchor = {
-        client: box.top,
-        offset: item.offsetTop,
-        scroll: window.scrollY,
-      };
+      base = item.offsetTop - (box.top - listTop());
       grab = y - box.top;
+      places = items().map(
+        (element) => element.offsetTop - base + element.offsetHeight / 2,
+      );
       shift = 0;
       pointerY = y;
       origin = items().indexOf(item);
@@ -346,9 +355,11 @@ function reorderMotion(page: {
         if (at === pending.to) {
           slide = null;
           play(pending.tops);
-          follow();
+          if (lifted === null) tidyLater();
         }
       }
+      // Wherever the lifted item now rests, even if a move was refused.
+      follow();
       // Set only when a move was made, so no later render steals focus.
       if (refocus !== null) {
         const target = refocus;
