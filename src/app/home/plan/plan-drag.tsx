@@ -138,6 +138,8 @@ export function usePlanDrag(
 
   return {
     handle,
+    /** A session is lifted and being carried. */
+    holding: drag !== null,
     overDate: drag?.overDate ?? null,
     aimed: drag === null ? null : aimed,
     ghost,

@@ -211,17 +211,6 @@ export function PlanManager({
     setSwiped(null);
     startTransition(() => trackedPlanAction(formData));
   };
-  const swipe = {
-    open: swiped,
-    enabled: !(pending || seriesPending),
-    onOpen: (id: string, side: SwipeSide) => setSwiped({ id, side }),
-    onClose: () => setSwiped(null),
-    onCancel: (id: string) => sendSessionChange("cancel", id),
-    onDelete: (session: PlanCardView) => {
-      setSwiped(null);
-      setDeleting(session);
-    },
-  };
 
   const weeks = planWeeks(today, lastPlaceableDate, repeatsThrough, firstDate);
   // The weeks before this one sit ahead of it in the list (owner, 2 Oct
@@ -266,6 +255,20 @@ export function PlanManager({
       return true;
     },
   );
+
+  const swipe = {
+    open: swiped,
+    // Not while a session is held to drag: a finger carrying it sideways to
+    // turn the week is not a swipe (owner, 4 Nov 2026).
+    enabled: !(pending || seriesPending || drag.holding),
+    onOpen: (id: string, side: SwipeSide) => setSwiped({ id, side }),
+    onClose: () => setSwiped(null),
+    onCancel: (id: string) => sendSessionChange("cancel", id),
+    onDelete: (session: PlanCardView) => {
+      setSwiped(null);
+      setDeleting(session);
+    },
+  };
   // Some forty weeks of tiles scroll sideways, so the one being shown is
   // brought into view: the strip otherwise opens on its oldest week with
   // nothing marked. Instant, so there is no motion to reduce.
