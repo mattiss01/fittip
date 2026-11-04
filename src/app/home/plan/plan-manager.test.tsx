@@ -1,4 +1,5 @@
 import {
+  act,
   cleanup,
   fireEvent,
   waitFor,
@@ -108,7 +109,10 @@ describe("PlanManager", () => {
     window.sessionStorage.clear();
   });
 
-  afterEach(cleanup);
+  afterEach(() => {
+    cleanup();
+    vi.useRealTimers();
+  });
 
   it("shows one week from Monday, with a + only from today on", () => {
     renderManager();
@@ -155,8 +159,8 @@ describe("PlanManager", () => {
     };
     const dragTo = (target: HTMLElement) => {
       pointAt.mockReturnValue(target);
-      pointer(card, "pointerdown", { clientX: 10, clientY: 10 });
-      pointer(document, "pointermove", { clientX: 10, clientY: 60 });
+      pointer(card, "pointerdown", { clientX: 200, clientY: 10 });
+      pointer(document, "pointermove", { clientX: 200, clientY: 60 });
       pointer(document, "pointerup");
     };
 
@@ -174,6 +178,52 @@ describe("PlanManager", () => {
       expectedRevision: "3",
     });
     Reflect.deleteProperty(document, "elementFromPoint");
+  });
+
+  // Owner, 4 Nov 2026: held on a week arrow, a session turns the week, and
+  // drops onto a day there.
+  it("turns the week under a session held on its arrow", () => {
+    vi.useFakeTimers();
+    renderManager(INITIAL_PLAN_ACTION_STATE, [session()]);
+    const card = day(TODAY).querySelector<HTMLElement>("[data-draggable]")!;
+    const next = screen.getByRole("button", { name: "Next week" });
+    const pointAt = vi.fn().mockReturnValue(next);
+    document.elementFromPoint = pointAt;
+    const pointer = (target: EventTarget, type: string, clientY = 60) => {
+      const event = new MouseEvent(type, {
+        bubbles: true,
+        button: 0,
+        clientX: 200,
+        clientY,
+      });
+      Object.assign(event, {
+        pointerId: 1,
+        pointerType: "mouse",
+        isPrimary: true,
+      });
+      fireEvent(target as Element, event);
+    };
+
+    pointer(card, "pointerdown", 10);
+    // A mouse lifts it on the first move, and aims it on the next.
+    pointer(document, "pointermove");
+    pointer(document, "pointermove", 62);
+    expect(next).toHaveAttribute("data-aimed");
+    act(() => vi.advanceTimersByTime(599));
+    expect(screen.getByRole("heading", { name: "This week" })).toBeVisible();
+    act(() => vi.advanceTimersByTime(1));
+    expect(screen.getByRole("heading", { name: "Next week" })).toBeVisible();
+
+    pointAt.mockReturnValue(day(DATES[7]));
+    pointer(document, "pointermove");
+    expect(
+      screen.getByRole("button", { name: "Previous week" }),
+    ).not.toHaveAttribute("data-aimed");
+    pointer(document, "pointerup");
+    const sent = action.mock.calls[0][0] as FormData;
+    expect(sent.get("localDate")).toBe(DATES[7]);
+    Reflect.deleteProperty(document, "elementFromPoint");
+    vi.useRealTimers();
   });
 
   // Owner, 19 Oct 2026: a card swiped left offers Cancel and Delete.
