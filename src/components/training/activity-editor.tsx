@@ -279,7 +279,7 @@ export function ActivityEditor({
     });
   }
   const list = useRef<HTMLOListElement>(null);
-  const { dragging, hold, keys, hint } = useHoldReorder(list, moveTo);
+  const { hold, keys, hint } = useHoldReorder(list, moveTo);
 
   /** The row's library buttons, by the rule every session editor shares. */
   function libraryActions(
@@ -317,7 +317,6 @@ export function ActivityEditor({
               index={index}
               problem={build.ok ? null : build.message}
               preview={build.ok ? describeMeasurement(build.measurement) : null}
-              dragging={dragging === row.key}
               hold={rows.length < 2 ? undefined : hold(row.key)}
               move={rows.length < 2 ? undefined : keys(row.key)}
               library={libraryActions(
@@ -420,7 +419,6 @@ type ActivityRowProps = {
   index: number;
   problem: string | null;
   preview: string | null;
-  dragging: boolean;
   /** Holding the row's head drags it; absent while it is alone. */
   hold?: HoldProps;
   /** The arrow keys on the row's summary; absent while it is alone. */
@@ -437,7 +435,6 @@ function ActivityRow({
   index,
   problem,
   preview,
-  dragging,
   hold,
   move,
   library,
@@ -460,7 +457,7 @@ function ActivityRow({
 
   return (
     <li
-      className={dragging ? `${styles.row} ${styles.rowDragging}` : styles.row}
+      className={styles.row}
       data-activity-row={index}
       data-hold-key={row.key}
     >

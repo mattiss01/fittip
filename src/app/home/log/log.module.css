@@ -568,20 +568,6 @@
   cursor: grab;
 }
 
-.activityRowDragging {
-  position: relative;
-  z-index: 1;
-  border-color: var(--ledger-ink);
-  box-shadow: var(--shadow-raised);
-  transform: scale(1.02);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .activityRowDragging {
-    transform: none;
-  }
-}
-
 .activityHead {
   display: grid;
   gap: 0.15rem;

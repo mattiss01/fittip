@@ -148,11 +148,7 @@ export function MeasurementFields({
             const alone = groups.length < 2;
             return (
               <li
-                className={
-                  reorder.dragging === key
-                    ? `${styles.groupRow} ${styles.groupRowDragging}`
-                    : styles.groupRow
-                }
+                className={styles.groupRow}
                 key={key}
                 data-hold-key={key}
                 {...(alone ? {} : reorder.hold(key))}

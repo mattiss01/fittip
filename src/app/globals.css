@@ -1149,3 +1149,29 @@ button:disabled {
     animation-delay: 0s !important;
   }
 }
+
+/*
+ * An item held to reorder (src/components/hold/use-hold-reorder.ts), alike in
+ * every list (owner, 4 Nov 2026): it rises off the list, larger, deeper in
+ * shadow and ringed in the accent, and the rest of the list steps back. Two
+ * attributes beat a list's own single class for its shadow.
+ */
+[data-hold-key][data-hold-lifted] {
+  position: relative;
+  z-index: 2;
+  scale: 1.03;
+  box-shadow:
+    0 0 0 2px var(--accent),
+    0 24px 44px -14px rgb(23 51 46 / 0.45);
+  cursor: grabbing;
+}
+
+[data-hold-active] > [data-hold-key]:not([data-hold-lifted]) {
+  opacity: 0.55;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-hold-key][data-hold-lifted] {
+    scale: none;
+  }
+}
