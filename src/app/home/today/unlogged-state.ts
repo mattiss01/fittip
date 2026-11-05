@@ -2,6 +2,7 @@
 export type UnloggedSessionView = {
   id: string;
   localDate: string;
+  position: number;
   title: string;
   sport: string;
   expectedDurationMinutes: number | null;

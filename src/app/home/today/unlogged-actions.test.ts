@@ -37,7 +37,10 @@ import { skipUnloggedSessionAction } from "./unlogged-actions";
 import { INITIAL_SKIP_STATE } from "./unlogged-state";
 
 import { isoDateInTimezone, shiftIsoDate } from "@/lib/date/local-date";
-import { CompletionDuplicateError } from "@/server/completions/completion-log";
+import {
+  CompletionDuplicateError,
+  CompletionValidationError,
+} from "@/server/completions/completion-log";
 
 const TIMEZONE = "Europe/Berlin";
 const SESSION_ID = "7e15c000-0000-4000-8000-000000000001";
@@ -161,6 +164,20 @@ describe("skipUnloggedSessionAction", () => {
       status: "error",
       message: "That session already has a log. Reload Today to see it.",
     });
+    expect(revalidatePathMock).not.toHaveBeenCalled();
+  });
+
+  it("says nothing was logged when the log refuses the write", async () => {
+    applyChange.mockRejectedValueOnce(new CompletionValidationError());
+
+    const state = await skipUnloggedSessionAction(
+      INITIAL_SKIP_STATE,
+      form({ plannedSessionId: SESSION_ID, plannedDate: yesterday() }),
+    );
+
+    expect(state.message).toBe(
+      "That session could not be logged as skipped. Nothing was logged.",
+    );
     expect(revalidatePathMock).not.toHaveBeenCalled();
   });
 });

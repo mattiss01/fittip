@@ -491,7 +491,7 @@ describe("Today", () => {
     expect(readPlanWindowToppedUpMock).not.toHaveBeenCalled();
   });
 
-  it("lists past sessions with no log above today, and on no other day", async () => {
+  it("lists past sessions with no log on today, and on no other day", async () => {
     readUnloggedSessionsMock.mockResolvedValue([
       {
         id: SESSION_ID,

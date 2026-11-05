@@ -8,7 +8,9 @@ import { isoDateInTimezone } from "@/lib/date/local-date";
 import {
   CompletionConflictError,
   CompletionDuplicateError,
+  CompletionFutureDateError,
   CompletionTimezoneRequiredError,
+  CompletionValidationError,
 } from "@/server/completions/completion-log";
 import {
   CompletionAuthenticationError,
@@ -125,6 +127,15 @@ export async function skipUnloggedSessionAction(
       return answer(
         "error",
         "That session changed somewhere else. Reload Today. Nothing was logged.",
+      );
+    }
+    if (
+      error instanceof CompletionValidationError ||
+      error instanceof CompletionFutureDateError
+    ) {
+      return answer(
+        "error",
+        "That session could not be logged as skipped. Nothing was logged.",
       );
     }
     if (

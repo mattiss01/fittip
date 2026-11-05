@@ -19,6 +19,7 @@ import type { UnloggedSessionView } from "./unlogged-state";
 const RUN: UnloggedSessionView = {
   id: "7e15d000-0000-4000-8000-000000000001",
   localDate: "2026-11-09",
+  position: 0,
   title: "Easy run",
   sport: "Running",
   expectedDurationMinutes: 45,
@@ -27,6 +28,7 @@ const RUN: UnloggedSessionView = {
 const GYM: UnloggedSessionView = {
   id: "7e15d000-0000-4000-8000-000000000002",
   localDate: "2026-11-10",
+  position: 0,
   title: "Strength A",
   sport: "Strength",
   expectedDurationMinutes: null,

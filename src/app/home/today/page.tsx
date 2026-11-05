@@ -126,9 +126,9 @@ async function renderDay(timezoneName: string, requested: string | null) {
       createLiveWorkouts()
         .then((workouts) => workouts.current())
         .catch(() => null),
-      // Past sessions with no log, listed above today only (owner, 5 Nov
-      // 2026). Like the navigation's marks, a reminder: a failed read shows
-      // none rather than failing the day.
+      // Past sessions with no log, listed on today only (owner, 5 Nov 2026).
+      // Like the navigation's marks, a reminder: a failed read shows none
+      // rather than failing the day.
       date === today
         ? readUnloggedSessions(plan, log, today).catch(() => [])
         : Promise.resolve([]),
@@ -215,6 +215,7 @@ function toUnloggedView(session: UnloggedSession): UnloggedSessionView {
   return {
     id: session.id,
     localDate: session.localDate,
+    position: session.position,
     title: session.title,
     sport: session.sport,
     expectedDurationMinutes: session.expectedDurationMinutes ?? null,

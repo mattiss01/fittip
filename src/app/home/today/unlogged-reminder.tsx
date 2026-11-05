@@ -12,11 +12,13 @@ import {
 } from "./unlogged-state";
 
 import { dayLabel } from "../log/day-label";
+
+import { byStartTime } from "@/lib/training/start-time";
 import { recordHref } from "../progress/record-href";
 
 /**
- * Planned sessions from past days with no log yet (owner, 5 Nov 2026), at
- * the top of Today. Each is logged through the log form, or answered with
+ * Planned sessions from past days with no log yet (owner, 5 Nov 2026),
+ * below today's day. Each is logged through the log form, or answered with
  * "Didn't do it", which saves a Skipped log in one tap. Nothing here is
  * written without that tap, and a session with no log is only that: not
  * missed, not failed.
@@ -37,11 +39,10 @@ export function UnloggedReminder({
     ...answered.filter((session) => !listed.has(session.id)),
   ].toSorted(
     (left, right) =>
-      left.localDate.localeCompare(right.localDate) ||
-      (left.startTime ?? "~").localeCompare(right.startTime ?? "~"),
+      left.localDate.localeCompare(right.localDate) || byStartTime(left, right),
   );
   if (rows.length === 0) return null;
-  const open = sessions.length;
+  const stillOpen = sessions.length;
 
   return (
     <section
@@ -52,11 +53,11 @@ export function UnloggedReminder({
       <header className={styles.head}>
         <h2 id="unlogged-heading">Not logged yet</h2>
         <p>
-          {open === 0
+          {stillOpen === 0
             ? "Every past session here has a log now."
-            : open === 1
+            : stillOpen === 1
               ? "1 planned session from a past day has no log."
-              : `${open} planned sessions from past days have no log.`}
+              : `${stillOpen} planned sessions from past days have no log.`}
         </p>
       </header>
       <ul className={styles.rows}>
