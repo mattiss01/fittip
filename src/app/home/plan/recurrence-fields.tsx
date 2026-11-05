@@ -20,24 +20,26 @@ const WEEKDAYS = [
   [0, "Sunday"],
 ] as const;
 
-const WEEKDAY_NAMES = [
-  "Sunday",
-  "Monday",
-  "Tuesday",
-  "Wednesday",
-  "Thursday",
-  "Friday",
-  "Saturday",
-];
-
 /** How many coming dates the summary lists under its sentence. */
 const PREVIEW_COUNT = 4;
+
+/** How far an open-ended rule is searched for its first dates. */
+const OPEN_SEARCH_DAYS = 3700;
 
 export type RecurrenceFieldsValue = {
   frequency: "daily" | "weekly";
   intervalCount: number;
   weekdays?: number[];
   endDate?: string;
+};
+
+/** The rule as the controls hold it: the interval as typed, the end apart. */
+type Draft = {
+  frequency: "daily" | "weekly";
+  intervalText: string;
+  weekdays: number[];
+  noEnd: boolean;
+  endDate: string;
 };
 
 type Preset = "none" | "weekly" | "fortnightly" | "daily" | "custom";
@@ -53,7 +55,8 @@ type Preset = "none" | "weekly" | "fortnightly" | "daily" | "custom";
  * `endDate`), so the visible controls carry no names of their own.
  *
  * `onRepeatsChange` adds "Doesn't repeat" to the presets, for a form where
- * repeating is optional; without it the rule always repeats.
+ * repeating is optional; without it the rule always repeats. `onRuleChange`
+ * is told at each change whether the rule now differs from `initial`.
  */
 export function RecurrenceFields({
   idPrefix,
@@ -68,45 +71,35 @@ export function RecurrenceFields({
   initial?: RecurrenceFieldsValue;
   repeats?: boolean;
   onRepeatsChange?: (repeats: boolean) => void;
-  onRuleChange?: () => void;
+  onRuleChange?: (differsFromInitial: boolean) => void;
 }) {
   const startWeekday = weekday(startDate);
-  const [frequency, setFrequency] = useState(initial?.frequency ?? "weekly");
-  const [intervalText, setIntervalText] = useState(
-    String(initial?.intervalCount ?? 1),
-  );
-  const [weekdays, setWeekdays] = useState<number[]>(
-    initial?.weekdays && initial.weekdays.length > 0
-      ? initial.weekdays
-      : [startWeekday],
-  );
+  const [opening] = useState<Draft>(() => ({
+    frequency: initial?.frequency ?? "weekly",
+    intervalText: String(initial?.intervalCount ?? 1),
+    weekdays:
+      initial?.weekdays && initial.weekdays.length > 0
+        ? initial.weekdays
+        : [startWeekday],
+    noEnd: initial?.endDate === undefined,
+    // Eight weeks on, a block's length, when "On a date" is first chosen.
+    endDate: initial?.endDate ?? shiftIsoDate(startDate, 55),
+  }));
+  const [draft, setDraft] = useState(opening);
   const [custom, setCustom] = useState(
-    initial !== undefined &&
-      matchPreset(
-        initial.frequency,
-        initial.intervalCount,
-        initial.weekdays ?? [],
-        startWeekday,
-      ) === "custom",
-  );
-  const [noEnd, setNoEnd] = useState(initial?.endDate === undefined);
-  const [endDate, setEndDate] = useState(
-    initial?.endDate ?? shiftIsoDate(startDate, 55),
+    initial !== undefined && matchPreset(opening, startWeekday) === "custom",
   );
   const groupName = useId();
 
+  const { frequency, intervalText, weekdays, noEnd, endDate } = draft;
   const intervalCount = Number(intervalText);
   const maxInterval = frequency === "daily" ? 365 : 52;
-  const intervalValid =
-    Number.isInteger(intervalCount) &&
-    intervalCount >= 1 &&
-    intervalCount <= maxInterval;
   const selected: Preset = !repeats
     ? "none"
     : custom
       ? "custom"
-      : matchPreset(frequency, intervalCount, weekdays, startWeekday);
-  const dayName = WEEKDAY_NAMES[startWeekday];
+      : matchPreset(draft, startWeekday);
+  const dayName = weekdayName(startWeekday);
   const presets: [Preset, string][] = [
     ...(onRepeatsChange
       ? [["none", "Doesn't repeat"] as [Preset, string]]
@@ -117,45 +110,34 @@ export function RecurrenceFields({
     ["custom", "Custom"],
   ];
 
-  function changed() {
-    onRuleChange?.();
+  function update(next: Partial<Draft>) {
+    const merged = { ...draft, ...next };
+    setDraft(merged);
+    onRuleChange?.(!sameRule(merged, opening));
   }
 
   function choosePreset(preset: Preset) {
     if (preset === "none") {
       onRepeatsChange?.(false);
-      changed();
+      onRuleChange?.(true);
       return;
     }
     if (!repeats) onRepeatsChange?.(true);
     if (preset === "custom") {
-      // Opening the builder changes nothing yet.
+      // Opening the builder changes nothing by itself.
       setCustom(true);
-      if (repeats) return;
-    } else {
-      setCustom(false);
-      setFrequency(preset === "daily" ? "daily" : "weekly");
-      setIntervalText(preset === "fortnightly" ? "2" : "1");
-      if (preset !== "daily") setWeekdays([startWeekday]);
+      if (!repeats) onRuleChange?.(true);
+      return;
     }
-    changed();
+    setCustom(false);
+    update({
+      frequency: preset === "daily" ? "daily" : "weekly",
+      intervalText: preset === "fortnightly" ? "2" : "1",
+      ...(preset === "daily" ? {} : { weekdays: [startWeekday] }),
+    });
   }
 
-  const preview =
-    intervalValid && (frequency === "daily" || weekdays.length > 0)
-      ? seriesOccurrenceDates(
-          {
-            frequency,
-            intervalCount,
-            ...(frequency === "weekly" ? { weekdays } : {}),
-            startDate,
-            ...(noEnd || endDate === "" ? {} : { endDate }),
-          },
-          startDate,
-          noEnd || endDate === "" ? shiftIsoDate(startDate, 3700) : endDate,
-          PREVIEW_COUNT + 1,
-        )
-      : [];
+  const checked = checkRule(draft, startDate, PREVIEW_COUNT + 1);
 
   return (
     <fieldset className={styles.picker}>
@@ -197,12 +179,13 @@ export function RecurrenceFields({
                 <div className={styles.stepper}>
                   <button
                     type="button"
-                    aria-label="Fewer"
-                    disabled={!intervalValid || intervalCount <= 1}
-                    onClick={() => {
-                      setIntervalText(String(intervalCount - 1));
-                      changed();
-                    }}
+                    aria-label="Repeat more often"
+                    disabled={
+                      !Number.isInteger(intervalCount) || intervalCount <= 1
+                    }
+                    onClick={() =>
+                      update({ intervalText: String(intervalCount - 1) })
+                    }
                   >
                     −
                   </button>
@@ -214,21 +197,26 @@ export function RecurrenceFields({
                     max={maxInterval}
                     required
                     value={intervalText}
-                    onChange={(event) => {
-                      setIntervalText(event.target.value);
-                      changed();
-                    }}
+                    onChange={(event) =>
+                      update({ intervalText: event.target.value })
+                    }
                   />
                   <button
                     type="button"
-                    aria-label="More"
-                    disabled={intervalValid && intervalCount >= maxInterval}
-                    onClick={() => {
-                      setIntervalText(
-                        String(intervalValid ? intervalCount + 1 : 1),
-                      );
-                      changed();
-                    }}
+                    aria-label="Repeat less often"
+                    disabled={
+                      Number.isInteger(intervalCount) &&
+                      intervalCount >= maxInterval
+                    }
+                    onClick={() =>
+                      update({
+                        intervalText: String(
+                          Number.isInteger(intervalCount) && intervalCount >= 1
+                            ? intervalCount + 1
+                            : 1,
+                        ),
+                      })
+                    }
                   >
                     +
                   </button>
@@ -245,10 +233,7 @@ export function RecurrenceFields({
                         type="radio"
                         name={`${groupName}-unit`}
                         checked={frequency === unit}
-                        onChange={() => {
-                          setFrequency(unit);
-                          changed();
-                        }}
+                        onChange={() => update({ frequency: unit })}
                       />
                       <span>
                         {unit === "daily"
@@ -277,15 +262,13 @@ export function RecurrenceFields({
                         className={styles.hiddenInput}
                         type="checkbox"
                         checked={weekdays.includes(value)}
-                        onChange={(event) => {
-                          const checked = event.target.checked;
-                          setWeekdays((current) =>
-                            checked
-                              ? [...current, value]
-                              : current.filter((day) => day !== value),
-                          );
-                          changed();
-                        }}
+                        onChange={(event) =>
+                          update({
+                            weekdays: event.target.checked
+                              ? [...weekdays, value]
+                              : weekdays.filter((day) => day !== value),
+                          })
+                        }
                       />
                       <span className={styles.srOnly}>{name}</span>
                       <span aria-hidden="true">{name[0]}</span>
@@ -311,10 +294,7 @@ export function RecurrenceFields({
                     type="radio"
                     name={`${groupName}-ends`}
                     checked={noEnd === value}
-                    onChange={() => {
-                      setNoEnd(value);
-                      changed();
-                    }}
+                    onChange={() => update({ noEnd: value })}
                   />
                   <span>{label}</span>
                 </label>
@@ -327,45 +307,38 @@ export function RecurrenceFields({
                 min={startDate}
                 name="endDate"
                 required
-                onChange={(date) => {
-                  setEndDate(date);
-                  changed();
-                }}
+                onChange={(date) => update({ endDate: date })}
               />
             )}
           </fieldset>
 
-          <div className={styles.summary} aria-live="polite">
-            <p className={styles.sentence}>
-              {summarize(frequency, intervalText, intervalValid, weekdays)}
-            </p>
-            {preview.length > 0 ? (
-              <>
+          <div className={styles.summary}>
+            <div aria-live="polite">
+              <p className={styles.sentence}>{summarize(draft)}</p>
+              {checked.problem !== null ? (
+                <p className={styles.problem}>{checked.problem}</p>
+              ) : (
                 <ol className={styles.dates} aria-label="Next sessions">
-                  {preview.slice(0, PREVIEW_COUNT).map((date) => (
+                  {checked.dates.slice(0, PREVIEW_COUNT).map((date) => (
                     <li key={date}>{shortDate(date)}</li>
                   ))}
-                  {preview.length > PREVIEW_COUNT ? (
+                  {checked.dates.length > PREVIEW_COUNT ? (
                     <li aria-hidden="true" className={styles.more}>
                       …
                     </li>
                   ) : null}
                 </ol>
-                <p className={styles.hint}>
-                  {noEnd
-                    ? "No end date: FitTip writes the next thirteen weeks and extends them on later Plan visits."
-                    : `Last one on or before ${shortDate(endDate)}.`}{" "}
-                  A day that already holds ten sessions is skipped and named
-                  after saving.
-                </p>
-              </>
-            ) : intervalValid &&
-              (frequency === "daily" || weekdays.length > 0) ? (
-              <p className={styles.problem}>
-                No session falls before the end date. Move the end date or
-                choose other days.
+              )}
+            </div>
+            {checked.problem !== null ? null : (
+              <p className={styles.hint}>
+                {noEnd
+                  ? "No end date: FitTip writes the next thirteen weeks and extends them on later Plan visits."
+                  : `Last one on or before ${shortDate(endDate)}.`}{" "}
+                A day that already holds ten sessions is skipped and named after
+                saving.
               </p>
-            ) : null}
+            )}
           </div>
         </>
       )}
@@ -383,75 +356,108 @@ export function recurrenceProblem(
   startDate: string,
 ): string | null {
   const frequency = values.get("frequency");
-  const intervalCount = Number(values.get("intervalCount"));
-  const noEnd = values.get("noEnd") === "true";
-  const selectedEnd = noEnd ? undefined : values.get("endDate");
-  const weekdays = values
-    .getAll("weekdays")
-    .map(Number)
-    .filter(Number.isInteger);
-  if (
-    (frequency !== "daily" && frequency !== "weekly") ||
-    (selectedEnd !== undefined && typeof selectedEnd !== "string") ||
-    !Number.isInteger(intervalCount) ||
-    intervalCount < 1
-  ) {
+  const endDate = values.get("endDate");
+  if (frequency !== "daily" && frequency !== "weekly") {
     return "Check how often it repeats.";
   }
-  if (frequency === "weekly" && weekdays.length === 0) {
-    return "Choose at least one day.";
-  }
-  const first = seriesOccurrenceDates(
+  return checkRule(
     {
       frequency,
-      intervalCount,
-      ...(frequency === "weekly" ? { weekdays } : {}),
-      startDate,
-      ...(selectedEnd === undefined ? {} : { endDate: selectedEnd }),
+      intervalText: String(values.get("intervalCount") ?? ""),
+      weekdays: values.getAll("weekdays").map(Number),
+      noEnd: values.get("noEnd") === "true",
+      endDate: typeof endDate === "string" ? endDate : "",
     },
     startDate,
-    selectedEnd ?? shiftIsoDate(startDate, 3700),
     1,
-  );
-  return first.length === 0
-    ? "No session falls before the end date. Move the end date or choose other days."
-    : null;
+  ).problem;
 }
 
-function matchPreset(
-  frequency: "daily" | "weekly",
-  intervalCount: number,
-  weekdays: number[],
-  startWeekday: number,
-): Preset {
-  if (frequency === "daily") return intervalCount === 1 ? "daily" : "custom";
-  if (weekdays.length !== 1 || weekdays[0] !== startWeekday) return "custom";
-  if (intervalCount === 1) return "weekly";
-  if (intervalCount === 2) return "fortnightly";
+/** The rule's first dates, or why it has none, read the same for preview and save. */
+function checkRule(
+  draft: Draft,
+  startDate: string,
+  limit: number,
+): { dates: string[]; problem: string | null } {
+  const intervalCount = Number(draft.intervalText);
+  const maxInterval = draft.frequency === "daily" ? 365 : 52;
+  if (
+    !Number.isInteger(intervalCount) ||
+    intervalCount < 1 ||
+    intervalCount > maxInterval
+  ) {
+    return {
+      dates: [],
+      problem: `Choose every 1 to ${maxInterval} ${draft.frequency === "daily" ? "days" : "weeks"}.`,
+    };
+  }
+  if (draft.frequency === "weekly" && draft.weekdays.length === 0) {
+    return { dates: [], problem: "Choose at least one day." };
+  }
+  if (!draft.noEnd && draft.endDate === "") {
+    return { dates: [], problem: "Choose the end date." };
+  }
+  const dates = seriesOccurrenceDates(
+    {
+      frequency: draft.frequency,
+      intervalCount,
+      ...(draft.frequency === "weekly" ? { weekdays: draft.weekdays } : {}),
+      startDate,
+      ...(draft.noEnd ? {} : { endDate: draft.endDate }),
+    },
+    startDate,
+    draft.noEnd ? shiftIsoDate(startDate, OPEN_SEARCH_DAYS) : draft.endDate,
+    limit,
+  );
+  return dates.length === 0
+    ? {
+        dates,
+        problem:
+          "No session falls before the end date. Move the end date or choose other days.",
+      }
+    : { dates, problem: null };
+}
+
+function sameRule(left: Draft, right: Draft) {
+  return (
+    left.frequency === right.frequency &&
+    left.intervalText === right.intervalText &&
+    left.noEnd === right.noEnd &&
+    (left.noEnd || left.endDate === right.endDate) &&
+    (left.frequency === "daily" ||
+      left.weekdays.toSorted().join() === right.weekdays.toSorted().join())
+  );
+}
+
+function matchPreset(draft: Draft, startWeekday: number): Preset {
+  const count = Number(draft.intervalText);
+  if (draft.frequency === "daily") return count === 1 ? "daily" : "custom";
+  if (draft.weekdays.length !== 1 || draft.weekdays[0] !== startWeekday) {
+    return "custom";
+  }
+  if (count === 1) return "weekly";
+  if (count === 2) return "fortnightly";
   return "custom";
 }
 
-function summarize(
-  frequency: "daily" | "weekly",
-  interval: string,
-  intervalValid: boolean,
-  weekdays: number[],
-) {
-  if (!intervalValid) return "Choose how often it repeats.";
-  const count = Number(interval);
-  if (frequency === "daily") {
+function summarize(draft: Draft) {
+  const count = Number(draft.intervalText);
+  if (!Number.isInteger(count) || count < 1) {
+    return "Choose how often it repeats.";
+  }
+  if (draft.frequency === "daily") {
     return count === 1 ? "Every day" : `Every ${count} days`;
   }
-  if (weekdays.length === 0) return "Choose at least one day.";
   const every =
     count === 1
       ? "Every week"
       : count === 2
         ? "Every other week"
         : `Every ${count} weeks`;
-  const names = WEEKDAYS.filter(([value]) => weekdays.includes(value)).map(
-    ([, name]) => name,
-  );
+  const names = WEEKDAYS.filter(([value]) =>
+    draft.weekdays.includes(value),
+  ).map(([, name]) => name);
+  if (names.length === 0) return every;
   const days =
     names.length === 1
       ? names[0]
@@ -459,13 +465,18 @@ function summarize(
   return `${every} on ${days}`;
 }
 
-function shortDate(isoDate: string) {
+/** A date as the repeat picker and its scope choice write it: "Fri 6 Nov". */
+export function shortDate(isoDate: string) {
   return new Intl.DateTimeFormat("en-GB", {
     weekday: "short",
     day: "numeric",
     month: "short",
     timeZone: "UTC",
   }).format(new Date(`${isoDate}T12:00:00.000Z`));
+}
+
+function weekdayName(day: number) {
+  return WEEKDAYS.find(([value]) => value === day)![1];
 }
 
 function weekday(isoDate: string) {

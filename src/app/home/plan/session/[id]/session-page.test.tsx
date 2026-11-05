@@ -537,9 +537,15 @@ describe("SessionPage", () => {
       (planDispatch.mock.calls.at(-1) as [FormData])[0].get("operation"),
     ).toBe("edit");
     await act(async () => fireEvent.click(future));
-    expect(
-      (seriesDispatch.mock.calls.at(-1) as [FormData])[0].get("operation"),
-    ).toBe("edit_series");
+    const sent = (seriesDispatch.mock.calls.at(-1) as [FormData])[0];
+    expect(sent.get("operation")).toBe("edit_series");
+    // The rule goes as the series action reads it, though the owner never
+    // opened Custom: a daily series sends no weekdays.
+    expect(sent.get("frequency")).toBe("daily");
+    expect(sent.get("intervalCount")).toBe("1");
+    expect(sent.getAll("weekdays")).toEqual([]);
+    expect(sent.get("noEnd")).toBe("true");
+    expect(sent.get("endDate")).toBeNull();
     // The form submits the whole list, so an editor that opened empty would
     // erase what the occurrence already holds.
     const activities = form.querySelector<HTMLInputElement>(
@@ -555,7 +561,7 @@ describe("SessionPage", () => {
   it("offers only the future scope once the repeat itself was changed", () => {
     render(editPage(occurrence(), series()));
     fireEvent.click(screen.getByRole("radio", { name: "Custom" }));
-    fireEvent.click(screen.getByRole("button", { name: "More" }));
+    fireEvent.click(screen.getByRole("button", { name: "Repeat less often" }));
     fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
 
     expect(
@@ -567,6 +573,12 @@ describe("SessionPage", () => {
       ),
     ).toBeVisible();
     expect(screen.getByRole("button", { name: FUTURE_SCOPE })).toBeVisible();
+
+    // Put back as it was, the repeat is the series' own again.
+    fireEvent.click(screen.getByRole("button", { name: "Repeat more often" }));
+    expect(
+      screen.getByRole("button", { name: /^Only this session/ }),
+    ).toBeVisible();
   });
 
   it("cancels an occurrence alone; removing the future is a delete", () => {

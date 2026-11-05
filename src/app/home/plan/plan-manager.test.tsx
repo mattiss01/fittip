@@ -695,10 +695,12 @@ describe("PlanManager", () => {
     fireEvent.click(screen.getByRole("checkbox", { name: "Friday" }));
 
     expect(screen.getByText("Choose at least one day.")).toBeVisible();
+    const callsBefore = action.mock.calls.length;
     fireEvent.submit(form);
     expect(screen.getByRole("alert")).toHaveTextContent(
       "Choose at least one day.",
     );
+    expect(action.mock.calls.length).toBe(callsBefore);
   });
 
   it("keeps a cancelled session on the record rather than hiding it", () => {

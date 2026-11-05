@@ -722,8 +722,17 @@ async function addSeries(
   const details = await openNewSession(page, startDate);
   await details.getByLabel("Title").fill(title);
   await details.getByLabel("Sport").fill(sport);
-  await details.getByText("Every day", { exact: true }).click();
-  await details.getByText("On a date", { exact: true }).click();
+  // The picker's radios sit under the labels drawn as chips.
+  await details
+    .locator("label", {
+      has: page.getByRole("radio", { name: "Every day", exact: true }),
+    })
+    .click();
+  await details
+    .locator("label", {
+      has: page.getByRole("radio", { name: "On a date", exact: true }),
+    })
+    .click();
   await fillDate(details, "End date", endDate);
   await expect(
     details.getByRole("list", { name: "Next sessions" }),

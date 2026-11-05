@@ -4,7 +4,11 @@ import { useState } from "react";
 
 import { CancelReasonFields } from "./cancel-reason-fields";
 import type { FillProposal } from "./fill/fill-state";
-import { RecurrenceFields, recurrenceProblem } from "./recurrence-fields";
+import {
+  RecurrenceFields,
+  recurrenceProblem,
+  shortDate,
+} from "./recurrence-fields";
 import type { SeriesActionState } from "./series-action-state";
 import { seriesOccurrenceDates } from "./series-recurrence";
 import { SessionFields } from "./session-fields";
@@ -169,8 +173,8 @@ export function RecurringSessionControls({
  * Editing an occurrence asks for the scope last, as a calendar does (owner,
  * 5 Nov 2026): the fields are filled in once, Save asks "only this one or
  * this and following", and each choice says in a line what it leaves alone.
- * A changed repeat only means something from here on, so once the repeat is
- * touched "Only this session" is not offered.
+ * A changed repeat only means something from here on, so while the repeat
+ * differs from the series' own "Only this session" is not offered.
  *
  * The form opens with this occurrence's content, which is what its card
  * shows; the future scope makes that the template from here on.
@@ -231,8 +235,8 @@ function RecurringEditForm({
             weekdays: series.weekdays,
             ...(series.endDate === null ? {} : { endDate: series.endDate }),
           }}
-          onRuleChange={() => {
-            setRuleChanged(true);
+          onRuleChange={(differs) => {
+            setRuleChanged(differs);
             setRuleError(null);
           }}
         />
@@ -308,7 +312,7 @@ function RecurringEditForm({
             </strong>
             <span>
               {canEditWhole
-                ? "Every session of it, since none has passed yet. Logged training stays as it is."
+                ? "Every session of it, starting with this first one. Logged training stays as it is."
                 : `From ${shortDate(session.occurrenceDate)} on. Earlier sessions, one-off changes before this date, and logged training stay as they are.`}
             </span>
           </button>
@@ -329,15 +333,6 @@ function RecurringEditForm({
       )}
     </form>
   );
-}
-
-function shortDate(isoDate: string) {
-  return new Intl.DateTimeFormat("en-GB", {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-    timeZone: "UTC",
-  }).format(new Date(`${isoDate}T12:00:00.000Z`));
 }
 
 /**

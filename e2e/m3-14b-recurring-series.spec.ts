@@ -110,10 +110,10 @@ test.describe("M3-14B recurring series surface", () => {
       ).toBeChecked();
 
       // Bounded daily interval, its next dates shown before the write.
-      await create.getByText("Custom", { exact: true }).click();
-      await create.getByText("day", { exact: true }).click();
+      await choose(create, "radio", "Custom");
+      await choose(create, "radio", "day");
       await create.getByLabel("Every", { exact: true }).fill("2");
-      await create.getByText("On a date", { exact: true }).click();
+      await choose(create, "radio", "On a date");
       await fillDate(create, "End date", dailyEnd);
       await expect(create.getByText("Every 2 days")).toBeVisible();
       const dailyNext = create.getByRole("list", { name: "Next sessions" });
@@ -162,7 +162,7 @@ test.describe("M3-14B recurring series surface", () => {
       await page.getByRole("link", { name: "Edit", exact: true }).click();
       const future = recurringEditForm(sessionPanel(page, "Edit session"));
       await future.getByLabel("Title").fill("Future steady");
-      await future.getByText("Every day", { exact: true }).click();
+      await choose(future, "radio", "Every day");
       await future.getByRole("button", { name: "Save changes" }).click();
       // A changed repeat applies from here on, so only that scope is offered.
       await expect(
@@ -228,17 +228,11 @@ test.describe("M3-14B recurring series surface", () => {
       const weeklyCreate = await openNewSession(page, capDate);
       await weeklyCreate.getByLabel("Title").fill("Weekly strength");
       await weeklyCreate.getByLabel("Sport").fill("Strength");
-      await weeklyCreate.getByText("Custom", { exact: true }).click();
+      await choose(weeklyCreate, "radio", "Custom");
       await expect(
         weeklyCreate.getByRole("checkbox", { name: dayName(capDate) }),
       ).toBeChecked();
-      await weeklyCreate
-        .locator("label", {
-          has: page.getByRole("checkbox", {
-            name: dayName(weeklyVisibleDate),
-          }),
-        })
-        .click();
+      await choose(weeklyCreate, "checkbox", dayName(weeklyVisibleDate));
       const weeklyNext = weeklyCreate.getByRole("list", {
         name: "Next sessions",
       });
@@ -340,6 +334,22 @@ async function backToPlan(page: Page) {
   await expect(
     page.getByRole("heading", { level: 1, name: "Plan", exact: true }),
   ).toBeVisible();
+}
+
+/**
+ * Taps a repeat-picker choice. Its radio or checkbox is hidden under the
+ * label drawn as a chip, so the label is what a finger reaches.
+ */
+async function choose(
+  scope: Locator,
+  role: "radio" | "checkbox",
+  name: string,
+) {
+  await scope
+    .locator("label", {
+      has: scope.page().getByRole(role, { name, exact: true }),
+    })
+    .click();
 }
 
 function recurringEditForm(card: Locator) {

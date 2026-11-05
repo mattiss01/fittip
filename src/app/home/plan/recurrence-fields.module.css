@@ -82,17 +82,20 @@
   color: var(--paper);
 }
 
+/* The app's focus ring (M3-18), on the visible control for its hidden input. */
 .picker .chip:has(:focus-visible),
 .picker .segmented label:has(:focus-visible),
-.picker .day:has(:focus-visible) {
-  outline: 2px solid var(--ember);
+.picker .day:has(:focus-visible),
+.picker .stepper button:focus-visible,
+.picker .stepper input:focus-visible {
+  outline: 3px solid var(--ledger-ink, var(--pine));
   outline-offset: 2px;
 }
 
 .builder {
   display: grid;
   gap: 0.9rem;
-  padding: 0.85rem;
+  padding: 0.85rem 0.6rem;
   border-radius: var(--radius-control);
   background: var(--sage);
 }
@@ -116,12 +119,12 @@
   border: 1px solid var(--line);
   border-radius: var(--radius-control);
   background: white;
-  overflow: hidden;
 }
 
 .stepper button {
   min-height: 2.75rem;
   border: 0;
+  border-radius: var(--radius-control);
   background: transparent;
   color: var(--pine);
   font: 600 1.15rem var(--font-sans);
@@ -165,7 +168,7 @@
 }
 
 .picker .segmented label {
-  min-height: 2.35rem;
+  min-height: 2.75rem;
   border: 0;
   border-radius: calc(var(--radius-control) - 0.2rem);
   background: transparent;
@@ -182,7 +185,7 @@
 .days {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 0.3rem;
+  gap: 0.2rem;
 }
 
 .days > legend {
