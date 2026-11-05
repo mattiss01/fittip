@@ -61,7 +61,7 @@ import {
 const SAFETY =
   "If a symptom is severe, sudden or getting worse, stop training and speak to a qualified health professional.";
 
-function hours(minutes: number) {
+export function hours(minutes: number) {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
   return h === 0 ? `${m} min` : m === 0 ? `${h} h` : `${h} h ${m}`;
@@ -220,7 +220,7 @@ function GoalRow({ goal }: { goal: Goal }) {
   );
 }
 
-function History({ series: s }: { series: Series }) {
+export function History({ series: s }: { series: Series }) {
   return (
     <ol className={styles.history}>
       {[...s.points].reverse().map((p) => (
@@ -236,7 +236,7 @@ function History({ series: s }: { series: Series }) {
   );
 }
 
-function SignalList({ signals }: { signals: Log[] }) {
+export function SignalList({ signals }: { signals: Log[] }) {
   if (signals.length === 0) {
     return <p className={styles.muted}>Nothing reported.</p>;
   }
@@ -602,7 +602,7 @@ export function VariantC() {
   );
 }
 
-function Tile({
+export function Tile({
   label,
   value,
   detail,
@@ -947,18 +947,4 @@ function CalendarWeek({
       })}
     </>
   );
-}
-
-export const VARIANTS = [
-  { key: "A", name: "One page of answers", Component: VariantA },
-  { key: "B", name: "Goal first", Component: VariantB },
-  { key: "C", name: "Tabs", Component: VariantC },
-  { key: "D", name: "Week review", Component: VariantD },
-  { key: "E", name: "Calendar", Component: VariantE },
-];
-
-export function Host({ variant }: { variant: string }) {
-  const found = VARIANTS.find((v) => v.key === variant) ?? VARIANTS[0];
-  const Component = found.Component;
-  return <Component />;
 }

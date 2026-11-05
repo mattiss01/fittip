@@ -49,6 +49,7 @@ export type ActivityLog = {
   name: string;
   mode: string;
   measurement: Measurement;
+  sport: string;
 };
 
 export type PlanSession = {
@@ -188,18 +189,22 @@ export type Week = {
   signals: Log[];
 };
 
-export function week(start: string): Week {
+/** One week of the plan; with a sport, only that sport's sessions and logs. */
+export function week(start: string, sport?: string): Week {
   const end = addDays(start, 6);
   const inWeek = (date: string) => date >= start && date <= end;
+  const ofSport = (s: string) => sport === undefined || s === sport;
   const items: WeekItem[] = [];
-  for (const session of sessions.filter((s) => inWeek(s.date))) {
+  for (const session of sessions.filter(
+    (s) => inWeek(s.date) && ofSport(s.sport),
+  )) {
     items.push({
       kind: "planned",
       session,
       status: session.outcome ?? (session.date < TODAY ? "no-log" : "open"),
     });
   }
-  const weekLogs = logs.filter((log) => inWeek(log.date));
+  const weekLogs = logs.filter((log) => inWeek(log.date) && ofSport(log.sport));
   for (const log of weekLogs.filter((l) => !l.planned)) {
     items.push({ kind: "unplanned", log });
   }
@@ -248,10 +253,10 @@ export function itemStatus(item: WeekItem): Outcome | "no-log" | "open" {
 }
 
 /** The last `count` weeks, the current one last. */
-export function recentWeeks(count: number) {
+export function recentWeeks(count: number, sport?: string) {
   const current = mondayOf(TODAY);
   return Array.from({ length: count }, (_, index) =>
-    week(addDays(current, (index - count + 1) * 7)),
+    week(addDays(current, (index - count + 1) * 7), sport),
   );
 }
 
@@ -423,22 +428,27 @@ export function series(
 }
 
 /** Activities by how often they were logged, warm-ups and cool-downs aside. */
-export const topActivities = (() => {
+export function activitiesBySport(sport?: string) {
   const counts = new Map<string, number>();
-  for (const a of activities) counts.set(a.name, (counts.get(a.name) ?? 0) + 1);
+  for (const a of activities) {
+    if (sport !== undefined && a.sport !== sport) continue;
+    counts.set(a.name, (counts.get(a.name) ?? 0) + 1);
+  }
   return [...counts.entries()]
     .filter(([name]) => !["Einlaufen", "Auslaufen"].includes(name))
     .sort((a, b) => b[1] - a[1])
     .map(([name, count]) => ({ name, count }));
-})();
+}
+
+export const topActivities = activitiesBySport();
 
 /**
  * One line per activity whose best moved in a date range: the best it reached
  * there, against the best it had before the range began.
  */
-export function bestsBetween(start: string, end: string) {
+export function bestsBetween(start: string, end: string, sport?: string) {
   const found: { name: string; point: Point; previous: Point }[] = [];
-  for (const { name } of topActivities) {
+  for (const { name } of activitiesBySport(sport)) {
     const s = series(name);
     if (!s) continue;
     const beats = (a: Point, b: Point) =>
@@ -606,3 +616,30 @@ export const SPORT_COLOURS: Record<string, string> = {
 };
 
 export const sportsInRecord = [...new Set(logs.map((log) => log.sport))];
+
+/** The sports with any log, most-logged first. */
+export const sportsByUse = [...sportsInRecord].sort(
+  (a, b) =>
+    logs.filter((l) => l.sport === b).length -
+    logs.filter((l) => l.sport === a).length,
+);
+
+export function goalsForSport(sport: string) {
+  return goals.filter((goal) => goal.sports.includes(sport));
+}
+
+/** What each mode can be measured by, for the measure picker. */
+export function metricsFor(name: string): Metric[] {
+  const mode = activities.find((a) => a.name === name)?.mode;
+  if (mode === "sets_reps_load") return ["load", "reps"];
+  if (mode === "time_distance_pace") return ["distance", "pace", "minutes"];
+  return ["minutes"];
+}
+
+export const METRIC_WORDS: Record<Metric, string> = {
+  load: "Heaviest top set (kg)",
+  reps: "Most reps in a set",
+  distance: "Longest distance (km)",
+  pace: "Fastest pace (sec/km)",
+  minutes: "Longest time (min)",
+};

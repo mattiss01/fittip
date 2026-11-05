@@ -1056,3 +1056,184 @@
 .dayActivity {
   padding-left: 1.6rem;
 }
+
+/* ---- F and G: sports, the measure picker ---- */
+
+.sportChips {
+  position: sticky;
+  z-index: 5;
+  top: 3rem;
+  display: flex;
+  gap: 0.4rem;
+  margin: 0 -1rem;
+  padding: 0.3rem 1rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.sportChip {
+  all: unset;
+  flex: none;
+  min-height: 2.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0 0.95rem;
+  border-radius: var(--radius-pill);
+  background: var(--paper);
+  box-shadow: var(--shadow-card);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.sportChip i {
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  background: var(--sport);
+}
+
+.sportChip[aria-selected="true"] {
+  background: var(--pine);
+  color: var(--paper);
+}
+
+.sportChip:focus-visible,
+.sportCard:focus-visible,
+.linkButton:focus-visible,
+.tab:focus-visible {
+  outline: 2px solid var(--ember);
+  outline-offset: 2px;
+}
+
+.sportCard {
+  all: unset;
+  box-sizing: border-box;
+  display: grid;
+  gap: 0.4rem;
+  padding: 1rem 1rem 1rem 1.15rem;
+  border-radius: var(--radius-card);
+  background: var(--paper);
+  box-shadow:
+    inset 5px 0 0 var(--sport),
+    var(--shadow-card);
+  cursor: pointer;
+}
+
+.sportCardHead {
+  display: flex;
+  justify-content: space-between;
+  font-size: 1.1rem;
+}
+
+.sportCardFacts {
+  color: var(--moss);
+  font-size: 0.85rem;
+}
+
+.sportCardGoals {
+  display: grid;
+  gap: 0.15rem;
+  font-size: 0.88rem;
+}
+
+.sportCardBest {
+  color: var(--ember-dark);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.sportDot {
+  width: 0.8rem;
+  height: 0.8rem;
+  border-radius: 50%;
+}
+
+.activityRowSpark {
+  display: block;
+}
+
+.linkButton {
+  all: unset;
+  justify-self: start;
+  min-height: 2.25rem;
+  display: flex;
+  align-items: center;
+  color: var(--ember-dark);
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.measureEmpty {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.8rem;
+  border: 1.5px dashed var(--rule);
+  border-radius: var(--radius-control);
+}
+
+.choiceList {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.choice {
+  text-transform: none;
+  letter-spacing: normal;
+  min-height: 2.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0 0.8rem;
+  border-radius: var(--radius-control);
+  background: var(--sage);
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.choice input {
+  width: 1.1rem;
+  height: 1.1rem;
+  accent-color: var(--pine);
+}
+
+.fields {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.fields label {
+  text-transform: none;
+  letter-spacing: normal;
+  display: grid;
+  gap: 0.3rem;
+  font: var(--font-field-label);
+}
+
+.fields select,
+.fields input {
+  min-height: 2.9rem;
+  padding: 0 0.8rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-control);
+  background: var(--paper);
+  color: var(--pine);
+  font: 500 1rem var(--font-sans);
+}
+
+.primary {
+  min-height: 3rem;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--ember);
+  color: white;
+  font: 800 1rem var(--font-sans);
+}
+
+.primary:disabled {
+  opacity: 0.45;
+}

@@ -1,6 +1,6 @@
 /**
- * PROTOTYPE — five ways to redesign Progress around "am I following my plan?"
- * and "is it working?", switchable with ?variant=A–E. Every number comes from
+ * PROTOTYPE — seven ways to redesign Progress around "am I following my plan?"
+ * and "is it working?", switchable with ?variant=A–G. Every number comes from
  * Lena's local test record, exported into `lena.json`; no account is needed and
  * nothing is saved. Throwaway: lives on the prototype/progress branch and
  * never merges to master.
@@ -9,7 +9,7 @@
 import { notFound } from "next/navigation";
 
 import { PrototypeSwitcher } from "./switcher";
-import { Host } from "./variants";
+import { Host } from "./host";
 
 type Props = { searchParams: Promise<{ variant?: string | string[] }> };
 
@@ -19,6 +19,8 @@ const VARIANTS = [
   { key: "C", name: "Tabs" },
   { key: "D", name: "Week review" },
   { key: "E", name: "Calendar" },
+  { key: "F", name: "By sport" },
+  { key: "G", name: "Goals + tabs" },
 ];
 
 export default async function PrototypeProgressPage({ searchParams }: Props) {

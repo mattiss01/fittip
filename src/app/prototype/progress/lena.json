@@ -710,7 +710,8 @@
       "mode": "time_distance_pace",
       "measurement": {
         "duration_seconds": 900
-      }
+      },
+      "sport": "Laufen"
     },
     {
       "date": "2026-08-12",
@@ -721,7 +722,8 @@
         "pace_unit": "sec/km",
         "distance_unit": "km",
         "pace_seconds_per_unit": 296
-      }
+      },
+      "sport": "Laufen"
     },
     {
       "date": "2026-08-12",
@@ -729,7 +731,8 @@
       "mode": "time_distance_pace",
       "measurement": {
         "duration_seconds": 600
-      }
+      },
+      "sport": "Laufen"
     },
     {
       "date": "2026-08-14",
@@ -749,7 +752,8 @@
           }
         ],
         "load_unit": "kg"
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-08-14",
@@ -758,7 +762,8 @@
       "measurement": {
         "reps": 3,
         "sets": 4
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-08-14",
@@ -769,7 +774,8 @@
         "reps": 8,
         "sets": 3,
         "load_unit": "kg"
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-08-14",
@@ -780,7 +786,8 @@
         "reps": 10,
         "sets": 3,
         "load_unit": "kg"
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-08-15",
@@ -791,7 +798,8 @@
         "pace_unit": "sec/km",
         "distance_unit": "km",
         "pace_seconds_per_unit": 335
-      }
+      },
+      "sport": "Laufen"
     },
     {
       "date": "2026-08-17",
@@ -811,7 +819,8 @@
           }
         ],
         "load_unit": "kg"
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-08-17",
@@ -822,7 +831,8 @@
         "reps": 6,
         "sets": 4,
         "load_unit": "kg"
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-08-17",
@@ -833,7 +843,8 @@
         "reps": 10,
         "sets": 3,
         "load_unit": "kg"
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-08-17",
@@ -842,7 +853,8 @@
       "measurement": {
         "reps": 3,
         "sets": 4
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-08-18",
@@ -855,7 +867,8 @@
             "sets": 1
           }
         ]
-      }
+      },
+      "sport": "Klettern"
     },
     {
       "date": "2026-08-19",
@@ -863,7 +876,8 @@
       "mode": "time_distance_pace",
       "measurement": {
         "duration_seconds": 900
-      }
+      },
+      "sport": "Laufen"
     },
     {
       "date": "2026-08-19",
@@ -874,7 +888,8 @@
         "pace_unit": "sec/km",
         "distance_unit": "km",
         "pace_seconds_per_unit": 296
-      }
+      },
+      "sport": "Laufen"
     },
     {
       "date": "2026-08-19",
@@ -882,7 +897,8 @@
       "mode": "time_distance_pace",
       "measurement": {
         "duration_seconds": 600
-      }
+      },
+      "sport": "Laufen"
     },
     {
       "date": "2026-08-21",
@@ -902,7 +918,8 @@
           }
         ],
         "load_unit": "kg"
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-08-21",
@@ -911,7 +928,8 @@
       "measurement": {
         "reps": 3,
         "sets": 4
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-08-21",
@@ -922,7 +940,8 @@
         "reps": 8,
         "sets": 3,
         "load_unit": "kg"
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-08-21",
@@ -933,7 +952,8 @@
         "reps": 10,
         "sets": 3,
         "load_unit": "kg"
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-08-22",
@@ -944,7 +964,8 @@
         "pace_unit": "sec/km",
         "distance_unit": "km",
         "pace_seconds_per_unit": 362
-      }
+      },
+      "sport": "Laufen"
     },
     {
       "date": "2026-08-24",
@@ -964,7 +985,8 @@
           }
         ],
         "load_unit": "kg"
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-08-24",
@@ -975,7 +997,8 @@
         "reps": 6,
         "sets": 4,
         "load_unit": "kg"
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-08-24",
@@ -986,7 +1009,8 @@
         "reps": 10,
         "sets": 3,
         "load_unit": "kg"
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-08-24",
@@ -995,7 +1019,8 @@
       "measurement": {
         "reps": 3,
         "sets": 4
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-08-24",
@@ -1004,7 +1029,8 @@
       "measurement": {
         "intensity": "easy",
         "duration_minutes": 60
-      }
+      },
+      "sport": "Mobility"
     },
     {
       "date": "2026-08-25",
@@ -1017,7 +1043,8 @@
             "sets": 1
           }
         ]
-      }
+      },
+      "sport": "Klettern"
     },
     {
       "date": "2026-08-26",
@@ -1025,7 +1052,8 @@
       "mode": "time_distance_pace",
       "measurement": {
         "duration_seconds": 900
-      }
+      },
+      "sport": "Laufen"
     },
     {
       "date": "2026-08-26",
@@ -1036,7 +1064,8 @@
         "pace_unit": "sec/km",
         "distance_unit": "km",
         "pace_seconds_per_unit": 296
-      }
+      },
+      "sport": "Laufen"
     },
     {
       "date": "2026-08-26",
@@ -1044,7 +1073,8 @@
       "mode": "time_distance_pace",
       "measurement": {
         "duration_seconds": 600
-      }
+      },
+      "sport": "Laufen"
     },
     {
       "date": "2026-08-29",
@@ -1055,7 +1085,8 @@
         "pace_unit": "sec/km",
         "distance_unit": "km",
         "pace_seconds_per_unit": 362
-      }
+      },
+      "sport": "Laufen"
     },
     {
       "date": "2026-08-31",
@@ -1075,7 +1106,8 @@
           }
         ],
         "load_unit": "kg"
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-08-31",
@@ -1086,7 +1118,8 @@
         "reps": 6,
         "sets": 4,
         "load_unit": "kg"
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-08-31",
@@ -1097,7 +1130,8 @@
         "reps": 10,
         "sets": 3,
         "load_unit": "kg"
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-08-31",
@@ -1106,7 +1140,8 @@
       "measurement": {
         "reps": 3,
         "sets": 4
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-09-01",
@@ -1119,7 +1154,8 @@
             "sets": 1
           }
         ]
-      }
+      },
+      "sport": "Klettern"
     },
     {
       "date": "2026-09-02",
@@ -1127,7 +1163,8 @@
       "mode": "time_distance_pace",
       "measurement": {
         "duration_seconds": 900
-      }
+      },
+      "sport": "Laufen"
     },
     {
       "date": "2026-09-02",
@@ -1138,7 +1175,8 @@
         "pace_unit": "sec/km",
         "distance_unit": "km",
         "pace_seconds_per_unit": 296
-      }
+      },
+      "sport": "Laufen"
     },
     {
       "date": "2026-09-02",
@@ -1146,7 +1184,8 @@
       "mode": "time_distance_pace",
       "measurement": {
         "duration_seconds": 600
-      }
+      },
+      "sport": "Laufen"
     },
     {
       "date": "2026-09-04",
@@ -1166,7 +1205,8 @@
           }
         ],
         "load_unit": "kg"
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-09-04",
@@ -1175,7 +1215,8 @@
       "measurement": {
         "reps": 3,
         "sets": 4
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-09-04",
@@ -1186,7 +1227,8 @@
         "reps": 8,
         "sets": 3,
         "load_unit": "kg"
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-09-04",
@@ -1197,7 +1239,8 @@
         "reps": 10,
         "sets": 3,
         "load_unit": "kg"
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-09-05",
@@ -1208,7 +1251,8 @@
         "pace_unit": "sec/km",
         "distance_unit": "km",
         "pace_seconds_per_unit": 335
-      }
+      },
+      "sport": "Laufen"
     },
     {
       "date": "2026-09-07",
@@ -1228,7 +1272,8 @@
           }
         ],
         "load_unit": "kg"
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-09-07",
@@ -1239,7 +1284,8 @@
         "reps": 6,
         "sets": 4,
         "load_unit": "kg"
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-09-07",
@@ -1250,7 +1296,8 @@
         "reps": 10,
         "sets": 3,
         "load_unit": "kg"
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-09-07",
@@ -1259,7 +1306,8 @@
       "measurement": {
         "reps": 3,
         "sets": 4
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-09-08",
@@ -1272,7 +1320,8 @@
             "sets": 1
           }
         ]
-      }
+      },
+      "sport": "Klettern"
     },
     {
       "date": "2026-09-16",
@@ -1283,7 +1332,8 @@
         "pace_unit": "sec/km",
         "distance_unit": "km",
         "pace_seconds_per_unit": 288
-      }
+      },
+      "sport": "Laufen"
     },
     {
       "date": "2026-09-16",
@@ -1291,7 +1341,8 @@
       "mode": "time_distance_pace",
       "measurement": {
         "duration_seconds": 900
-      }
+      },
+      "sport": "Laufen"
     },
     {
       "date": "2026-09-16",
@@ -1299,7 +1350,8 @@
       "mode": "time_distance_pace",
       "measurement": {
         "duration_seconds": 600
-      }
+      },
+      "sport": "Laufen"
     },
     {
       "date": "2026-09-18",
@@ -1310,7 +1362,8 @@
         "reps": 8,
         "sets": 3,
         "load_unit": "kg"
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-09-18",
@@ -1330,7 +1383,8 @@
           }
         ],
         "load_unit": "kg"
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-09-18",
@@ -1339,7 +1393,8 @@
       "measurement": {
         "reps": 4,
         "sets": 4
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-09-18",
@@ -1350,7 +1405,8 @@
         "reps": 10,
         "sets": 3,
         "load_unit": "kg"
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-09-19",
@@ -1361,7 +1417,8 @@
         "pace_unit": "sec/km",
         "distance_unit": "km",
         "pace_seconds_per_unit": 362
-      }
+      },
+      "sport": "Laufen"
     },
     {
       "date": "2026-09-21",
@@ -1381,7 +1438,8 @@
           }
         ],
         "load_unit": "kg"
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-09-21",
@@ -1392,7 +1450,8 @@
         "reps": 6,
         "sets": 4,
         "load_unit": "kg"
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-09-21",
@@ -1403,7 +1462,8 @@
         "reps": 10,
         "sets": 3,
         "load_unit": "kg"
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-09-21",
@@ -1412,7 +1472,8 @@
       "measurement": {
         "reps": 4,
         "sets": 4
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-09-22",
@@ -1425,7 +1486,8 @@
             "sets": 1
           }
         ]
-      }
+      },
+      "sport": "Klettern"
     },
     {
       "date": "2026-09-23",
@@ -1433,7 +1495,8 @@
       "mode": "time_distance_pace",
       "measurement": {
         "duration_seconds": 600
-      }
+      },
+      "sport": "Laufen"
     },
     {
       "date": "2026-09-23",
@@ -1441,7 +1504,8 @@
       "mode": "time_distance_pace",
       "measurement": {
         "duration_seconds": 900
-      }
+      },
+      "sport": "Laufen"
     },
     {
       "date": "2026-09-23",
@@ -1452,7 +1516,8 @@
         "pace_unit": "sec/km",
         "distance_unit": "km",
         "pace_seconds_per_unit": 288
-      }
+      },
+      "sport": "Laufen"
     },
     {
       "date": "2026-09-26",
@@ -1463,7 +1528,8 @@
         "pace_unit": "sec/km",
         "distance_unit": "km",
         "pace_seconds_per_unit": 335
-      }
+      },
+      "sport": "Laufen"
     },
     {
       "date": "2026-09-28",
@@ -1472,7 +1538,8 @@
       "measurement": {
         "reps": 4,
         "sets": 4
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-09-28",
@@ -1492,7 +1559,8 @@
           }
         ],
         "load_unit": "kg"
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-09-28",
@@ -1503,7 +1571,8 @@
         "reps": 6,
         "sets": 4,
         "load_unit": "kg"
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-09-28",
@@ -1514,7 +1583,8 @@
         "reps": 10,
         "sets": 3,
         "load_unit": "kg"
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-09-29",
@@ -1527,7 +1597,8 @@
             "sets": 1
           }
         ]
-      }
+      },
+      "sport": "Klettern"
     },
     {
       "date": "2026-09-30",
@@ -1535,7 +1606,8 @@
       "mode": "time_distance_pace",
       "measurement": {
         "duration_seconds": 900
-      }
+      },
+      "sport": "Laufen"
     },
     {
       "date": "2026-09-30",
@@ -1546,7 +1618,8 @@
         "pace_unit": "sec/km",
         "distance_unit": "km",
         "pace_seconds_per_unit": 292
-      }
+      },
+      "sport": "Laufen"
     },
     {
       "date": "2026-10-02",
@@ -1557,7 +1630,8 @@
         "reps": 8,
         "sets": 3,
         "load_unit": "kg"
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-10-02",
@@ -1577,7 +1651,8 @@
           }
         ],
         "load_unit": "kg"
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-10-02",
@@ -1586,7 +1661,8 @@
       "measurement": {
         "reps": 4,
         "sets": 4
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-10-02",
@@ -1597,7 +1673,8 @@
         "reps": 10,
         "sets": 3,
         "load_unit": "kg"
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-10-03",
@@ -1607,7 +1684,8 @@
         "distance": 38,
         "distance_unit": "km",
         "duration_seconds": 6000
-      }
+      },
+      "sport": "Radfahren"
     },
     {
       "date": "2026-10-05",
@@ -1627,7 +1705,8 @@
           }
         ],
         "load_unit": "kg"
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-10-05",
@@ -1638,7 +1717,8 @@
         "reps": 6,
         "sets": 4,
         "load_unit": "kg"
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-10-05",
@@ -1649,7 +1729,8 @@
         "reps": 10,
         "sets": 3,
         "load_unit": "kg"
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-10-05",
@@ -1658,7 +1739,8 @@
       "measurement": {
         "reps": 4,
         "sets": 4
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-10-05",
@@ -1667,7 +1749,8 @@
       "measurement": {
         "intensity": "easy",
         "duration_minutes": 20
-      }
+      },
+      "sport": "Mobility"
     },
     {
       "date": "2026-10-06",
@@ -1680,7 +1763,8 @@
             "sets": 1
           }
         ]
-      }
+      },
+      "sport": "Klettern"
     },
     {
       "date": "2026-10-07",
@@ -1688,7 +1772,8 @@
       "mode": "time_distance_pace",
       "measurement": {
         "duration_seconds": 900
-      }
+      },
+      "sport": "Laufen"
     },
     {
       "date": "2026-10-07",
@@ -1699,7 +1784,8 @@
         "pace_unit": "sec/km",
         "distance_unit": "km",
         "pace_seconds_per_unit": 288
-      }
+      },
+      "sport": "Laufen"
     },
     {
       "date": "2026-10-07",
@@ -1707,7 +1793,8 @@
       "mode": "time_distance_pace",
       "measurement": {
         "duration_seconds": 600
-      }
+      },
+      "sport": "Laufen"
     },
     {
       "date": "2026-10-09",
@@ -1727,7 +1814,8 @@
           }
         ],
         "load_unit": "kg"
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-10-09",
@@ -1736,7 +1824,8 @@
       "measurement": {
         "reps": 4,
         "sets": 4
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-10-09",
@@ -1747,7 +1836,8 @@
         "reps": 8,
         "sets": 3,
         "load_unit": "kg"
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-10-09",
@@ -1758,7 +1848,8 @@
         "reps": 10,
         "sets": 3,
         "load_unit": "kg"
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-10-10",
@@ -1769,7 +1860,8 @@
         "pace_unit": "sec/km",
         "distance_unit": "km",
         "pace_seconds_per_unit": 368
-      }
+      },
+      "sport": "Laufen"
     },
     {
       "date": "2026-10-12",
@@ -1789,7 +1881,8 @@
           }
         ],
         "load_unit": "kg"
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-10-12",
@@ -1800,7 +1893,8 @@
         "reps": 6,
         "sets": 4,
         "load_unit": "kg"
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-10-12",
@@ -1811,7 +1905,8 @@
         "reps": 10,
         "sets": 3,
         "load_unit": "kg"
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-10-12",
@@ -1820,7 +1915,8 @@
       "measurement": {
         "reps": 4,
         "sets": 4
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-10-13",
@@ -1833,7 +1929,8 @@
             "sets": 1
           }
         ]
-      }
+      },
+      "sport": "Klettern"
     },
     {
       "date": "2026-10-14",
@@ -1841,7 +1938,8 @@
       "mode": "time_distance_pace",
       "measurement": {
         "duration_seconds": 900
-      }
+      },
+      "sport": "Laufen"
     },
     {
       "date": "2026-10-14",
@@ -1852,7 +1950,8 @@
         "pace_unit": "sec/km",
         "distance_unit": "km",
         "pace_seconds_per_unit": 288
-      }
+      },
+      "sport": "Laufen"
     },
     {
       "date": "2026-10-14",
@@ -1860,7 +1959,8 @@
       "mode": "time_distance_pace",
       "measurement": {
         "duration_seconds": 600
-      }
+      },
+      "sport": "Laufen"
     },
     {
       "date": "2026-10-16",
@@ -1880,7 +1980,8 @@
           }
         ],
         "load_unit": "kg"
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-10-16",
@@ -1889,7 +1990,8 @@
       "measurement": {
         "reps": 4,
         "sets": 4
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-10-16",
@@ -1900,7 +2002,8 @@
         "reps": 8,
         "sets": 3,
         "load_unit": "kg"
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-10-16",
@@ -1911,7 +2014,8 @@
         "reps": 10,
         "sets": 3,
         "load_unit": "kg"
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-10-17",
@@ -1922,7 +2026,8 @@
         "pace_unit": "sec/km",
         "distance_unit": "km",
         "pace_seconds_per_unit": 368
-      }
+      },
+      "sport": "Laufen"
     },
     {
       "date": "2026-10-19",
@@ -1942,7 +2047,8 @@
           }
         ],
         "load_unit": "kg"
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-10-19",
@@ -1953,7 +2059,8 @@
         "reps": 6,
         "sets": 4,
         "load_unit": "kg"
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-10-19",
@@ -1964,7 +2071,8 @@
         "reps": 10,
         "sets": 3,
         "load_unit": "kg"
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-10-19",
@@ -1973,7 +2081,8 @@
       "measurement": {
         "reps": 4,
         "sets": 4
-      }
+      },
+      "sport": "Krafttraining"
     },
     {
       "date": "2026-10-19",
@@ -1983,7 +2092,8 @@
         "distance": 27,
         "distance_unit": "km",
         "duration_seconds": 4500
-      }
+      },
+      "sport": "Radfahren"
     },
     {
       "date": "2026-10-20",
@@ -1996,7 +2106,8 @@
             "sets": 1
           }
         ]
-      }
+      },
+      "sport": "Klettern"
     }
   ],
   "sessions": [
