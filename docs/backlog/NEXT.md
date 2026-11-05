@@ -40,27 +40,6 @@ the owner says when to build. It reuses the repeat row and sheet (`repeat-sheet.
         its link are unchanged; then the founder apply (ADR-018) with `migration list` and
         advisors reported before merge.
 
-**Progress.** Owner, 5 Nov 2026: today's month of logs answers nothing a person following
-a plan asks. Prototyped on branch `prototype/progress` (`/prototype/progress?variant=A–H`,
-Lena's local record); the owner chose H, "split by sport, show what has been done, but
-nicer", for now. Goal numbers wait (see Later).
-
-- [ ] **P1 — Progress split by sport.** Build lane, no schema. Reads completions and their
-      activities only, as today: no plan read (ADR-017 consequence 3).
-      - A row of sport chips over the month: All, then the owner's sports, most-logged
-        first. The month keeps its arrows and its URL; the sport joins it in the URL.
-      - A month summary: sessions done and time. A skip is a log, not a session done; a
-        log without a duration is named ("1 without a duration"), never counted as zero.
-        On All, a bar split by sport whose segments select it; then the outcome counts.
-      - The month's logs grouped by week, newest first, each week with its own total.
-        A card per log: the sport's colour, day, title, outcome, start, duration and
-        effort, the first activities with what they measured, and "You reported: …".
-      - Counts and totals of the owner's own logs only. No score, streak, trend, target
-        or "on track"; the old "counts nothing" comment on the page goes with this.
-      - Open for the owner: sports are free text, so a colour per sport needs a rule
-        (palette in order of use?); and whether a card expands in place, as in H, or
-        opens the record at `/home/progress/[id]` as now.
-
 **Activities in training.** The owner named this on 24 Sep 2026. A session can now hold
 activities and the editor writes them; what is left is everywhere else they should appear.
 The live tables are `rolling_plan_activities` and `completion_activities`; M3-11 dropped
