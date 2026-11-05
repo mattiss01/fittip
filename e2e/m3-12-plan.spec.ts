@@ -111,10 +111,12 @@ test.describe("M3-12 manual continuous planning", () => {
 
       // R3b-3: a single session may sit up to 180 days out - a race months
       // away - though recurring sessions are written only thirteen weeks
-      // ahead. A far day offers the session and not "Repeat this session".
+      // ahead. A far day offers the session and not the repeat picker.
       const raceDay = ownerDate(150);
       const far = await openNewSession(page, raceDay);
-      await expect(far.getByLabel("Repeat this session")).toHaveCount(0);
+      await expect(
+        far.getByRole("radio", { name: "Doesn't repeat" }),
+      ).toHaveCount(0);
       await far.getByLabel("Title").fill("Autumn race");
       await far.getByLabel("Sport").fill("Running");
       await far.getByRole("button", { name: "Create session" }).click();

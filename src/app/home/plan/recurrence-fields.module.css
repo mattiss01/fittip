@@ -1,0 +1,267 @@
+/* Selectors carry two classes so they win over the forms' own `label` and
+   `input` rules (`.seriesForm label`, `.form input`), which this sits inside. */
+
+.picker {
+  min-width: 0;
+  display: grid;
+  gap: 0.9rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.picker legend,
+.picker .every > label {
+  margin-bottom: 0.45rem;
+  padding: 0;
+  color: var(--ledger-muted, var(--muted));
+  font: 500 0.62rem var(--font-mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.picker .hiddenInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.picker .chip,
+.picker .segmented label,
+.picker .day {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  background: white;
+  color: var(--pine);
+  font: 600 0.88rem var(--font-sans);
+  letter-spacing: 0;
+  text-transform: none;
+  cursor: pointer;
+  transition:
+    background-color 120ms var(--ease-out),
+    color 120ms var(--ease-out),
+    border-color 120ms var(--ease-out);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.picker .chip {
+  min-height: 2.75rem;
+  padding: 0 0.95rem;
+  border-radius: var(--radius-pill);
+}
+
+.picker .chip[data-selected="true"],
+.picker .segmented label[data-selected="true"],
+.picker .day[data-selected="true"] {
+  border-color: var(--pine);
+  background: var(--pine);
+  color: var(--paper);
+}
+
+/* The app's focus ring (M3-18), on the visible control for its hidden input. */
+.picker .chip:has(:focus-visible),
+.picker .segmented label:has(:focus-visible),
+.picker .day:has(:focus-visible),
+.picker .stepper button:focus-visible,
+.picker .stepper input:focus-visible {
+  outline: 3px solid var(--ledger-ink, var(--pine));
+  outline-offset: 2px;
+}
+
+.builder {
+  display: grid;
+  gap: 0.9rem;
+  padding: 0.85rem 0.6rem;
+  border-radius: var(--radius-control);
+  background: var(--sage);
+}
+
+.every {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.every > label {
+  grid-column: 1 / -1;
+  margin-bottom: -0.25rem;
+}
+
+.stepper {
+  display: grid;
+  grid-template-columns: 2.75rem 3rem 2.75rem;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: white;
+}
+
+.stepper button {
+  min-height: 2.75rem;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--pine);
+  font: 600 1.15rem var(--font-sans);
+  cursor: pointer;
+}
+
+.stepper button:disabled {
+  color: var(--rule);
+  cursor: default;
+}
+
+.picker .stepper input {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0;
+  border: 0;
+  border-inline: 1px solid var(--line);
+  border-radius: 0;
+  background: white;
+  color: var(--pine);
+  font: 700 1rem var(--font-sans);
+  text-align: center;
+  appearance: textfield;
+}
+
+.picker .stepper input::-webkit-inner-spin-button,
+.picker .stepper input::-webkit-outer-spin-button {
+  margin: 0;
+  appearance: none;
+}
+
+.segmented {
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  padding: 0.2rem;
+  gap: 0.2rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: white;
+}
+
+.picker .segmented label {
+  min-height: 2.75rem;
+  border: 0;
+  border-radius: calc(var(--radius-control) - 0.2rem);
+  background: transparent;
+}
+
+.days,
+.ends {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.2rem;
+}
+
+.days > legend {
+  grid-column: 1 / -1;
+}
+
+.picker .day {
+  width: 100%;
+  max-width: 2.75rem;
+  aspect-ratio: 1;
+  justify-self: center;
+  border-radius: 50%;
+}
+
+.ends {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.summary {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.85rem 0.9rem;
+  border-left: 4px solid var(--plan-today, var(--ember));
+  border-radius: 0;
+  background: var(--sage);
+}
+
+.sentence {
+  margin: 0;
+  color: var(--pine);
+  font: 700 1rem/1.3 var(--font-sans);
+}
+
+.dates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dates li {
+  padding: 0.25rem 0.55rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: white;
+  color: var(--pine);
+  font: 500 0.78rem var(--font-mono);
+}
+
+.dates .more {
+  border-color: transparent;
+  background: transparent;
+}
+
+.hint,
+.problem {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.hint {
+  color: var(--ledger-muted, var(--muted));
+}
+
+.problem {
+  color: var(--danger);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .picker .chip,
+  .picker .segmented label,
+  .picker .day {
+    transition: none;
+  }
+}

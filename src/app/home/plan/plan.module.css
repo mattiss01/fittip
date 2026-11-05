@@ -330,6 +330,54 @@
   font-weight: 700;
 }
 
+/* Where an edited occurrence's Save button was: the scope is chosen in the
+   same place the thumb already is, in the flow of the form. */
+.scopeSheet {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.9rem;
+  border: 1px solid var(--ledger-rule);
+  border-radius: var(--radius-card);
+  background: var(--ledger-paper);
+  box-shadow: var(--shadow-card);
+}
+
+.scopeSheet h4 {
+  margin: 0 0 0.15rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.scopeChoice {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: white;
+  color: var(--ledger-ink);
+  font: 400 0.84rem/1.4 var(--font-sans);
+  text-align: left;
+  cursor: pointer;
+}
+
+.scopeChoice strong {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.scopeChoice span {
+  color: var(--ledger-muted);
+}
+
+.scopeChoice:hover {
+  border-color: var(--pine);
+}
+
+.scopeChoice:disabled {
+  opacity: 0.45;
+}
+
 .permanentConsequence {
   margin: 0;
   padding: 0.75rem 0.9rem;
@@ -376,7 +424,6 @@
 }
 
 .sourceCard,
-.reviewCard,
 .skippedCard,
 .extensionCard {
   padding: 1rem;
@@ -391,7 +438,6 @@
 }
 
 .sourceCard h2,
-.reviewCard h2,
 .skippedCard h2,
 .extensionCard .extensionNotice {
   margin: 0;
@@ -408,62 +454,6 @@
   background: var(--ledger-paper);
 }
 
-.ruleFields,
-.weekdays {
-  min-width: 0;
-  display: grid;
-  gap: 0.75rem;
-  margin: 0;
-  padding: 0.8rem;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-control);
-}
-
-.ruleFields > legend,
-.weekdays > legend {
-  padding: 0 0.35rem;
-  color: var(--ledger-muted);
-  font: 500 0.62rem var(--font-mono);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.weekdays {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  padding: 0;
-  border: 0;
-}
-
-.weekdays label,
-.checkField {
-  min-height: 2.75rem;
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  padding: 0.45rem 0.6rem;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-control);
-  color: var(--ledger-ink);
-  font: 600 0.88rem var(--font-sans);
-  letter-spacing: 0;
-  text-transform: none;
-}
-
-.weekdays input,
-.checkField input {
-  width: 1.1rem;
-  min-height: 1.1rem;
-  margin: 0;
-}
-
-.inlineValue {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.inlineValue span,
 .fieldHint {
   color: var(--ledger-muted);
   font-size: 0.78rem;
@@ -494,44 +484,6 @@
   color: var(--ledger-ink);
   font: 400 1rem/1.35 var(--font-sans);
   text-transform: none;
-}
-
-.seriesForm .weekdays input,
-.seriesForm .checkField input {
-  width: 1.1rem;
-  min-height: 1.1rem;
-  padding: 0;
-}
-
-/* A checkbox and its words on one line, over the form's own label rule. */
-.seriesForm .weekdays label,
-.seriesForm .checkField {
-  display: flex;
-  color: var(--ledger-ink);
-  font: 600 0.88rem var(--font-sans);
-  letter-spacing: 0;
-  text-transform: none;
-}
-
-.reviewCard {
-  display: grid;
-  gap: 0.75rem;
-  border-top: 7px solid var(--plan-today);
-  box-shadow: none;
-}
-
-.previewDates {
-  display: grid;
-  gap: 0.35rem;
-  margin: 0;
-  padding-left: 1.4rem;
-  font: 500 0.78rem/1.4 var(--font-mono);
-}
-
-.reviewActions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.55rem;
 }
 
 .inlineError {
@@ -601,10 +553,6 @@
 @media (max-width: 400px) {
   .fieldPair {
     grid-template-columns: 1fr;
-  }
-
-  .weekdays {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 

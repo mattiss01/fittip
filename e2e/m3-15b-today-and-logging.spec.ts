@@ -722,16 +722,20 @@ async function addSeries(
   const details = await openNewSession(page, startDate);
   await details.getByLabel("Title").fill(title);
   await details.getByLabel("Sport").fill(sport);
-  await details.getByLabel("Repeat this session").check();
-  await details.getByLabel("Repeat", { exact: true }).selectOption("daily");
-  await details.getByLabel("Every").fill("1");
-  await details.getByText("No end date", { exact: true }).click();
-  await fillDate(details, "End date", endDate);
+  // The picker's radios sit under the labels drawn as chips.
   await details
-    .getByRole("button", { name: "Review recurring sessions" })
+    .locator("label", {
+      has: page.getByRole("radio", { name: "Every day", exact: true }),
+    })
     .click();
+  await details
+    .locator("label", {
+      has: page.getByRole("radio", { name: "On a date", exact: true }),
+    })
+    .click();
+  await fillDate(details, "End date", endDate);
   await expect(
-    page.getByRole("heading", { name: "First occurrences" }),
+    details.getByRole("list", { name: "Next sessions" }),
   ).toBeVisible();
   await details
     .getByRole("button", { name: "Create recurring sessions" })
