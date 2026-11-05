@@ -37,9 +37,9 @@ p.row {
 .rowLabel {
   flex: none;
   color: var(--ledger-muted, var(--muted));
-  font: 500 0.62rem var(--font-mono);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font: var(--font-field-label);
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .rowValue {

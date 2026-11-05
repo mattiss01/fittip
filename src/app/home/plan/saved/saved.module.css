@@ -215,9 +215,9 @@
 .form label {
   display: block;
   color: var(--moss);
-  font: 500 0.62rem var(--font-mono);
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
+  font: var(--font-field-label);
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .form input,

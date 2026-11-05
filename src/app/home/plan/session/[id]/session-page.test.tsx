@@ -299,11 +299,9 @@ describe("SessionPage", () => {
     ).toHaveValue("cancel");
 
     choose("Delete");
-    const warning = screen.getByText(/gone for good/i);
-    // A one-off delete really is permanent, so it says so, briefly (owner,
-    // 19 Oct 2026), and says nothing about a series it does not belong to.
-    expect(warning.textContent).toMatch(/no undo/i);
-    expect(warning.textContent).not.toMatch(/repeats/i);
+    // The dialog's title and its button say it; no sentence (owner, 5 Nov
+    // 2026).
+    expect(screen.queryByText(/gone for good|no undo/i)).toBeNull();
     const form = screen
       .getByRole("button", { name: "Delete session" })
       .closest("form")!;
@@ -696,6 +694,30 @@ describe("SessionPage", () => {
     expect(sent.get("endDate")).toBe("2026-09-30");
   });
 
+  it("moves an occurrence from its edit form, which saves it alone", async () => {
+    render(editPage(occurrence(), series()));
+    const date = screen.getByLabelText("Date", { exact: true });
+    expect(date).toHaveValue(TODAY);
+    fireEvent.change(date, { target: { value: DATES[2] } });
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+
+    // A series has no date to move to, so only this session is offered.
+    expect(screen.queryByRole("button", { name: FUTURE_SCOPE })).toBeNull();
+    expect(
+      screen.getByText(
+        /moved it to another day, so this saves this session only/,
+      ),
+    ).toBeVisible();
+    await act(async () =>
+      fireEvent.click(
+        screen.getByRole("button", { name: /^Only this session/ }),
+      ),
+    );
+    const sent = (planDispatch.mock.calls.at(-1) as [FormData])[0];
+    expect(sent.get("operation")).toBe("edit");
+    expect(sent.get("localDate")).toBe(DATES[2]);
+  });
+
   it("only shows the repeat of an occurrence its series no longer fills", () => {
     render(page(occurrence(), series({ endDate: "2026-08-16" })));
     expect(screen.queryByRole("button", { name: /^Repeats/ })).toBeNull();
@@ -728,20 +750,15 @@ describe("SessionPage", () => {
     expect(
       only.closest("form")!.querySelector("input[name='operation']"),
     ).toHaveValue("delete");
-    // M3-20: the series records the deleted date and leaves it empty.
-    expect(
-      screen.getByText(/series will not write this date back/i),
-    ).toBeVisible();
+    // Two buttons and nothing else (owner, 5 Nov 2026).
+    expect(screen.queryByText(/gone for good|no undo/i)).toBeNull();
     const future = screen.getByRole("button", {
       name: "Delete this and all future sessions",
     });
     expect(
       future.closest("form")!.querySelector("input[name='operation']"),
     ).toHaveValue("end_series");
-    expect(
-      screen.getByText(/A session with training logged against it is kept/),
-    ).toBeVisible();
-    expect(screen.queryByText(/[Ll]ocked/)).toBeNull();
+    expect(screen.queryByText(/Permanent\./)).toBeNull();
     expect(screen.queryByRole("button", { name: "Delete session" })).toBeNull();
   });
 

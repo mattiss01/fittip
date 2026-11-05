@@ -4,6 +4,7 @@ import { startTransition, useRef, useState } from "react";
 
 import { CancelReasonFields } from "./cancel-reason-fields";
 import type { FillProposal } from "./fill/fill-state";
+import { PlanDateInput, type PlanDateRange } from "./plan-date-field";
 import { SheetCloseButton, SheetLayer } from "./plan-sheet";
 import { appendRule, shortDate } from "./recurrence-fields";
 import { RepeatRow, RepeatSheet, ruleOf } from "./repeat-sheet";
@@ -33,6 +34,8 @@ export type PlanSeriesView = {
 
 export type RecurringSessionView = {
   id: string;
+  /** The day it is on, which a move may have taken off its rule date. */
+  localDate: string;
   occurrenceDate: string;
   title: string;
   sport: string;
@@ -124,12 +127,15 @@ export function RecurringSessionControls({
   planPending,
   seriesAction,
   seriesPending,
+  dateRange,
 }: {
   mode: "edit" | "remove";
   today: string;
   session: RecurringSessionView;
   series: PlanSeriesView;
   expectedRevision: number;
+  /** Where a single session may be placed; the edit form's date field. */
+  dateRange?: PlanDateRange;
   planAction: PlanFormAction;
   planPending: boolean;
   seriesAction: PlanFormAction;
@@ -151,6 +157,7 @@ export function RecurringSessionControls({
         planAction={planAction}
         seriesAction={seriesAction}
         pending={planPending || seriesPending}
+        dateRange={dateRange}
       />
     );
   }
@@ -205,6 +212,7 @@ function RecurringEditForm({
   planAction,
   seriesAction,
   pending,
+  dateRange,
 }: {
   session: RecurringSessionView;
   series: PlanSeriesView;
@@ -214,9 +222,16 @@ function RecurringEditForm({
   planAction: PlanFormAction;
   seriesAction: PlanFormAction;
   pending: boolean;
+  dateRange?: PlanDateRange;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
   const [open, setOpen] = useState<"repeat" | "scope" | null>(null);
+  // A series has no date to move to, so a session moved to another day can
+  // only be saved as itself (owner, 5 Nov 2026: the date is a field here too).
+  const [moved, setMoved] = useState(false);
+  const isMoved = () =>
+    formRef.current !== null &&
+    new FormData(formRef.current).get("localDate") !== session.localDate;
   const rule = ruleOf(series);
   const scopeTitle = `scope-${session.id}`;
   const from = shortDate(session.occurrenceDate);
@@ -253,6 +268,26 @@ function RecurringEditForm({
         draft={draftOf(session)}
         activities={session.activities}
         fill={{ sessionId: session.id, open: session.openFill }}
+        dateField={
+          dateRange === undefined ? undefined : (
+            <PlanDateInput
+              label="Date"
+              // Within its own series' dates, which is where the plan lets
+              // an occurrence go.
+              range={{
+                first:
+                  series.startDate > dateRange.first
+                    ? series.startDate
+                    : dateRange.first,
+                last:
+                  series.endDate !== null && series.endDate < dateRange.last
+                    ? series.endDate
+                    : dateRange.last,
+              }}
+              defaultValue={session.localDate}
+            />
+          )
+        }
       />
       {canChangeFuture ? (
         <RepeatRow
@@ -282,6 +317,7 @@ function RecurringEditForm({
             // The dialog makes the form inert, where the browser could not
             // point at a field it refuses, so the fields are checked first.
             if (formRef.current?.reportValidity() === false) return;
+            setMoved(isMoved());
             setOpen("scope");
           }}
           disabled={pending}
@@ -315,7 +351,9 @@ function RecurringEditForm({
           checkBefore={() =>
             formRef.current?.checkValidity() === false
               ? "Some of the session's own fields need fixing first. Cancel, check them, then change the repeat."
-              : null
+              : isMoved()
+                ? "You moved this session to another day, which saves it alone. Cancel, save that first, then change the repeat."
+                : null
           }
           onSave={(ruleData) => send("edit_series", seriesAction, ruleData)}
           onClose={() => setOpen(null)}
@@ -342,21 +380,27 @@ function RecurringEditForm({
                 {from} becomes a one-off change; the series never overwrites it.
               </span>
             </button>
-            <button
-              className={styles.scopeChoice}
-              type="button"
-              onClick={() => send("edit_series", seriesAction)}
-              disabled={pending}
-            >
-              <strong>
-                {canEditWhole ? "The whole series" : "This and following"}
-              </strong>
-              <span>
-                {canEditWhole
-                  ? "Every session of it, starting with this first one. Logged training stays as it is."
-                  : `From ${from} on. Earlier sessions, one-off changes before this date, and logged training stay as they are.`}
-              </span>
-            </button>
+            {moved ? (
+              <p className={styles.consequenceStandalone}>
+                You moved it to another day, so this saves this session only.
+              </p>
+            ) : (
+              <button
+                className={styles.scopeChoice}
+                type="button"
+                onClick={() => send("edit_series", seriesAction)}
+                disabled={pending}
+              >
+                <strong>
+                  {canEditWhole ? "The whole series" : "This and following"}
+                </strong>
+                <span>
+                  {canEditWhole
+                    ? "Every session of it, starting with this first one. Logged training stays as it is."
+                    : `From ${from} on. Earlier sessions, one-off changes before this date, and logged training stay as they are.`}
+                </span>
+              </button>
+            )}
             <SheetCloseButton className={styles.action}>
               Back to editing
             </SheetCloseButton>
@@ -368,9 +412,11 @@ function RecurringEditForm({
 }
 
 /**
- * The two scopes of a delete on an occurrence, in the same shape as Edit and
- * Cancel. Both are permanent: since M3-20 the series records a deleted date and
- * leaves it empty, and ending the series from a date removes the rest.
+ * The two scopes of a delete on an occurrence, as two buttons and nothing
+ * else (owner, 5 Nov 2026: the dialog's title and the buttons say it). Both are
+ * permanent: since M3-20 the series records a deleted date and leaves it
+ * empty, and ending the series from a date removes the rest, keeping any
+ * session with training logged against it.
  */
 export function RecurringDeleteControls({
   today,
@@ -403,16 +449,22 @@ export function RecurringDeleteControls({
 
   return (
     <>
-      <section className={styles.scope}>
-        <h4>Only this session</h4>
-        <p className={styles.permanentConsequence}>
-          Permanent. Deletes only this occurrence and does not keep it on the
-          record. The series will not write this date back, and every other
-          occurrence stays. A session you have logged training against cannot be
-          deleted. There is no undo.
-        </p>
-        <form className={styles.form} action={planAction}>
-          <input type="hidden" name="operation" value="delete" />
+      <form className={styles.form} action={planAction}>
+        <input type="hidden" name="operation" value="delete" />
+        <input type="hidden" name="sessionId" value={sessionId} />
+        <input type="hidden" name="expectedRevision" value={expectedRevision} />
+        <button
+          className={styles.dangerAction}
+          type="submit"
+          disabled={planPending}
+        >
+          Delete only this session
+        </button>
+      </form>
+
+      {canChangeFuture ? (
+        <form className={styles.form} action={seriesAction}>
+          <input type="hidden" name="operation" value="end_series" />
           <input type="hidden" name="sessionId" value={sessionId} />
           <input
             type="hidden"
@@ -422,40 +474,11 @@ export function RecurringDeleteControls({
           <button
             className={styles.dangerAction}
             type="submit"
-            disabled={planPending}
+            disabled={seriesPending}
           >
-            Delete only this session
+            Delete this and all future sessions
           </button>
         </form>
-      </section>
-
-      {canChangeFuture ? (
-        <section className={styles.scope}>
-          <h4>This and all future sessions</h4>
-          <p className={styles.permanentConsequence}>
-            Permanent. Removes this occurrence and every later one of this
-            series, including changed and cancelled ones, and the series stops.
-            A session with training logged against it is kept. Nothing before
-            this date changes, completed training is untouched, and there is no
-            undo.
-          </p>
-          <form className={styles.form} action={seriesAction}>
-            <input type="hidden" name="operation" value="end_series" />
-            <input type="hidden" name="sessionId" value={sessionId} />
-            <input
-              type="hidden"
-              name="expectedRevision"
-              value={expectedRevision}
-            />
-            <button
-              className={styles.dangerAction}
-              type="submit"
-              disabled={seriesPending}
-            >
-              Delete this and all future sessions
-            </button>
-          </form>
-        </section>
       ) : (
         <p className={styles.consequence}>
           Its series no longer fills this date, so only this session can be

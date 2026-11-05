@@ -115,7 +115,6 @@ test.describe("M3-14B recurring series surface", () => {
       await create.getByLabel("Every", { exact: true }).fill("2");
       await choose(create, "radio", "On a date");
       await fillDate(create, "End date", dailyEnd);
-      await expect(create.getByText("Every 2 days")).toBeVisible();
       const dailyNext = create.getByRole("list", { name: "Next sessions" });
       await expect(dailyNext).toContainText(shortDate(dailyStart));
       await expect(dailyNext).toContainText(shortDate(secondDaily));
@@ -186,26 +185,11 @@ test.describe("M3-14B recurring series surface", () => {
         await sessionCard(page, secondDaily, "Future steady"),
       ).toBeVisible();
 
-      // Consequences appear before future removal and carry no forecast count.
       const endFrom = ownerDate(5);
       // M3-20: removing the future deletes, so it is a Delete scope.
       await openSession(page, endFrom, "Future steady");
       await chooseMore(page, "Delete");
-      const futureRemoval = scope(
-        sessionPanel(page, "Delete session"),
-        "This and all future sessions",
-      ).last();
-      const permanent = futureRemoval.getByText(
-        /Permanent\. Removes this occurrence/,
-      );
-      await expect(permanent).toContainText(
-        "A session with training logged against it is kept",
-      );
-      await expect(permanent).not.toContainText(/locked/i);
-      await expect(permanent).toContainText("completed training is untouched");
-      await expect(permanent).toContainText("no undo");
-      await expect(permanent).not.toContainText(/\b\d+\b/);
-      await futureRemoval
+      await sessionPanel(page, "Delete session")
         .getByRole("button", {
           name: "Delete this and all future sessions",
         })
@@ -364,10 +348,6 @@ function recurringEditForm(card: Locator) {
   return card.locator("form").filter({
     has: card.page().getByLabel("Title", { exact: true }),
   });
-}
-
-function scope(container: Locator, heading: string) {
-  return container.locator("section").filter({ hasText: heading });
 }
 
 async function openDisclosure(container: Locator, label: string) {

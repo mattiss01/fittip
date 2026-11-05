@@ -33,6 +33,8 @@
   --font-sans:
     var(--font-schibsted), ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: var(--font-mono-face), ui-monospace, "SFMono-Regular", monospace;
+  /* A form field's label: plain words, not capitals (owner, 5 Nov 2026). */
+  --font-field-label: 600 0.82rem var(--font-sans);
   --radius-card: 1.25rem;
   --radius-control: 0.9rem;
   --radius-pill: 999px;
@@ -174,11 +176,9 @@ h1 {
   outline-offset: 2px;
 }
 label {
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  font-weight: 500;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font: var(--font-field-label);
+  letter-spacing: 0;
+  text-transform: none;
 }
 input {
   width: 100%;

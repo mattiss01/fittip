@@ -76,8 +76,6 @@ const PANEL_HEADINGS: Record<Panel, string> = {
   delete: "Delete session",
 };
 
-const ONE_OFF_WARNING = "Gone for good. There is no undo.";
-
 /**
  * A planned session on its own page: read first, changed on purpose (owner,
  * 29 Sep 2026). Edit is the one verb in plain sight because it is the one
@@ -324,6 +322,7 @@ export function SessionPage({
   const busy = pending || seriesPending;
   const recurringView = {
     id: session.id,
+    localDate: session.localDate,
     occurrenceDate: recurring?.occurrenceDate ?? "",
     title: session.title,
     sport: session.sport,
@@ -441,6 +440,7 @@ export function SessionPage({
               planPending={pending}
               seriesAction={trackedSeriesAction}
               seriesPending={seriesPending}
+              dateRange={dateRange}
             />
           )}
         </section>
@@ -827,7 +827,6 @@ export function SessionPage({
           {panel === "delete" ? (
             recurring === null ? (
               <form className={styles.form} action={planAction}>
-                <p className={styles.permanentConsequence}>{ONE_OFF_WARNING}</p>
                 <input type="hidden" name="operation" value="delete" />
                 <input type="hidden" name="sessionId" value={session.id} />
                 <input

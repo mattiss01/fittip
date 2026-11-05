@@ -657,7 +657,9 @@ describe("PlanManager", () => {
     // DATES[2] is a Friday, so the presets are built from it.
     fireEvent.click(screen.getByRole("radio", { name: "Every Friday" }));
     expect(operation).toHaveValue("add_series");
-    expect(screen.getByText("Every week on Friday")).toBeVisible();
+    expect(
+      screen.getByRole("list", { name: "Next sessions" }),
+    ).toHaveTextContent(/^Fri /);
     expect(
       screen.getByRole("button", { name: "Create recurring sessions" }),
     ).toBeVisible();
@@ -667,9 +669,8 @@ describe("PlanManager", () => {
     expect(screen.getByRole("checkbox", { name: "Monday" })).not.toBeChecked();
     fireEvent.click(screen.getByRole("checkbox", { name: "Monday" }));
 
-    // The sentence and the next dates follow the rule as it is built, and
-    // the rule is sent under the names the series action reads.
-    expect(screen.getByText("Every week on Monday and Friday")).toBeVisible();
+    // The next dates follow the rule as it is built, and the rule is sent
+    // under the names the series action reads.
     const next = within(screen.getByRole("list", { name: "Next sessions" }));
     expect(next.getAllByRole("listitem")[0]).toHaveTextContent(/^Fri /);
     expect(next.getAllByRole("listitem")[1]).toHaveTextContent(/^Mon /);

@@ -47,8 +47,8 @@ type Preset = "none" | "weekly" | "fortnightly" | "daily" | "custom";
 /**
  * The repeat rule as a calendar asks it (owner, 5 Nov 2026): a row of ready
  * rules built from the session's own weekday, "Custom" for anything else, and
- * a sentence with the next dates that changes as the rule does, so what will
- * be created is read before it is saved rather than on a separate review.
+ * the next dates, which change as the rule does, so what will be created is
+ * read before it is saved rather than on a separate review.
  *
  * The rule is held here and sent in hidden fields under the names the series
  * actions read (`frequency`, `intervalCount`, `weekdays`, `noEnd`,
@@ -314,14 +314,28 @@ export function RecurrenceFields({
 
           <div className={styles.summary}>
             <div aria-live="polite">
-              <p className={styles.sentence}>{summarize(draft)}</p>
+              <p id={`${groupName}-next`} className={styles.summaryTitle}>
+                Next sessions
+              </p>
               {checked.problem !== null ? (
                 <p className={styles.problem}>{checked.problem}</p>
               ) : (
-                <ol className={styles.dates} aria-label="Next sessions">
-                  {checked.dates.slice(0, PREVIEW_COUNT).map((date) => (
-                    <li key={date}>{shortDate(date)}</li>
-                  ))}
+                // Each date as a calendar leaf (owner, 5 Nov 2026). The
+                // spaces keep it reading "Fri 6 Nov" aloud and in tests.
+                <ol
+                  className={styles.dates}
+                  aria-labelledby={`${groupName}-next`}
+                >
+                  {checked.dates.slice(0, PREVIEW_COUNT).map((date) => {
+                    const [dow, day, month] = shortDate(date).split(" ");
+                    return (
+                      <li key={date}>
+                        <span className={styles.dow}>{dow}</span>{" "}
+                        <span className={styles.dateDay}>{day}</span>{" "}
+                        <span className={styles.month}>{month}</span>
+                      </li>
+                    );
+                  })}
                   {checked.dates.length > PREVIEW_COUNT ? (
                     <li aria-hidden="true" className={styles.more}>
                       …
@@ -330,15 +344,6 @@ export function RecurrenceFields({
                 </ol>
               )}
             </div>
-            {checked.problem !== null ? null : (
-              <p className={styles.hint}>
-                {noEnd
-                  ? "No end date: FitTip writes the next thirteen weeks and extends them on later Plan visits."
-                  : `Last one on or before ${shortDate(endDate)}.`}{" "}
-                A day that already holds ten sessions is skipped and named after
-                saving.
-              </p>
-            )}
           </div>
         </>
       )}

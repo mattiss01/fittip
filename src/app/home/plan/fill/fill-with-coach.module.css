@@ -34,7 +34,14 @@
   min-width: 0;
 }
 
-.field label,
+.field label {
+  margin: 0;
+  color: var(--ledger-ink);
+  font: var(--font-field-label);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
 .eyebrow,
 .plannedLabel {
   margin: 0;
