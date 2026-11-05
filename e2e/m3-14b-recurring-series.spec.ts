@@ -352,9 +352,13 @@ async function choose(
     .click();
 }
 
+/**
+ * The edit form, found by its Title field: its Save button gives way to the
+ * scope choice once tapped, so it cannot be what the form is found by.
+ */
 function recurringEditForm(card: Locator) {
   return card.locator("form").filter({
-    has: card.page().getByRole("button", { name: "Save changes" }),
+    has: card.page().getByLabel("Title", { exact: true }),
   });
 }
 
