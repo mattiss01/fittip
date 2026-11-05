@@ -144,8 +144,15 @@ test.describe("M3-15C progress", () => {
         unplanned.getByText("Swimming", { exact: true }),
       ).toBeVisible();
       await expect(unplanned.getByText("Unplanned training")).toHaveCount(0);
-      // The product decision of 31 August 2026: a record, not a summary.
-      // Nothing on this surface totals, counts, ranks, or streaks.
+      // Split by sport (owner, 5 Nov 2026, P1): the month counts the owner's
+      // own logs and their time, which replaced the decision of 31 August
+      // 2026 that it count nothing. It still never totals, ranks or streaks.
+      await expect(
+        page.getByRole("navigation", { name: "Sports" }).getByRole("link"),
+      ).toHaveText(["All", "Running", "Swimming"]);
+      await expect(page.locator("[data-progress-summary]")).toContainText(
+        "2 sessions",
+      );
       for (const summarized of [/total/i, /streak/i, /average/i]) {
         await expect(page.getByText(summarized)).toHaveCount(0);
       }

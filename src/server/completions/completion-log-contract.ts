@@ -194,6 +194,45 @@ export function registerCompletionLogContract(
       ).rejects.toThrow(CompletionConflictError);
     });
 
+    it("ranks the sports logged, most first, and counts no skip (P1)", async () => {
+      const { completions, addPlanSession, day } = requireSubject(subject);
+      // A planned log is counted under the sport it carries, its own or the
+      // plan's; unplanned training under the one it was logged with.
+      for (const offset of [1, 2]) {
+        const planSessionId = await addPlanSession(day(offset), "Aerobic run");
+        await completions.applyChange(create(planSessionId, day(0)));
+      }
+      await completions.applyChange({
+        operation: "create",
+        completion: {
+          status: "unplanned",
+          actualLocalDate: day(0),
+          title: "Sunrise swim",
+          sport: "Swimming",
+          durationMinutes: 30,
+          activities: [],
+        },
+      });
+      // A skip names a sport it did not train, three times over.
+      for (const offset of [3, 4, 5]) {
+        const planSessionId = await addPlanSession(day(offset), "Aerobic run");
+        const { completionId } = await completions.applyChange(
+          create(planSessionId, day(0)),
+        );
+        await completions.applyChange({
+          operation: "edit",
+          completionId,
+          expectedRevision: 0,
+          completion: { status: "skipped", actualLocalDate: day(0) },
+        });
+      }
+
+      expect(await completions.sportUse()).toEqual([
+        { sport: "Running", logs: 2 },
+        { sport: "Swimming", logs: 1 },
+      ]);
+    });
+
     it("keeps at most one completion per planned session", async () => {
       const { completions, addPlanSession, day } = requireSubject(subject);
       const planSessionId = await addPlanSession(day(4), "Aerobic run");
