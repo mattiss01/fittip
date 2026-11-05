@@ -206,6 +206,36 @@ export type CompletionReceipt = {
   result: "created" | "updated" | "deleted";
 };
 
+/**
+ * How many of the owner's logs name one sport. Progress lists the owner's
+ * sports, and gives each its colour, in this order (owner, 5 Nov 2026).
+ */
+export type SportUse = { sport: string; logs: number };
+
+/**
+ * Counts every log that records training by its sport, its own or else the
+ * plan's, and orders them most-logged first, then by name. A skip names a
+ * sport it did not train, so it is not counted. Both adapters answer through
+ * this, so they cannot disagree on the order.
+ */
+export function rankSportUse(
+  rows: { status: CompletionStatus; sport: string | null }[],
+): SportUse[] {
+  const counts = new Map<string, number>();
+  for (const { status, sport } of rows) {
+    if (status === "skipped" || sport === null || sport.trim() === "") {
+      continue;
+    }
+    counts.set(sport, (counts.get(sport) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .map(([sport, logs]) => ({ sport, logs }))
+    .toSorted(
+      (left, right) =>
+        right.logs - left.logs || left.sport.localeCompare(right.sport, "en"),
+    );
+}
+
 /** The owner-local date range one read covers, both ends inclusive. */
 export type ParsedCompletionWindow = { startDate: string; endDate: string };
 
@@ -221,6 +251,8 @@ export interface CompletionLogAdapter {
   /** The same, for many planned sessions in one read; absent ones are omitted. */
   findByPlanSessions(planSessionIds: string[]): Promise<Completion[]>;
   applyChange(change: CompletionChange): Promise<CompletionReceipt>;
+  /** Every sport the owner has logged, most-logged first (`rankSportUse`). */
+  sportUse(): Promise<SportUse[]>;
 }
 
 export class CompletionValidationError extends Error {
@@ -340,6 +372,11 @@ export class CompletionLog {
 
   async get(completionId: unknown): Promise<Completion | null> {
     return await this.adapter.get(readUuid(completionId));
+  }
+
+  /** The owner's sports, most-logged first, over their whole record. */
+  async sportUse(): Promise<SportUse[]> {
+    return await this.adapter.sportUse();
   }
 
   /** What was already logged against one planned session, on any date. */

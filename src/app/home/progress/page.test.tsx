@@ -29,6 +29,7 @@ const today = () => isoDateInTimezone(new Date(), TIMEZONE);
 const currentMonth = () => today().slice(0, 7);
 
 const listCompletions = vi.fn();
+const sportUse = vi.fn();
 
 describe("Progress", () => {
   beforeEach(() => {
@@ -38,7 +39,11 @@ describe("Progress", () => {
       createdAt: "2020-01-15T09:00:00.000Z",
     });
     listCompletions.mockResolvedValue([]);
-    createCompletionLogMock.mockResolvedValue({ list: listCompletions });
+    sportUse.mockResolvedValue([]);
+    createCompletionLogMock.mockResolvedValue({
+      list: listCompletions,
+      sportUse,
+    });
   });
 
   afterEach(cleanup);
@@ -124,7 +129,7 @@ describe("Progress", () => {
     expect(within(entry).getByText("Partly completed")).toBeTruthy();
     expect(within(entry).getByText("Running")).toBeTruthy();
     expect(within(entry).getByText("42 min")).toBeTruthy();
-    expect(within(entry).getByText("7 of 10")).toBeTruthy();
+    expect(within(entry).getByText("Effort 7 of 10")).toBeTruthy();
     // A log no longer carries how it felt (owner, 7 Oct 2026).
     expect(within(entry).queryByText("Felt")).toBeNull();
     expect(
@@ -173,7 +178,7 @@ describe("Progress", () => {
     expect(within(entry).queryByText(/Threshold intervals/)).toBe(null);
   });
 
-  it("keeps two logs from one day under that day, in the order read", async () => {
+  it("keeps two logs from one week under that week, in the order read", async () => {
     listCompletions.mockResolvedValue([
       completion(),
       { ...completion(), id: OTHER_ID },
@@ -181,11 +186,15 @@ describe("Progress", () => {
 
     render(await ProgressPage({ searchParams: Promise.resolve({}) }));
 
-    expect(document.querySelectorAll("[data-progress-entry]")).toHaveLength(2);
-    // One day mark, not two: both were logged for the same owner-local date.
+    const entries = [...document.querySelectorAll("[data-progress-entry]")];
+    expect(
+      entries.map((entry) => entry.getAttribute("data-progress-entry")),
+    ).toEqual([COMPLETION_ID, OTHER_ID]);
+    // One week heading, not two: both were logged in this owner-local week.
     expect(
       document.querySelectorAll("[data-progress-month] > ol > li"),
     ).toHaveLength(1);
+    expect(screen.getByRole("heading", { name: "This week" })).toBeTruthy();
   });
 
   it("says a month with nothing in it is empty, and never says zero", async () => {
@@ -227,6 +236,131 @@ describe("Progress", () => {
     ).toBeTruthy();
   });
 
+  it("lists the owner's sports most-logged first, keeping the month", async () => {
+    sportUse.mockResolvedValue([
+      { sport: "Running", logs: 9 },
+      { sport: "Swimming", logs: 2 },
+    ]);
+
+    render(
+      await ProgressPage({
+        searchParams: Promise.resolve({ month: "2026-02" }),
+      }),
+    );
+
+    const chips = within(screen.getByRole("navigation", { name: "Sports" }))
+      .getAllByRole("link")
+      .map((link) => [link.textContent, link.getAttribute("href")]);
+    expect(chips).toEqual([
+      ["All", "/home/progress?month=2026-02"],
+      ["Running", "/home/progress?month=2026-02&sport=Running"],
+      ["Swimming", "/home/progress?month=2026-02&sport=Swimming"],
+    ]);
+    expect(
+      screen.getByRole("link", { name: "All" }).getAttribute("aria-current"),
+    ).toBe("page");
+  });
+
+  it("shows one sport alone, and keeps it when the month changes", async () => {
+    sportUse.mockResolvedValue([
+      { sport: "Running", logs: 9 },
+      { sport: "Swimming", logs: 2 },
+    ]);
+    listCompletions.mockResolvedValue([completion(), swim()]);
+
+    render(
+      await ProgressPage({
+        searchParams: Promise.resolve({ sport: "Swimming" }),
+      }),
+    );
+
+    expect(
+      [...document.querySelectorAll("[data-progress-entry]")].map((entry) =>
+        entry.getAttribute("data-progress-entry"),
+      ),
+    ).toEqual([OTHER_ID]);
+    expect(
+      document
+        .querySelector("[data-progress-month]")
+        ?.getAttribute("data-progress-sport"),
+    ).toBe("Swimming");
+    expect(
+      screen.getByRole("link", { name: /Previous month/ }).getAttribute("href"),
+    ).toMatch(/^\/home\/progress\?month=\d{4}-\d{2}&sport=Swimming$/);
+    expect(
+      screen
+        .getByRole("link", { name: "Swimming" })
+        .getAttribute("aria-current"),
+    ).toBe("page");
+  });
+
+  it("shows every sport for a sport the owner has never logged", async () => {
+    sportUse.mockResolvedValue([{ sport: "Running", logs: 9 }]);
+    listCompletions.mockResolvedValue([completion(), swim()]);
+
+    render(
+      await ProgressPage({
+        searchParams: Promise.resolve({ sport: "Curling" }),
+      }),
+    );
+
+    expect(
+      document
+        .querySelector("[data-progress-month]")
+        ?.getAttribute("data-progress-sport"),
+    ).toBe("all");
+    expect(document.querySelectorAll("[data-progress-entry]")).toHaveLength(2);
+  });
+
+  it("counts training and its time, never a skip, and names a missing duration", async () => {
+    sportUse.mockResolvedValue([
+      { sport: "Running", logs: 9 },
+      { sport: "Swimming", logs: 2 },
+    ]);
+    listCompletions.mockResolvedValue([
+      { ...completion(), status: "completed" as const },
+      { ...swim(), durationMinutes: null },
+      {
+        ...completion(),
+        id: "7e150000-0000-4000-8000-000000000013",
+        status: "skipped" as const,
+        durationMinutes: null,
+      },
+    ]);
+
+    render(await ProgressPage({ searchParams: Promise.resolve({}) }));
+
+    const summary = document.querySelector(
+      "[data-progress-summary]",
+    ) as HTMLElement;
+    expect(summary.textContent).toContain("2 sessions · 42 min");
+    expect(summary.textContent).toContain(
+      "1 session has no duration and is not in the time.",
+    );
+    expect(summary.textContent).toContain("1 skipped");
+    expect(
+      within(summary)
+        .getByRole("link", { name: "Swimming: 1 session" })
+        .getAttribute("href"),
+    ).toBe("/home/progress?sport=Swimming");
+    // It counts the owner's logs; it never totals, streaks or averages them.
+    expect(document.body.textContent).not.toMatch(/total|streak|average/i);
+  });
+
+  it("says which sport an empty month has none of", async () => {
+    sportUse.mockResolvedValue([{ sport: "Swimming", logs: 2 }]);
+
+    render(
+      await ProgressPage({
+        searchParams: Promise.resolve({ month: "2026-02", sport: "Swimming" }),
+      }),
+    );
+
+    expect(
+      document.querySelector('[data-progress-empty="month"]')?.textContent,
+    ).toContain("No Swimming was logged in February 2026.");
+  });
+
   it("refuses to guess a month for an owner with no stored zone", async () => {
     profileIs({ timezoneName: null, createdAt: "2020-01-15T09:00:00.000Z" });
 
@@ -248,6 +382,19 @@ function profileIs(profile: {
       .fn()
       .mockResolvedValue({ userId: "owner", ...profile }),
   });
+}
+
+function swim() {
+  return {
+    ...completion(),
+    id: OTHER_ID,
+    planSessionId: null,
+    status: "unplanned" as const,
+    plannedSnapshot: null,
+    title: "Sunrise swim",
+    sport: "Swimming",
+    durationMinutes: 30,
+  };
 }
 
 function completion() {

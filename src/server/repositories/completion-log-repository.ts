@@ -29,6 +29,8 @@ import {
   type CompletionPlannedSnapshot,
   type CompletionReceipt,
   type ParsedCompletionWindow,
+  rankSportUse,
+  type SportUse,
 } from "@/server/completions/completion-log";
 import {
   parseTrainingMeasurement,
@@ -48,6 +50,9 @@ const COMPLETION_COLUMNS = `
     instructions, measurement_mode, actual_measurement
   )
 ` as const;
+
+/** The project's `max_rows`: one request never returns more. */
+const SPORT_USE_PAGE = 1000;
 
 export class CompletionAuthenticationError extends Error {
   constructor(readonly accessError?: VerifiedUserAccessError) {
@@ -77,6 +82,40 @@ export class PostgresCompletionLogAdapter implements CompletionLogAdapter {
       .order("id", { ascending: true });
     if (error) throw new CompletionPersistenceError();
     return await this.withReplacements(userId, data ?? []);
+  }
+
+  /**
+   * Only the status and the two sport columns of every log, a page at a time:
+   * the API returns at most `SPORT_USE_PAGE` rows a request, and a record of a
+   * few years outgrows one. Counted here rather than in SQL because PostgREST
+   * aggregates are switched off on the project.
+   */
+  async sportUse(): Promise<SportUse[]> {
+    const userId = await this.getVerifiedUserId();
+    const rows: { status: Completion["status"]; sport: string | null }[] = [];
+    for (let from = 0; ; from += SPORT_USE_PAGE) {
+      const { data, error } = await this.client
+        .from("completions")
+        .select("id, status, sport, snapshot_sport:planned_snapshot->>sport")
+        .eq("user_id", userId)
+        .order("id", { ascending: true })
+        .range(from, from + SPORT_USE_PAGE - 1);
+      if (error) throw new CompletionPersistenceError();
+      for (const row of data ?? []) {
+        const record = readRecord(row);
+        if (!isChoice(record.status, COMPLETION_STATUSES)) {
+          throw new CompletionPersistenceError();
+        }
+        const own = typeof record.sport === "string" ? record.sport : null;
+        const planned =
+          typeof record.snapshot_sport === "string"
+            ? record.snapshot_sport
+            : null;
+        rows.push({ status: record.status, sport: own ?? planned });
+      }
+      if ((data ?? []).length < SPORT_USE_PAGE) break;
+    }
+    return rankSportUse(rows);
   }
 
   async get(completionId: string): Promise<Completion | null> {

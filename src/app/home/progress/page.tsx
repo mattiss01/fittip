@@ -4,12 +4,14 @@ import { redirect } from "next/navigation";
 import { monthOf, monthWindow, readRequestedMonth } from "./month";
 import { ProgressMonth } from "./progress-month";
 import type { ProgressCompletionView } from "./progress-record";
+import { readRequestedSport, sportColours } from "./sport-colours";
 import { startTimeOf } from "./start-time-of";
 import styles from "./progress.module.css";
 
 import homeStyles from "../home.module.css";
 import { LogDeletedNote } from "@/components/home/log-deleted-note";
 import { isoDateInTimezone } from "@/lib/date/local-date";
+import { describeMeasurement } from "@/lib/training/describe-measurement";
 import {
   replacedByLabel,
   replacesLabels,
@@ -29,18 +31,21 @@ export const dynamic = "force-dynamic";
 type Props = {
   searchParams: Promise<{
     month?: string | string[];
+    /** One of the owner's sports, or absent for all of them (P1). */
+    sport?: string | string[];
     /** "deleted" after a log opened from here was deleted (ADR-031). */
     log?: string | string[];
   }>;
 };
 
 /**
- * The owner's training record, one owner-local calendar month at a time. The
- * month is a URL search parameter so the view is addressable and the back
- * button steps through the months the owner actually visited. An absent or
- * unreadable parameter falls back to the owner-local current month - never to
- * the server's own month, which would show a stranger's month either side of
- * a month boundary.
+ * The owner's training record, one owner-local calendar month at a time,
+ * split by sport (owner, 5 Nov 2026, P1). The month and the sport are URL
+ * search parameters so the view is addressable and the back button steps
+ * through what the owner actually visited. An absent or unreadable month
+ * falls back to the owner-local current month - never to the server's own
+ * month, which would show a stranger's month either side of a month boundary
+ * - and a sport the owner has never logged falls back to all of them.
  *
  * Progress reads, and only completions. It calls no plan read: ADR-017
  * consequence 3 binds a consumer that reads plan sessions, and topping the
@@ -61,10 +66,9 @@ export default async function ProgressPage({ searchParams }: Props) {
   }
 
   const timezoneName = profile?.timezoneName ?? null;
-  const currentMonth =
-    timezoneName === null
-      ? null
-      : monthOf(isoDateInTimezone(new Date(), timezoneName));
+  const today =
+    timezoneName === null ? null : isoDateInTimezone(new Date(), timezoneName);
+  const currentMonth = today === null ? null : monthOf(today);
   const month = currentMonth === null ? null : (requested ?? currentMonth);
 
   return (
@@ -73,7 +77,10 @@ export default async function ProgressPage({ searchParams }: Props) {
         <h1>Progress</h1>
       </header>
       <LogDeletedNote flag={query.log} />
-      {timezoneName === null || month === null || currentMonth === null ? (
+      {timezoneName === null ||
+      today === null ||
+      month === null ||
+      currentMonth === null ? (
         <section className={homeStyles.stateCard} data-progress-state="no-zone">
           <p className={homeStyles.sectionLabel}>Time zone needed</p>
           <h2>Confirm your time zone first</h2>
@@ -89,41 +96,66 @@ export default async function ProgressPage({ searchParams }: Props) {
           </div>
         </section>
       ) : (
-        await renderMonth(
+        await renderMonth({
           timezoneName,
-          profile?.createdAt ?? null,
+          createdAt: profile?.createdAt ?? null,
           month,
           currentMonth,
-        )
+          today,
+          requestedSport: query.sport,
+        })
       )}
     </main>
   );
 }
 
-async function renderMonth(
-  timezoneName: string,
-  createdAt: string | null,
-  month: string,
-  currentMonth: string,
-) {
+async function renderMonth({
+  timezoneName,
+  createdAt,
+  month,
+  currentMonth,
+  today,
+  requestedSport,
+}: {
+  timezoneName: string;
+  createdAt: string | null;
+  month: string;
+  currentMonth: string;
+  today: string;
+  requestedSport: string | string[] | undefined;
+}) {
   const window = monthWindow(month);
 
   let completions;
+  let sportUse;
   try {
-    // The one read this surface makes, bounded by the month it is showing.
-    completions = await (
-      await createCompletionLog()
-    ).list(window.startDate, window.endDate);
+    const log = await createCompletionLog();
+    // The month, bounded by the month it is showing; and which sports the
+    // owner has logged over their whole record, which orders and colours the
+    // chips the same way in every month.
+    [completions, sportUse] = await Promise.all([
+      log.list(window.startDate, window.endDate),
+      log.sportUse(),
+    ]);
   } catch (error) {
     redirectOnAuthError(error);
     throw error;
   }
 
+  const sports = sportColours(sportUse.map(({ sport }) => sport));
+  const sport = readRequestedSport(
+    requestedSport,
+    sports.map((entry) => entry.sport),
+  );
+
   return (
     <ProgressMonth
       month={month}
       currentMonth={currentMonth}
+      today={today}
       accountMonth={accountMonth(createdAt, timezoneName)}
+      sports={sports}
+      sport={sport}
       entries={completions.map(toCompletionView)}
     />
   );
@@ -170,6 +202,13 @@ function toCompletionView(completion: Completion): ProgressCompletionView {
     replacementDescription: completion.replacementDescription ?? null,
     replacedBy: replacedByLabel(completion),
     replaces: replacesLabels(completion),
+    // What its activities measured, in the words the log form wrote them
+    // with; the card shows the first of them (P1).
+    activities: completion.activities.map((activity) => ({
+      position: activity.position,
+      name: activity.name,
+      detail: describeMeasurement(activity.actualMeasurement ?? null),
+    })),
     pain: completion.painReported,
     illness: completion.illnessReported,
     injury: completion.injuryReported,
