@@ -1,0 +1,2977 @@
+{
+  "logs": [
+    {
+      "date": "2026-08-12",
+      "outcome": "completed",
+      "title": "Intervalle 6×800 m",
+      "sport": "Laufen",
+      "minutes": 58,
+      "effort": 8,
+      "pain": false,
+      "illness": false,
+      "injury": false,
+      "fatigue": false,
+      "planned": true
+    },
+    {
+      "date": "2026-08-14",
+      "outcome": "completed",
+      "title": "Kraft B",
+      "sport": "Krafttraining",
+      "minutes": 70,
+      "effort": 8,
+      "pain": false,
+      "illness": false,
+      "injury": false,
+      "fatigue": false,
+      "planned": true
+    },
+    {
+      "date": "2026-08-15",
+      "outcome": "completed",
+      "title": "Langer Lauf",
+      "sport": "Laufen",
+      "minutes": 80,
+      "effort": 5,
+      "pain": false,
+      "illness": false,
+      "injury": false,
+      "fatigue": false,
+      "planned": true
+    },
+    {
+      "date": "2026-08-17",
+      "outcome": "completed",
+      "title": "Kraft A",
+      "sport": "Krafttraining",
+      "minutes": 68,
+      "effort": 7,
+      "pain": false,
+      "illness": false,
+      "injury": false,
+      "fatigue": false,
+      "planned": true
+    },
+    {
+      "date": "2026-08-18",
+      "outcome": "completed",
+      "title": "Bouldern mit den Mädels",
+      "sport": "Klettern",
+      "minutes": 95,
+      "effort": 6,
+      "pain": false,
+      "illness": false,
+      "injury": false,
+      "fatigue": false,
+      "planned": true
+    },
+    {
+      "date": "2026-08-19",
+      "outcome": "completed",
+      "title": "Intervalle 6×800 m",
+      "sport": "Laufen",
+      "minutes": 58,
+      "effort": 8,
+      "pain": false,
+      "illness": false,
+      "injury": false,
+      "fatigue": false,
+      "planned": true
+    },
+    {
+      "date": "2026-08-21",
+      "outcome": "completed",
+      "title": "Kraft B",
+      "sport": "Krafttraining",
+      "minutes": 70,
+      "effort": 8,
+      "pain": false,
+      "illness": false,
+      "injury": false,
+      "fatigue": false,
+      "planned": true
+    },
+    {
+      "date": "2026-08-22",
+      "outcome": "completed",
+      "title": "Langer Lauf",
+      "sport": "Laufen",
+      "minutes": 82,
+      "effort": 5,
+      "pain": false,
+      "illness": false,
+      "injury": false,
+      "fatigue": false,
+      "planned": true
+    },
+    {
+      "date": "2026-08-24",
+      "outcome": "completed",
+      "title": "Kraft A",
+      "sport": "Krafttraining",
+      "minutes": 72,
+      "effort": 7,
+      "pain": false,
+      "illness": false,
+      "injury": false,
+      "fatigue": false,
+      "planned": true
+    },
+    {
+      "date": "2026-08-24",
+      "outcome": "unplanned",
+      "title": "Yoga-Kurs",
+      "sport": "Mobility",
+      "minutes": 60,
+      "effort": 3,
+      "pain": false,
+      "illness": false,
+      "injury": false,
+      "fatigue": false,
+      "planned": false
+    },
+    {
+      "date": "2026-08-25",
+      "outcome": "completed",
+      "title": "Bouldern mit den Mädels",
+      "sport": "Klettern",
+      "minutes": 95,
+      "effort": 6,
+      "pain": false,
+      "illness": false,
+      "injury": false,
+      "fatigue": false,
+      "planned": true
+    },
+    {
+      "date": "2026-08-26",
+      "outcome": "completed",
+      "title": "Intervalle 6×800 m",
+      "sport": "Laufen",
+      "minutes": 58,
+      "effort": 8,
+      "pain": false,
+      "illness": false,
+      "injury": false,
+      "fatigue": false,
+      "planned": true
+    },
+    {
+      "date": "2026-08-28",
+      "outcome": "skipped",
+      "title": "Kraft B",
+      "sport": "Krafttraining",
+      "minutes": null,
+      "effort": null,
+      "pain": false,
+      "illness": false,
+      "injury": false,
+      "fatigue": false,
+      "planned": true
+    },
+    {
+      "date": "2026-08-29",
+      "outcome": "completed",
+      "title": "Langer Lauf",
+      "sport": "Laufen",
+      "minutes": 84,
+      "effort": 5,
+      "pain": false,
+      "illness": false,
+      "injury": false,
+      "fatigue": false,
+      "planned": true
+    },
+    {
+      "date": "2026-08-31",
+      "outcome": "completed",
+      "title": "Kraft A",
+      "sport": "Krafttraining",
+      "minutes": 76,
+      "effort": 7,
+      "pain": false,
+      "illness": false,
+      "injury": false,
+      "fatigue": false,
+      "planned": true
+    },
+    {
+      "date": "2026-09-01",
+      "outcome": "completed",
+      "title": "Bouldern mit den Mädels",
+      "sport": "Klettern",
+      "minutes": 95,
+      "effort": 6,
+      "pain": false,
+      "illness": false,
+      "injury": false,
+      "fatigue": false,
+      "planned": true
+    },
+    {
+      "date": "2026-09-02",
+      "outcome": "completed",
+      "title": "Intervalle 6×800 m",
+      "sport": "Laufen",
+      "minutes": 58,
+      "effort": 8,
+      "pain": false,
+      "illness": false,
+      "injury": false,
+      "fatigue": false,
+      "planned": true
+    },
+    {
+      "date": "2026-09-04",
+      "outcome": "completed",
+      "title": "Kraft B",
+      "sport": "Krafttraining",
+      "minutes": 70,
+      "effort": 8,
+      "pain": false,
+      "illness": false,
+      "injury": false,
+      "fatigue": false,
+      "planned": true
+    },
+    {
+      "date": "2026-09-05",
+      "outcome": "completed",
+      "title": "Langer Lauf",
+      "sport": "Laufen",
+      "minutes": 86,
+      "effort": 5,
+      "pain": false,
+      "illness": false,
+      "injury": false,
+      "fatigue": false,
+      "planned": true
+    },
+    {
+      "date": "2026-09-07",
+      "outcome": "completed",
+      "title": "Kraft A",
+      "sport": "Krafttraining",
+      "minutes": 68,
+      "effort": 7,
+      "pain": false,
+      "illness": false,
+      "injury": false,
+      "fatigue": false,
+      "planned": true
+    },
+    {
+      "date": "2026-09-08",
+      "outcome": "completed",
+      "title": "Bouldern mit den Mädels",
+      "sport": "Klettern",
+      "minutes": 95,
+      "effort": 6,
+      "pain": false,
+      "illness": false,
+      "injury": false,
+      "fatigue": false,
+      "planned": true
+    },
+    {
+      "date": "2026-09-09",
+      "outcome": "skipped",
+      "title": "Intervalle 6×800 m",
+      "sport": "Laufen",
+      "minutes": null,
+      "effort": null,
+      "pain": false,
+      "illness": true,
+      "injury": false,
+      "fatigue": false,
+      "planned": true
+    },
+    {
+      "date": "2026-09-11",
+      "outcome": "skipped",
+      "title": "Kraft B",
+      "sport": "Krafttraining",
+      "minutes": null,
+      "effort": null,
+      "pain": false,
+      "illness": true,
+      "injury": false,
+      "fatigue": false,
+      "planned": true
+    },
+    {
+      "date": "2026-09-12",
+      "outcome": "skipped",
+      "title": "Langer Lauf",
+      "sport": "Laufen",
+      "minutes": null,
+      "effort": null,
+      "pain": false,
+      "illness": true,
+      "injury": false,
+      "fatigue": false,
+      "planned": true
+    },
+    {
+      "date": "2026-09-14",
+      "outcome": "skipped",
+      "title": "Kraft A",
+      "sport": "Krafttraining",
+      "minutes": null,
+      "effort": null,
+      "pain": false,
+      "illness": true,
+      "injury": false,
+      "fatigue": false,
+      "planned": true
+    },
+    {
+      "date": "2026-09-15",
+      "outcome": "skipped",
+      "title": "Bouldern mit den Mädels",
+      "sport": "Klettern",
+      "minutes": null,
+      "effort": null,
+      "pain": false,
+      "illness": true,
+      "injury": false,
+      "fatigue": false,
+      "planned": true
+    },
+    {
+      "date": "2026-09-16",
+      "outcome": "completed",
+      "title": "Intervalle 6×800 m",
+      "sport": "Laufen",
+      "minutes": 58,
+      "effort": 8,
+      "pain": false,
+      "illness": false,
+      "injury": false,
+      "fatigue": false,
+      "planned": true
+    },
+    {
+      "date": "2026-09-18",
+      "outcome": "completed",
+      "title": "Kraft B",
+      "sport": "Krafttraining",
+      "minutes": 70,
+      "effort": 8,
+      "pain": false,
+      "illness": false,
+      "injury": false,
+      "fatigue": false,
+      "planned": true
+    },
+    {
+      "date": "2026-09-19",
+      "outcome": "completed",
+      "title": "Langer Lauf",
+      "sport": "Laufen",
+      "minutes": 90,
+      "effort": 5,
+      "pain": false,
+      "illness": false,
+      "injury": false,
+      "fatigue": false,
+      "planned": true
+    },
+    {
+      "date": "2026-09-21",
+      "outcome": "completed",
+      "title": "Kraft A",
+      "sport": "Krafttraining",
+      "minutes": 76,
+      "effort": 7,
+      "pain": false,
+      "illness": false,
+      "injury": false,
+      "fatigue": false,
+      "planned": true
+    },
+    {
+      "date": "2026-09-22",
+      "outcome": "completed",
+      "title": "Bouldern mit den Mädels",
+      "sport": "Klettern",
+      "minutes": 95,
+      "effort": 6,
+      "pain": false,
+      "illness": false,
+      "injury": false,
+      "fatigue": false,
+      "planned": true
+    },
+    {
+      "date": "2026-09-23",
+      "outcome": "completed",
+      "title": "Intervalle 6×800 m",
+      "sport": "Laufen",
+      "minutes": 58,
+      "effort": 8,
+      "pain": false,
+      "illness": false,
+      "injury": false,
+      "fatigue": false,
+      "planned": true
+    },
+    {
+      "date": "2026-09-25",
+      "outcome": "skipped",
+      "title": "Kraft B",
+      "sport": "Krafttraining",
+      "minutes": null,
+      "effort": null,
+      "pain": false,
+      "illness": false,
+      "injury": false,
+      "fatigue": true,
+      "planned": true
+    },
+    {
+      "date": "2026-09-26",
+      "outcome": "completed",
+      "title": "Langer Lauf",
+      "sport": "Laufen",
+      "minutes": 92,
+      "effort": 5,
+      "pain": false,
+      "illness": false,
+      "injury": false,
+      "fatigue": false,
+      "planned": true
+    },
+    {
+      "date": "2026-09-28",
+      "outcome": "completed",
+      "title": "Kraft A",
+      "sport": "Krafttraining",
+      "minutes": 68,
+      "effort": 7,
+      "pain": false,
+      "illness": false,
+      "injury": false,
+      "fatigue": false,
+      "planned": true
+    },
+    {
+      "date": "2026-09-29",
+      "outcome": "completed",
+      "title": "Bouldern mit den Mädels",
+      "sport": "Klettern",
+      "minutes": 95,
+      "effort": 6,
+      "pain": false,
+      "illness": false,
+      "injury": false,
+      "fatigue": false,
+      "planned": true
+    },
+    {
+      "date": "2026-09-30",
+      "outcome": "partially_completed",
+      "title": "Intervalle 6×800 m",
+      "sport": "Laufen",
+      "minutes": 40,
+      "effort": 8,
+      "pain": true,
+      "illness": false,
+      "injury": false,
+      "fatigue": false,
+      "planned": true
+    },
+    {
+      "date": "2026-10-02",
+      "outcome": "completed",
+      "title": "Kraft B",
+      "sport": "Krafttraining",
+      "minutes": 70,
+      "effort": 8,
+      "pain": false,
+      "illness": false,
+      "injury": false,
+      "fatigue": false,
+      "planned": true
+    },
+    {
+      "date": "2026-10-03",
+      "outcome": "unplanned",
+      "title": "Radtour",
+      "sport": "Radfahren",
+      "minutes": 100,
+      "effort": 4,
+      "pain": false,
+      "illness": false,
+      "injury": false,
+      "fatigue": false,
+      "planned": false
+    },
+    {
+      "date": "2026-10-03",
+      "outcome": "replaced",
+      "title": "Langer Lauf",
+      "sport": "Laufen",
+      "minutes": null,
+      "effort": null,
+      "pain": false,
+      "illness": false,
+      "injury": false,
+      "fatigue": false,
+      "planned": true
+    },
+    {
+      "date": "2026-10-05",
+      "outcome": "completed",
+      "title": "Kraft A",
+      "sport": "Krafttraining",
+      "minutes": 72,
+      "effort": 7,
+      "pain": false,
+      "illness": false,
+      "injury": false,
+      "fatigue": false,
+      "planned": true
+    },
+    {
+      "date": "2026-10-05",
+      "outcome": "unplanned",
+      "title": "Mobility abends",
+      "sport": "Mobility",
+      "minutes": 20,
+      "effort": 2,
+      "pain": false,
+      "illness": false,
+      "injury": false,
+      "fatigue": false,
+      "planned": false
+    },
+    {
+      "date": "2026-10-06",
+      "outcome": "completed",
+      "title": "Bouldern mit den Mädels",
+      "sport": "Klettern",
+      "minutes": 95,
+      "effort": 6,
+      "pain": false,
+      "illness": false,
+      "injury": false,
+      "fatigue": false,
+      "planned": true
+    },
+    {
+      "date": "2026-10-07",
+      "outcome": "completed",
+      "title": "Intervalle 6×800 m",
+      "sport": "Laufen",
+      "minutes": 58,
+      "effort": 8,
+      "pain": false,
+      "illness": false,
+      "injury": false,
+      "fatigue": false,
+      "planned": true
+    },
+    {
+      "date": "2026-10-09",
+      "outcome": "completed",
+      "title": "Kraft B",
+      "sport": "Krafttraining",
+      "minutes": 70,
+      "effort": 8,
+      "pain": false,
+      "illness": false,
+      "injury": false,
+      "fatigue": false,
+      "planned": true
+    },
+    {
+      "date": "2026-10-10",
+      "outcome": "partially_completed",
+      "title": "Langer Lauf",
+      "sport": "Laufen",
+      "minutes": 55,
+      "effort": 5,
+      "pain": true,
+      "illness": false,
+      "injury": false,
+      "fatigue": false,
+      "planned": true
+    },
+    {
+      "date": "2026-10-12",
+      "outcome": "completed",
+      "title": "Kraft A",
+      "sport": "Krafttraining",
+      "minutes": 76,
+      "effort": 7,
+      "pain": false,
+      "illness": false,
+      "injury": false,
+      "fatigue": false,
+      "planned": true
+    },
+    {
+      "date": "2026-10-13",
+      "outcome": "completed",
+      "title": "Bouldern mit den Mädels",
+      "sport": "Klettern",
+      "minutes": 95,
+      "effort": 6,
+      "pain": false,
+      "illness": false,
+      "injury": false,
+      "fatigue": false,
+      "planned": true
+    },
+    {
+      "date": "2026-10-14",
+      "outcome": "completed",
+      "title": "Intervalle 6×800 m",
+      "sport": "Laufen",
+      "minutes": 58,
+      "effort": 8,
+      "pain": false,
+      "illness": false,
+      "injury": false,
+      "fatigue": false,
+      "planned": true
+    },
+    {
+      "date": "2026-10-16",
+      "outcome": "completed",
+      "title": "Kraft B",
+      "sport": "Krafttraining",
+      "minutes": 70,
+      "effort": 8,
+      "pain": false,
+      "illness": false,
+      "injury": false,
+      "fatigue": false,
+      "planned": true
+    },
+    {
+      "date": "2026-10-17",
+      "outcome": "partially_completed",
+      "title": "Langer Lauf",
+      "sport": "Laufen",
+      "minutes": 55,
+      "effort": 5,
+      "pain": true,
+      "illness": false,
+      "injury": false,
+      "fatigue": false,
+      "planned": true
+    },
+    {
+      "date": "2026-10-19",
+      "outcome": "completed",
+      "title": "Kraft A",
+      "sport": "Krafttraining",
+      "minutes": 68,
+      "effort": 7,
+      "pain": false,
+      "illness": false,
+      "injury": false,
+      "fatigue": false,
+      "planned": true
+    },
+    {
+      "date": "2026-10-19",
+      "outcome": "unplanned",
+      "title": "Radfahren zum Badesee",
+      "sport": "Radfahren",
+      "minutes": 75,
+      "effort": 4,
+      "pain": false,
+      "illness": false,
+      "injury": false,
+      "fatigue": false,
+      "planned": false
+    },
+    {
+      "date": "2026-10-20",
+      "outcome": "completed",
+      "title": "Bouldern mit den Mädels",
+      "sport": "Klettern",
+      "minutes": 95,
+      "effort": 6,
+      "pain": false,
+      "illness": false,
+      "injury": false,
+      "fatigue": false,
+      "planned": true
+    }
+  ],
+  "activities": [
+    {
+      "date": "2026-08-12",
+      "name": "Einlaufen",
+      "mode": "time_distance_pace",
+      "measurement": {
+        "duration_seconds": 900
+      }
+    },
+    {
+      "date": "2026-08-12",
+      "name": "Intervalle 800 m",
+      "mode": "time_distance_pace",
+      "measurement": {
+        "distance": 4.8,
+        "pace_unit": "sec/km",
+        "distance_unit": "km",
+        "pace_seconds_per_unit": 296
+      }
+    },
+    {
+      "date": "2026-08-12",
+      "name": "Auslaufen",
+      "mode": "time_distance_pace",
+      "measurement": {
+        "duration_seconds": 600
+      }
+    },
+    {
+      "date": "2026-08-14",
+      "name": "Kreuzheben",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "groups": [
+          {
+            "load": 60,
+            "reps": 5,
+            "sets": 1
+          },
+          {
+            "load": 80,
+            "reps": 4,
+            "sets": 3
+          }
+        ],
+        "load_unit": "kg"
+      }
+    },
+    {
+      "date": "2026-08-14",
+      "name": "Klimmzüge",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "reps": 3,
+        "sets": 4
+      }
+    },
+    {
+      "date": "2026-08-14",
+      "name": "Ausfallschritte",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "load": 10,
+        "reps": 8,
+        "sets": 3,
+        "load_unit": "kg"
+      }
+    },
+    {
+      "date": "2026-08-14",
+      "name": "Latzug",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "load": 40,
+        "reps": 10,
+        "sets": 3,
+        "load_unit": "kg"
+      }
+    },
+    {
+      "date": "2026-08-15",
+      "name": "Dauerlauf locker",
+      "mode": "time_distance_pace",
+      "measurement": {
+        "distance": 12,
+        "pace_unit": "sec/km",
+        "distance_unit": "km",
+        "pace_seconds_per_unit": 335
+      }
+    },
+    {
+      "date": "2026-08-17",
+      "name": "Kniebeuge",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "groups": [
+          {
+            "load": 40,
+            "reps": 5,
+            "sets": 2
+          },
+          {
+            "load": 62.5,
+            "reps": 5,
+            "sets": 4
+          }
+        ],
+        "load_unit": "kg"
+      }
+    },
+    {
+      "date": "2026-08-17",
+      "name": "Bankdrücken",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "load": 40,
+        "reps": 6,
+        "sets": 4,
+        "load_unit": "kg"
+      }
+    },
+    {
+      "date": "2026-08-17",
+      "name": "Rudern am Kabel",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "load": 35,
+        "reps": 10,
+        "sets": 3,
+        "load_unit": "kg"
+      }
+    },
+    {
+      "date": "2026-08-17",
+      "name": "Klimmzüge",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "reps": 3,
+        "sets": 4
+      }
+    },
+    {
+      "date": "2026-08-18",
+      "name": "Bouldern",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "groups": [
+          {
+            "reps": 20,
+            "sets": 1
+          }
+        ]
+      }
+    },
+    {
+      "date": "2026-08-19",
+      "name": "Einlaufen",
+      "mode": "time_distance_pace",
+      "measurement": {
+        "duration_seconds": 900
+      }
+    },
+    {
+      "date": "2026-08-19",
+      "name": "Intervalle 800 m",
+      "mode": "time_distance_pace",
+      "measurement": {
+        "distance": 4.8,
+        "pace_unit": "sec/km",
+        "distance_unit": "km",
+        "pace_seconds_per_unit": 296
+      }
+    },
+    {
+      "date": "2026-08-19",
+      "name": "Auslaufen",
+      "mode": "time_distance_pace",
+      "measurement": {
+        "duration_seconds": 600
+      }
+    },
+    {
+      "date": "2026-08-21",
+      "name": "Kreuzheben",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "groups": [
+          {
+            "load": 60,
+            "reps": 5,
+            "sets": 1
+          },
+          {
+            "load": 81.25,
+            "reps": 4,
+            "sets": 3
+          }
+        ],
+        "load_unit": "kg"
+      }
+    },
+    {
+      "date": "2026-08-21",
+      "name": "Klimmzüge",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "reps": 3,
+        "sets": 4
+      }
+    },
+    {
+      "date": "2026-08-21",
+      "name": "Ausfallschritte",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "load": 10,
+        "reps": 8,
+        "sets": 3,
+        "load_unit": "kg"
+      }
+    },
+    {
+      "date": "2026-08-21",
+      "name": "Latzug",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "load": 40,
+        "reps": 10,
+        "sets": 3,
+        "load_unit": "kg"
+      }
+    },
+    {
+      "date": "2026-08-22",
+      "name": "Dauerlauf locker",
+      "mode": "time_distance_pace",
+      "measurement": {
+        "distance": 12.5,
+        "pace_unit": "sec/km",
+        "distance_unit": "km",
+        "pace_seconds_per_unit": 362
+      }
+    },
+    {
+      "date": "2026-08-24",
+      "name": "Kniebeuge",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "groups": [
+          {
+            "load": 40,
+            "reps": 5,
+            "sets": 2
+          },
+          {
+            "load": 63.75,
+            "reps": 5,
+            "sets": 4
+          }
+        ],
+        "load_unit": "kg"
+      }
+    },
+    {
+      "date": "2026-08-24",
+      "name": "Bankdrücken",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "load": 40.5,
+        "reps": 6,
+        "sets": 4,
+        "load_unit": "kg"
+      }
+    },
+    {
+      "date": "2026-08-24",
+      "name": "Rudern am Kabel",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "load": 35,
+        "reps": 10,
+        "sets": 3,
+        "load_unit": "kg"
+      }
+    },
+    {
+      "date": "2026-08-24",
+      "name": "Klimmzüge",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "reps": 3,
+        "sets": 4
+      }
+    },
+    {
+      "date": "2026-08-24",
+      "name": "Yoga",
+      "mode": "duration_intensity",
+      "measurement": {
+        "intensity": "easy",
+        "duration_minutes": 60
+      }
+    },
+    {
+      "date": "2026-08-25",
+      "name": "Bouldern",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "groups": [
+          {
+            "reps": 21,
+            "sets": 1
+          }
+        ]
+      }
+    },
+    {
+      "date": "2026-08-26",
+      "name": "Einlaufen",
+      "mode": "time_distance_pace",
+      "measurement": {
+        "duration_seconds": 900
+      }
+    },
+    {
+      "date": "2026-08-26",
+      "name": "Intervalle 800 m",
+      "mode": "time_distance_pace",
+      "measurement": {
+        "distance": 4.8,
+        "pace_unit": "sec/km",
+        "distance_unit": "km",
+        "pace_seconds_per_unit": 296
+      }
+    },
+    {
+      "date": "2026-08-26",
+      "name": "Auslaufen",
+      "mode": "time_distance_pace",
+      "measurement": {
+        "duration_seconds": 600
+      }
+    },
+    {
+      "date": "2026-08-29",
+      "name": "Dauerlauf locker",
+      "mode": "time_distance_pace",
+      "measurement": {
+        "distance": 13,
+        "pace_unit": "sec/km",
+        "distance_unit": "km",
+        "pace_seconds_per_unit": 362
+      }
+    },
+    {
+      "date": "2026-08-31",
+      "name": "Kniebeuge",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "groups": [
+          {
+            "load": 40,
+            "reps": 5,
+            "sets": 2
+          },
+          {
+            "load": 65,
+            "reps": 5,
+            "sets": 4
+          }
+        ],
+        "load_unit": "kg"
+      }
+    },
+    {
+      "date": "2026-08-31",
+      "name": "Bankdrücken",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "load": 41,
+        "reps": 6,
+        "sets": 4,
+        "load_unit": "kg"
+      }
+    },
+    {
+      "date": "2026-08-31",
+      "name": "Rudern am Kabel",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "load": 35,
+        "reps": 10,
+        "sets": 3,
+        "load_unit": "kg"
+      }
+    },
+    {
+      "date": "2026-08-31",
+      "name": "Klimmzüge",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "reps": 3,
+        "sets": 4
+      }
+    },
+    {
+      "date": "2026-09-01",
+      "name": "Bouldern",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "groups": [
+          {
+            "reps": 22,
+            "sets": 1
+          }
+        ]
+      }
+    },
+    {
+      "date": "2026-09-02",
+      "name": "Einlaufen",
+      "mode": "time_distance_pace",
+      "measurement": {
+        "duration_seconds": 900
+      }
+    },
+    {
+      "date": "2026-09-02",
+      "name": "Intervalle 800 m",
+      "mode": "time_distance_pace",
+      "measurement": {
+        "distance": 4.8,
+        "pace_unit": "sec/km",
+        "distance_unit": "km",
+        "pace_seconds_per_unit": 296
+      }
+    },
+    {
+      "date": "2026-09-02",
+      "name": "Auslaufen",
+      "mode": "time_distance_pace",
+      "measurement": {
+        "duration_seconds": 600
+      }
+    },
+    {
+      "date": "2026-09-04",
+      "name": "Kreuzheben",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "groups": [
+          {
+            "load": 60,
+            "reps": 5,
+            "sets": 1
+          },
+          {
+            "load": 83.75,
+            "reps": 4,
+            "sets": 3
+          }
+        ],
+        "load_unit": "kg"
+      }
+    },
+    {
+      "date": "2026-09-04",
+      "name": "Klimmzüge",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "reps": 3,
+        "sets": 4
+      }
+    },
+    {
+      "date": "2026-09-04",
+      "name": "Ausfallschritte",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "load": 10,
+        "reps": 8,
+        "sets": 3,
+        "load_unit": "kg"
+      }
+    },
+    {
+      "date": "2026-09-04",
+      "name": "Latzug",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "load": 40,
+        "reps": 10,
+        "sets": 3,
+        "load_unit": "kg"
+      }
+    },
+    {
+      "date": "2026-09-05",
+      "name": "Dauerlauf locker",
+      "mode": "time_distance_pace",
+      "measurement": {
+        "distance": 13.5,
+        "pace_unit": "sec/km",
+        "distance_unit": "km",
+        "pace_seconds_per_unit": 335
+      }
+    },
+    {
+      "date": "2026-09-07",
+      "name": "Kniebeuge",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "groups": [
+          {
+            "load": 40,
+            "reps": 5,
+            "sets": 2
+          },
+          {
+            "load": 66.25,
+            "reps": 5,
+            "sets": 4
+          }
+        ],
+        "load_unit": "kg"
+      }
+    },
+    {
+      "date": "2026-09-07",
+      "name": "Bankdrücken",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "load": 41.5,
+        "reps": 6,
+        "sets": 4,
+        "load_unit": "kg"
+      }
+    },
+    {
+      "date": "2026-09-07",
+      "name": "Rudern am Kabel",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "load": 35,
+        "reps": 10,
+        "sets": 3,
+        "load_unit": "kg"
+      }
+    },
+    {
+      "date": "2026-09-07",
+      "name": "Klimmzüge",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "reps": 3,
+        "sets": 4
+      }
+    },
+    {
+      "date": "2026-09-08",
+      "name": "Bouldern",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "groups": [
+          {
+            "reps": 23,
+            "sets": 1
+          }
+        ]
+      }
+    },
+    {
+      "date": "2026-09-16",
+      "name": "Intervalle 800 m",
+      "mode": "time_distance_pace",
+      "measurement": {
+        "distance": 4.8,
+        "pace_unit": "sec/km",
+        "distance_unit": "km",
+        "pace_seconds_per_unit": 288
+      }
+    },
+    {
+      "date": "2026-09-16",
+      "name": "Einlaufen",
+      "mode": "time_distance_pace",
+      "measurement": {
+        "duration_seconds": 900
+      }
+    },
+    {
+      "date": "2026-09-16",
+      "name": "Auslaufen",
+      "mode": "time_distance_pace",
+      "measurement": {
+        "duration_seconds": 600
+      }
+    },
+    {
+      "date": "2026-09-18",
+      "name": "Ausfallschritte",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "load": 10,
+        "reps": 8,
+        "sets": 3,
+        "load_unit": "kg"
+      }
+    },
+    {
+      "date": "2026-09-18",
+      "name": "Kreuzheben",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "groups": [
+          {
+            "load": 60,
+            "reps": 5,
+            "sets": 1
+          },
+          {
+            "load": 86.25,
+            "reps": 4,
+            "sets": 3
+          }
+        ],
+        "load_unit": "kg"
+      }
+    },
+    {
+      "date": "2026-09-18",
+      "name": "Klimmzüge",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "reps": 4,
+        "sets": 4
+      }
+    },
+    {
+      "date": "2026-09-18",
+      "name": "Latzug",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "load": 40,
+        "reps": 10,
+        "sets": 3,
+        "load_unit": "kg"
+      }
+    },
+    {
+      "date": "2026-09-19",
+      "name": "Dauerlauf locker",
+      "mode": "time_distance_pace",
+      "measurement": {
+        "distance": 14.5,
+        "pace_unit": "sec/km",
+        "distance_unit": "km",
+        "pace_seconds_per_unit": 362
+      }
+    },
+    {
+      "date": "2026-09-21",
+      "name": "Kniebeuge",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "groups": [
+          {
+            "load": 40,
+            "reps": 5,
+            "sets": 2
+          },
+          {
+            "load": 68.75,
+            "reps": 5,
+            "sets": 4
+          }
+        ],
+        "load_unit": "kg"
+      }
+    },
+    {
+      "date": "2026-09-21",
+      "name": "Bankdrücken",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "load": 42.5,
+        "reps": 6,
+        "sets": 4,
+        "load_unit": "kg"
+      }
+    },
+    {
+      "date": "2026-09-21",
+      "name": "Rudern am Kabel",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "load": 35,
+        "reps": 10,
+        "sets": 3,
+        "load_unit": "kg"
+      }
+    },
+    {
+      "date": "2026-09-21",
+      "name": "Klimmzüge",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "reps": 4,
+        "sets": 4
+      }
+    },
+    {
+      "date": "2026-09-22",
+      "name": "Bouldern",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "groups": [
+          {
+            "reps": 25,
+            "sets": 1
+          }
+        ]
+      }
+    },
+    {
+      "date": "2026-09-23",
+      "name": "Auslaufen",
+      "mode": "time_distance_pace",
+      "measurement": {
+        "duration_seconds": 600
+      }
+    },
+    {
+      "date": "2026-09-23",
+      "name": "Einlaufen",
+      "mode": "time_distance_pace",
+      "measurement": {
+        "duration_seconds": 900
+      }
+    },
+    {
+      "date": "2026-09-23",
+      "name": "Intervalle 800 m",
+      "mode": "time_distance_pace",
+      "measurement": {
+        "distance": 4.8,
+        "pace_unit": "sec/km",
+        "distance_unit": "km",
+        "pace_seconds_per_unit": 288
+      }
+    },
+    {
+      "date": "2026-09-26",
+      "name": "Dauerlauf locker",
+      "mode": "time_distance_pace",
+      "measurement": {
+        "distance": 15,
+        "pace_unit": "sec/km",
+        "distance_unit": "km",
+        "pace_seconds_per_unit": 335
+      }
+    },
+    {
+      "date": "2026-09-28",
+      "name": "Klimmzüge",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "reps": 4,
+        "sets": 4
+      }
+    },
+    {
+      "date": "2026-09-28",
+      "name": "Kniebeuge",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "groups": [
+          {
+            "load": 40,
+            "reps": 5,
+            "sets": 2
+          },
+          {
+            "load": 70,
+            "reps": 5,
+            "sets": 4
+          }
+        ],
+        "load_unit": "kg"
+      }
+    },
+    {
+      "date": "2026-09-28",
+      "name": "Bankdrücken",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "load": 43,
+        "reps": 6,
+        "sets": 4,
+        "load_unit": "kg"
+      }
+    },
+    {
+      "date": "2026-09-28",
+      "name": "Rudern am Kabel",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "load": 35,
+        "reps": 10,
+        "sets": 3,
+        "load_unit": "kg"
+      }
+    },
+    {
+      "date": "2026-09-29",
+      "name": "Bouldern",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "groups": [
+          {
+            "reps": 26,
+            "sets": 1
+          }
+        ]
+      }
+    },
+    {
+      "date": "2026-09-30",
+      "name": "Einlaufen",
+      "mode": "time_distance_pace",
+      "measurement": {
+        "duration_seconds": 900
+      }
+    },
+    {
+      "date": "2026-09-30",
+      "name": "Intervalle 800 m",
+      "mode": "time_distance_pace",
+      "measurement": {
+        "distance": 3.2,
+        "pace_unit": "sec/km",
+        "distance_unit": "km",
+        "pace_seconds_per_unit": 292
+      }
+    },
+    {
+      "date": "2026-10-02",
+      "name": "Ausfallschritte",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "load": 10,
+        "reps": 8,
+        "sets": 3,
+        "load_unit": "kg"
+      }
+    },
+    {
+      "date": "2026-10-02",
+      "name": "Kreuzheben",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "groups": [
+          {
+            "load": 60,
+            "reps": 5,
+            "sets": 1
+          },
+          {
+            "load": 88.75,
+            "reps": 4,
+            "sets": 3
+          }
+        ],
+        "load_unit": "kg"
+      }
+    },
+    {
+      "date": "2026-10-02",
+      "name": "Klimmzüge",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "reps": 4,
+        "sets": 4
+      }
+    },
+    {
+      "date": "2026-10-02",
+      "name": "Latzug",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "load": 40,
+        "reps": 10,
+        "sets": 3,
+        "load_unit": "kg"
+      }
+    },
+    {
+      "date": "2026-10-03",
+      "name": "Radfahren locker",
+      "mode": "time_distance_pace",
+      "measurement": {
+        "distance": 38,
+        "distance_unit": "km",
+        "duration_seconds": 6000
+      }
+    },
+    {
+      "date": "2026-10-05",
+      "name": "Kniebeuge",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "groups": [
+          {
+            "load": 40,
+            "reps": 5,
+            "sets": 2
+          },
+          {
+            "load": 71.25,
+            "reps": 5,
+            "sets": 4
+          }
+        ],
+        "load_unit": "kg"
+      }
+    },
+    {
+      "date": "2026-10-05",
+      "name": "Bankdrücken",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "load": 43.5,
+        "reps": 6,
+        "sets": 4,
+        "load_unit": "kg"
+      }
+    },
+    {
+      "date": "2026-10-05",
+      "name": "Rudern am Kabel",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "load": 35,
+        "reps": 10,
+        "sets": 3,
+        "load_unit": "kg"
+      }
+    },
+    {
+      "date": "2026-10-05",
+      "name": "Klimmzüge",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "reps": 4,
+        "sets": 4
+      }
+    },
+    {
+      "date": "2026-10-05",
+      "name": "Mobility-Flow",
+      "mode": "duration_intensity",
+      "measurement": {
+        "intensity": "easy",
+        "duration_minutes": 20
+      }
+    },
+    {
+      "date": "2026-10-06",
+      "name": "Bouldern",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "groups": [
+          {
+            "reps": 27,
+            "sets": 1
+          }
+        ]
+      }
+    },
+    {
+      "date": "2026-10-07",
+      "name": "Einlaufen",
+      "mode": "time_distance_pace",
+      "measurement": {
+        "duration_seconds": 900
+      }
+    },
+    {
+      "date": "2026-10-07",
+      "name": "Intervalle 800 m",
+      "mode": "time_distance_pace",
+      "measurement": {
+        "distance": 4.8,
+        "pace_unit": "sec/km",
+        "distance_unit": "km",
+        "pace_seconds_per_unit": 288
+      }
+    },
+    {
+      "date": "2026-10-07",
+      "name": "Auslaufen",
+      "mode": "time_distance_pace",
+      "measurement": {
+        "duration_seconds": 600
+      }
+    },
+    {
+      "date": "2026-10-09",
+      "name": "Kreuzheben",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "groups": [
+          {
+            "load": 60,
+            "reps": 5,
+            "sets": 1
+          },
+          {
+            "load": 90,
+            "reps": 4,
+            "sets": 3
+          }
+        ],
+        "load_unit": "kg"
+      }
+    },
+    {
+      "date": "2026-10-09",
+      "name": "Klimmzüge",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "reps": 4,
+        "sets": 4
+      }
+    },
+    {
+      "date": "2026-10-09",
+      "name": "Ausfallschritte",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "load": 10,
+        "reps": 8,
+        "sets": 3,
+        "load_unit": "kg"
+      }
+    },
+    {
+      "date": "2026-10-09",
+      "name": "Latzug",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "load": 40,
+        "reps": 10,
+        "sets": 3,
+        "load_unit": "kg"
+      }
+    },
+    {
+      "date": "2026-10-10",
+      "name": "Dauerlauf locker",
+      "mode": "time_distance_pace",
+      "measurement": {
+        "distance": 9,
+        "pace_unit": "sec/km",
+        "distance_unit": "km",
+        "pace_seconds_per_unit": 368
+      }
+    },
+    {
+      "date": "2026-10-12",
+      "name": "Kniebeuge",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "groups": [
+          {
+            "load": 40,
+            "reps": 5,
+            "sets": 2
+          },
+          {
+            "load": 72.5,
+            "reps": 5,
+            "sets": 4
+          }
+        ],
+        "load_unit": "kg"
+      }
+    },
+    {
+      "date": "2026-10-12",
+      "name": "Bankdrücken",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "load": 44,
+        "reps": 6,
+        "sets": 4,
+        "load_unit": "kg"
+      }
+    },
+    {
+      "date": "2026-10-12",
+      "name": "Rudern am Kabel",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "load": 35,
+        "reps": 10,
+        "sets": 3,
+        "load_unit": "kg"
+      }
+    },
+    {
+      "date": "2026-10-12",
+      "name": "Klimmzüge",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "reps": 4,
+        "sets": 4
+      }
+    },
+    {
+      "date": "2026-10-13",
+      "name": "Bouldern",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "groups": [
+          {
+            "reps": 28,
+            "sets": 1
+          }
+        ]
+      }
+    },
+    {
+      "date": "2026-10-14",
+      "name": "Einlaufen",
+      "mode": "time_distance_pace",
+      "measurement": {
+        "duration_seconds": 900
+      }
+    },
+    {
+      "date": "2026-10-14",
+      "name": "Intervalle 800 m",
+      "mode": "time_distance_pace",
+      "measurement": {
+        "distance": 4.8,
+        "pace_unit": "sec/km",
+        "distance_unit": "km",
+        "pace_seconds_per_unit": 288
+      }
+    },
+    {
+      "date": "2026-10-14",
+      "name": "Auslaufen",
+      "mode": "time_distance_pace",
+      "measurement": {
+        "duration_seconds": 600
+      }
+    },
+    {
+      "date": "2026-10-16",
+      "name": "Kreuzheben",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "groups": [
+          {
+            "load": 60,
+            "reps": 5,
+            "sets": 1
+          },
+          {
+            "load": 91.25,
+            "reps": 4,
+            "sets": 3
+          }
+        ],
+        "load_unit": "kg"
+      }
+    },
+    {
+      "date": "2026-10-16",
+      "name": "Klimmzüge",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "reps": 4,
+        "sets": 4
+      }
+    },
+    {
+      "date": "2026-10-16",
+      "name": "Ausfallschritte",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "load": 10,
+        "reps": 8,
+        "sets": 3,
+        "load_unit": "kg"
+      }
+    },
+    {
+      "date": "2026-10-16",
+      "name": "Latzug",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "load": 40,
+        "reps": 10,
+        "sets": 3,
+        "load_unit": "kg"
+      }
+    },
+    {
+      "date": "2026-10-17",
+      "name": "Dauerlauf locker",
+      "mode": "time_distance_pace",
+      "measurement": {
+        "distance": 9,
+        "pace_unit": "sec/km",
+        "distance_unit": "km",
+        "pace_seconds_per_unit": 368
+      }
+    },
+    {
+      "date": "2026-10-19",
+      "name": "Kniebeuge",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "groups": [
+          {
+            "load": 40,
+            "reps": 5,
+            "sets": 2
+          },
+          {
+            "load": 73.75,
+            "reps": 5,
+            "sets": 4
+          }
+        ],
+        "load_unit": "kg"
+      }
+    },
+    {
+      "date": "2026-10-19",
+      "name": "Bankdrücken",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "load": 44.5,
+        "reps": 6,
+        "sets": 4,
+        "load_unit": "kg"
+      }
+    },
+    {
+      "date": "2026-10-19",
+      "name": "Rudern am Kabel",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "load": 35,
+        "reps": 10,
+        "sets": 3,
+        "load_unit": "kg"
+      }
+    },
+    {
+      "date": "2026-10-19",
+      "name": "Klimmzüge",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "reps": 4,
+        "sets": 4
+      }
+    },
+    {
+      "date": "2026-10-19",
+      "name": "Radfahren",
+      "mode": "time_distance_pace",
+      "measurement": {
+        "distance": 27,
+        "distance_unit": "km",
+        "duration_seconds": 4500
+      }
+    },
+    {
+      "date": "2026-10-20",
+      "name": "Bouldern",
+      "mode": "sets_reps_load",
+      "measurement": {
+        "groups": [
+          {
+            "reps": 29,
+            "sets": 1
+          }
+        ]
+      }
+    }
+  ],
+  "sessions": [
+    {
+      "date": "2026-08-12",
+      "title": "Intervalle 6×800 m",
+      "sport": "Laufen",
+      "minutes": 60,
+      "outcome": "completed"
+    },
+    {
+      "date": "2026-08-14",
+      "title": "Kraft B",
+      "sport": "Krafttraining",
+      "minutes": 70,
+      "outcome": "completed"
+    },
+    {
+      "date": "2026-08-15",
+      "title": "Langer Lauf",
+      "sport": "Laufen",
+      "minutes": 85,
+      "outcome": "completed"
+    },
+    {
+      "date": "2026-08-17",
+      "title": "Kraft A",
+      "sport": "Krafttraining",
+      "minutes": 70,
+      "outcome": "completed"
+    },
+    {
+      "date": "2026-08-18",
+      "title": "Bouldern mit den Mädels",
+      "sport": "Klettern",
+      "minutes": 90,
+      "outcome": "completed"
+    },
+    {
+      "date": "2026-08-19",
+      "title": "Intervalle 6×800 m",
+      "sport": "Laufen",
+      "minutes": 60,
+      "outcome": "completed"
+    },
+    {
+      "date": "2026-08-21",
+      "title": "Kraft B",
+      "sport": "Krafttraining",
+      "minutes": 70,
+      "outcome": "completed"
+    },
+    {
+      "date": "2026-08-22",
+      "title": "Langer Lauf",
+      "sport": "Laufen",
+      "minutes": 85,
+      "outcome": "completed"
+    },
+    {
+      "date": "2026-08-24",
+      "title": "Kraft A",
+      "sport": "Krafttraining",
+      "minutes": 70,
+      "outcome": "completed"
+    },
+    {
+      "date": "2026-08-25",
+      "title": "Bouldern mit den Mädels",
+      "sport": "Klettern",
+      "minutes": 90,
+      "outcome": "completed"
+    },
+    {
+      "date": "2026-08-26",
+      "title": "Intervalle 6×800 m",
+      "sport": "Laufen",
+      "minutes": 60,
+      "outcome": "completed"
+    },
+    {
+      "date": "2026-08-28",
+      "title": "Kraft B",
+      "sport": "Krafttraining",
+      "minutes": 70,
+      "outcome": "skipped"
+    },
+    {
+      "date": "2026-08-29",
+      "title": "Langer Lauf",
+      "sport": "Laufen",
+      "minutes": 85,
+      "outcome": "completed"
+    },
+    {
+      "date": "2026-08-31",
+      "title": "Kraft A",
+      "sport": "Krafttraining",
+      "minutes": 70,
+      "outcome": "completed"
+    },
+    {
+      "date": "2026-09-01",
+      "title": "Bouldern mit den Mädels",
+      "sport": "Klettern",
+      "minutes": 90,
+      "outcome": "completed"
+    },
+    {
+      "date": "2026-09-02",
+      "title": "Intervalle 6×800 m",
+      "sport": "Laufen",
+      "minutes": 60,
+      "outcome": "completed"
+    },
+    {
+      "date": "2026-09-04",
+      "title": "Kraft B",
+      "sport": "Krafttraining",
+      "minutes": 70,
+      "outcome": "completed"
+    },
+    {
+      "date": "2026-09-05",
+      "title": "Langer Lauf",
+      "sport": "Laufen",
+      "minutes": 85,
+      "outcome": "completed"
+    },
+    {
+      "date": "2026-09-07",
+      "title": "Kraft A",
+      "sport": "Krafttraining",
+      "minutes": 70,
+      "outcome": "completed"
+    },
+    {
+      "date": "2026-09-08",
+      "title": "Bouldern mit den Mädels",
+      "sport": "Klettern",
+      "minutes": 90,
+      "outcome": "completed"
+    },
+    {
+      "date": "2026-09-09",
+      "title": "Intervalle 6×800 m",
+      "sport": "Laufen",
+      "minutes": 60,
+      "outcome": "skipped"
+    },
+    {
+      "date": "2026-09-11",
+      "title": "Kraft B",
+      "sport": "Krafttraining",
+      "minutes": 70,
+      "outcome": "skipped"
+    },
+    {
+      "date": "2026-09-12",
+      "title": "Langer Lauf",
+      "sport": "Laufen",
+      "minutes": 85,
+      "outcome": "skipped"
+    },
+    {
+      "date": "2026-09-14",
+      "title": "Kraft A",
+      "sport": "Krafttraining",
+      "minutes": 70,
+      "outcome": "skipped"
+    },
+    {
+      "date": "2026-09-15",
+      "title": "Bouldern mit den Mädels",
+      "sport": "Klettern",
+      "minutes": 90,
+      "outcome": "skipped"
+    },
+    {
+      "date": "2026-09-16",
+      "title": "Intervalle 6×800 m",
+      "sport": "Laufen",
+      "minutes": 60,
+      "outcome": "completed"
+    },
+    {
+      "date": "2026-09-18",
+      "title": "Kraft B",
+      "sport": "Krafttraining",
+      "minutes": 70,
+      "outcome": "completed"
+    },
+    {
+      "date": "2026-09-19",
+      "title": "Langer Lauf",
+      "sport": "Laufen",
+      "minutes": 85,
+      "outcome": "completed"
+    },
+    {
+      "date": "2026-09-21",
+      "title": "Kraft A",
+      "sport": "Krafttraining",
+      "minutes": 70,
+      "outcome": "completed"
+    },
+    {
+      "date": "2026-09-22",
+      "title": "Bouldern mit den Mädels",
+      "sport": "Klettern",
+      "minutes": 90,
+      "outcome": "completed"
+    },
+    {
+      "date": "2026-09-23",
+      "title": "Intervalle 6×800 m",
+      "sport": "Laufen",
+      "minutes": 60,
+      "outcome": "completed"
+    },
+    {
+      "date": "2026-09-25",
+      "title": "Kraft B",
+      "sport": "Krafttraining",
+      "minutes": 70,
+      "outcome": "skipped"
+    },
+    {
+      "date": "2026-09-26",
+      "title": "Langer Lauf",
+      "sport": "Laufen",
+      "minutes": 85,
+      "outcome": "completed"
+    },
+    {
+      "date": "2026-09-28",
+      "title": "Kraft A",
+      "sport": "Krafttraining",
+      "minutes": 70,
+      "outcome": "completed"
+    },
+    {
+      "date": "2026-09-29",
+      "title": "Bouldern mit den Mädels",
+      "sport": "Klettern",
+      "minutes": 90,
+      "outcome": "completed"
+    },
+    {
+      "date": "2026-09-30",
+      "title": "Intervalle 6×800 m",
+      "sport": "Laufen",
+      "minutes": 60,
+      "outcome": "partially_completed"
+    },
+    {
+      "date": "2026-10-02",
+      "title": "Kraft B",
+      "sport": "Krafttraining",
+      "minutes": 70,
+      "outcome": "completed"
+    },
+    {
+      "date": "2026-10-03",
+      "title": "Langer Lauf",
+      "sport": "Laufen",
+      "minutes": 85,
+      "outcome": "replaced"
+    },
+    {
+      "date": "2026-10-05",
+      "title": "Kraft A",
+      "sport": "Krafttraining",
+      "minutes": 70,
+      "outcome": "completed"
+    },
+    {
+      "date": "2026-10-06",
+      "title": "Bouldern mit den Mädels",
+      "sport": "Klettern",
+      "minutes": 90,
+      "outcome": "completed"
+    },
+    {
+      "date": "2026-10-07",
+      "title": "Intervalle 6×800 m",
+      "sport": "Laufen",
+      "minutes": 60,
+      "outcome": "completed"
+    },
+    {
+      "date": "2026-10-09",
+      "title": "Kraft B",
+      "sport": "Krafttraining",
+      "minutes": 70,
+      "outcome": "completed"
+    },
+    {
+      "date": "2026-10-10",
+      "title": "Langer Lauf",
+      "sport": "Laufen",
+      "minutes": 85,
+      "outcome": "partially_completed"
+    },
+    {
+      "date": "2026-10-12",
+      "title": "Kraft A",
+      "sport": "Krafttraining",
+      "minutes": 70,
+      "outcome": "completed"
+    },
+    {
+      "date": "2026-10-13",
+      "title": "Bouldern mit den Mädels",
+      "sport": "Klettern",
+      "minutes": 90,
+      "outcome": "completed"
+    },
+    {
+      "date": "2026-10-14",
+      "title": "Intervalle 6×800 m",
+      "sport": "Laufen",
+      "minutes": 60,
+      "outcome": "completed"
+    },
+    {
+      "date": "2026-10-16",
+      "title": "Kraft B",
+      "sport": "Krafttraining",
+      "minutes": 70,
+      "outcome": "completed"
+    },
+    {
+      "date": "2026-10-17",
+      "title": "Langer Lauf",
+      "sport": "Laufen",
+      "minutes": 85,
+      "outcome": "partially_completed"
+    },
+    {
+      "date": "2026-10-19",
+      "title": "Kraft A",
+      "sport": "Krafttraining",
+      "minutes": 70,
+      "outcome": "completed"
+    },
+    {
+      "date": "2026-10-20",
+      "title": "Bouldern mit den Mädels",
+      "sport": "Klettern",
+      "minutes": 90,
+      "outcome": "completed"
+    },
+    {
+      "date": "2026-10-21",
+      "title": "Intervalle 6×800 m",
+      "sport": "Laufen",
+      "minutes": 60,
+      "outcome": null
+    },
+    {
+      "date": "2026-10-23",
+      "title": "Kraft B",
+      "sport": "Krafttraining",
+      "minutes": 70,
+      "outcome": null
+    },
+    {
+      "date": "2026-10-24",
+      "title": "Langer Lauf",
+      "sport": "Laufen",
+      "minutes": 85,
+      "outcome": null
+    },
+    {
+      "date": "2026-10-26",
+      "title": "Kraft A",
+      "sport": "Krafttraining",
+      "minutes": 70,
+      "outcome": null
+    },
+    {
+      "date": "2026-10-27",
+      "title": "Bouldern mit den Mädels",
+      "sport": "Klettern",
+      "minutes": 90,
+      "outcome": null
+    },
+    {
+      "date": "2026-10-28",
+      "title": "Intervalle 6×800 m",
+      "sport": "Laufen",
+      "minutes": 60,
+      "outcome": null
+    },
+    {
+      "date": "2026-10-30",
+      "title": "Kraft B",
+      "sport": "Krafttraining",
+      "minutes": 70,
+      "outcome": null
+    },
+    {
+      "date": "2026-10-31",
+      "title": "Langer Lauf",
+      "sport": "Laufen",
+      "minutes": 85,
+      "outcome": null
+    },
+    {
+      "date": "2026-11-02",
+      "title": "Kraft A",
+      "sport": "Krafttraining",
+      "minutes": 70,
+      "outcome": null
+    },
+    {
+      "date": "2026-11-03",
+      "title": "Bouldern mit den Mädels",
+      "sport": "Klettern",
+      "minutes": 90,
+      "outcome": null
+    },
+    {
+      "date": "2026-11-04",
+      "title": "Intervalle 6×800 m",
+      "sport": "Laufen",
+      "minutes": 60,
+      "outcome": null
+    },
+    {
+      "date": "2026-11-06",
+      "title": "Kraft B",
+      "sport": "Krafttraining",
+      "minutes": 70,
+      "outcome": null
+    },
+    {
+      "date": "2026-11-07",
+      "title": "Langer Lauf",
+      "sport": "Laufen",
+      "minutes": 85,
+      "outcome": null
+    },
+    {
+      "date": "2026-11-09",
+      "title": "Kraft A",
+      "sport": "Krafttraining",
+      "minutes": 70,
+      "outcome": null
+    },
+    {
+      "date": "2026-11-10",
+      "title": "Bouldern mit den Mädels",
+      "sport": "Klettern",
+      "minutes": 90,
+      "outcome": null
+    },
+    {
+      "date": "2026-11-11",
+      "title": "Intervalle 6×800 m",
+      "sport": "Laufen",
+      "minutes": 60,
+      "outcome": null
+    },
+    {
+      "date": "2026-11-13",
+      "title": "Kraft B",
+      "sport": "Krafttraining",
+      "minutes": 70,
+      "outcome": null
+    },
+    {
+      "date": "2026-11-14",
+      "title": "Langer Lauf",
+      "sport": "Laufen",
+      "minutes": 85,
+      "outcome": null
+    },
+    {
+      "date": "2026-11-16",
+      "title": "Kraft A",
+      "sport": "Krafttraining",
+      "minutes": 70,
+      "outcome": null
+    },
+    {
+      "date": "2026-11-17",
+      "title": "Bouldern mit den Mädels",
+      "sport": "Klettern",
+      "minutes": 90,
+      "outcome": null
+    },
+    {
+      "date": "2026-11-18",
+      "title": "Intervalle 6×800 m",
+      "sport": "Laufen",
+      "minutes": 60,
+      "outcome": null
+    },
+    {
+      "date": "2026-11-20",
+      "title": "Kraft B",
+      "sport": "Krafttraining",
+      "minutes": 70,
+      "outcome": null
+    },
+    {
+      "date": "2026-11-21",
+      "title": "Langer Lauf",
+      "sport": "Laufen",
+      "minutes": 85,
+      "outcome": null
+    },
+    {
+      "date": "2026-11-23",
+      "title": "Kraft A",
+      "sport": "Krafttraining",
+      "minutes": 70,
+      "outcome": null
+    },
+    {
+      "date": "2026-11-24",
+      "title": "Bouldern mit den Mädels",
+      "sport": "Klettern",
+      "minutes": 90,
+      "outcome": null
+    },
+    {
+      "date": "2026-11-25",
+      "title": "Intervalle 6×800 m",
+      "sport": "Laufen",
+      "minutes": 60,
+      "outcome": null
+    },
+    {
+      "date": "2026-11-26",
+      "title": "Testlauf 10 km",
+      "sport": "Laufen",
+      "minutes": 60,
+      "outcome": null
+    },
+    {
+      "date": "2026-11-27",
+      "title": "Kraft B",
+      "sport": "Krafttraining",
+      "minutes": 70,
+      "outcome": null
+    },
+    {
+      "date": "2026-11-28",
+      "title": "Langer Lauf",
+      "sport": "Laufen",
+      "minutes": 85,
+      "outcome": null
+    },
+    {
+      "date": "2026-11-30",
+      "title": "Kraft A",
+      "sport": "Krafttraining",
+      "minutes": 70,
+      "outcome": null
+    },
+    {
+      "date": "2026-12-01",
+      "title": "Bouldern mit den Mädels",
+      "sport": "Klettern",
+      "minutes": 90,
+      "outcome": null
+    },
+    {
+      "date": "2026-12-02",
+      "title": "Intervalle 6×800 m",
+      "sport": "Laufen",
+      "minutes": 60,
+      "outcome": null
+    },
+    {
+      "date": "2026-12-04",
+      "title": "Kraft B",
+      "sport": "Krafttraining",
+      "minutes": 70,
+      "outcome": null
+    },
+    {
+      "date": "2026-12-05",
+      "title": "Langer Lauf",
+      "sport": "Laufen",
+      "minutes": 85,
+      "outcome": null
+    },
+    {
+      "date": "2026-12-07",
+      "title": "Kraft A",
+      "sport": "Krafttraining",
+      "minutes": 70,
+      "outcome": null
+    },
+    {
+      "date": "2026-12-08",
+      "title": "Bouldern mit den Mädels",
+      "sport": "Klettern",
+      "minutes": 90,
+      "outcome": null
+    },
+    {
+      "date": "2026-12-09",
+      "title": "Intervalle 6×800 m",
+      "sport": "Laufen",
+      "minutes": 60,
+      "outcome": null
+    },
+    {
+      "date": "2026-12-11",
+      "title": "Kraft B",
+      "sport": "Krafttraining",
+      "minutes": 70,
+      "outcome": null
+    },
+    {
+      "date": "2026-12-12",
+      "title": "Langer Lauf",
+      "sport": "Laufen",
+      "minutes": 85,
+      "outcome": null
+    },
+    {
+      "date": "2026-12-14",
+      "title": "Kraft A",
+      "sport": "Krafttraining",
+      "minutes": 70,
+      "outcome": null
+    },
+    {
+      "date": "2026-12-15",
+      "title": "Bouldern mit den Mädels",
+      "sport": "Klettern",
+      "minutes": 90,
+      "outcome": null
+    },
+    {
+      "date": "2026-12-16",
+      "title": "Intervalle 6×800 m",
+      "sport": "Laufen",
+      "minutes": 60,
+      "outcome": null
+    },
+    {
+      "date": "2026-12-18",
+      "title": "Kraft B",
+      "sport": "Krafttraining",
+      "minutes": 70,
+      "outcome": null
+    },
+    {
+      "date": "2026-12-19",
+      "title": "Langer Lauf",
+      "sport": "Laufen",
+      "minutes": 85,
+      "outcome": null
+    },
+    {
+      "date": "2026-12-21",
+      "title": "Kraft A",
+      "sport": "Krafttraining",
+      "minutes": 70,
+      "outcome": null
+    },
+    {
+      "date": "2026-12-22",
+      "title": "Bouldern mit den Mädels",
+      "sport": "Klettern",
+      "minutes": 90,
+      "outcome": null
+    },
+    {
+      "date": "2026-12-23",
+      "title": "Intervalle 6×800 m",
+      "sport": "Laufen",
+      "minutes": 60,
+      "outcome": null
+    },
+    {
+      "date": "2026-12-25",
+      "title": "Kraft B",
+      "sport": "Krafttraining",
+      "minutes": 70,
+      "outcome": null
+    },
+    {
+      "date": "2026-12-26",
+      "title": "Langer Lauf",
+      "sport": "Laufen",
+      "minutes": 85,
+      "outcome": null
+    },
+    {
+      "date": "2026-12-28",
+      "title": "Kraft A",
+      "sport": "Krafttraining",
+      "minutes": 70,
+      "outcome": null
+    },
+    {
+      "date": "2026-12-29",
+      "title": "Bouldern mit den Mädels",
+      "sport": "Klettern",
+      "minutes": 90,
+      "outcome": null
+    },
+    {
+      "date": "2026-12-30",
+      "title": "Intervalle 6×800 m",
+      "sport": "Laufen",
+      "minutes": 60,
+      "outcome": null
+    },
+    {
+      "date": "2027-01-01",
+      "title": "Kraft B",
+      "sport": "Krafttraining",
+      "minutes": 70,
+      "outcome": null
+    },
+    {
+      "date": "2027-01-02",
+      "title": "Langer Lauf",
+      "sport": "Laufen",
+      "minutes": 85,
+      "outcome": null
+    },
+    {
+      "date": "2027-01-04",
+      "title": "Kraft A",
+      "sport": "Krafttraining",
+      "minutes": 70,
+      "outcome": null
+    },
+    {
+      "date": "2027-01-05",
+      "title": "Bouldern mit den Mädels",
+      "sport": "Klettern",
+      "minutes": 90,
+      "outcome": null
+    },
+    {
+      "date": "2027-01-06",
+      "title": "Intervalle 6×800 m",
+      "sport": "Laufen",
+      "minutes": 60,
+      "outcome": null
+    },
+    {
+      "date": "2027-01-08",
+      "title": "Kraft B",
+      "sport": "Krafttraining",
+      "minutes": 70,
+      "outcome": null
+    },
+    {
+      "date": "2027-01-09",
+      "title": "Langer Lauf",
+      "sport": "Laufen",
+      "minutes": 85,
+      "outcome": null
+    },
+    {
+      "date": "2027-01-11",
+      "title": "Kraft A",
+      "sport": "Krafttraining",
+      "minutes": 70,
+      "outcome": null
+    },
+    {
+      "date": "2027-01-12",
+      "title": "Bouldern mit den Mädels",
+      "sport": "Klettern",
+      "minutes": 90,
+      "outcome": null
+    },
+    {
+      "date": "2027-01-13",
+      "title": "Intervalle 6×800 m",
+      "sport": "Laufen",
+      "minutes": 60,
+      "outcome": null
+    },
+    {
+      "date": "2027-01-15",
+      "title": "Kraft B",
+      "sport": "Krafttraining",
+      "minutes": 70,
+      "outcome": null
+    },
+    {
+      "date": "2027-01-16",
+      "title": "Langer Lauf",
+      "sport": "Laufen",
+      "minutes": 85,
+      "outcome": null
+    },
+    {
+      "date": "2027-01-18",
+      "title": "Kraft A",
+      "sport": "Krafttraining",
+      "minutes": 70,
+      "outcome": null
+    },
+    {
+      "date": "2027-01-19",
+      "title": "Bouldern mit den Mädels",
+      "sport": "Klettern",
+      "minutes": 90,
+      "outcome": null
+    }
+  ],
+  "goals": [
+    {
+      "id": "00072c32-fb86-4bf4-9f18-896bc3a05c13",
+      "title": "Halbmarathon unter 1:50",
+      "outcome": "Den Münchner Halbmarathon im Frühjahr in unter 1:50:00 laufen, gleichmäßig eingeteilt (Pace ≤ 5:12/km), ohne Gehpausen.",
+      "tier": "core",
+      "targetDate": "2027-03-10",
+      "sports": ["Laufen"],
+      "rank": 1
+    },
+    {
+      "id": "38165d04-9692-437f-a042-c4a518890bd1",
+      "title": "8 saubere Klimmzüge",
+      "outcome": "8 Klimmzüge am Stück mit voller Streckung und Kinn über der Stange, ohne Kipping.",
+      "tier": "core",
+      "targetDate": "2027-01-13",
+      "sports": ["Krafttraining"],
+      "rank": 2
+    },
+    {
+      "id": "b1b90723-5bcf-4ea8-be86-5519f7dc7c97",
+      "title": "Kreuzheben 1,5× Körpergewicht",
+      "outcome": "Ein sauberes Kreuzheben mit ca. 100 kg (1,5× Körpergewicht), Technik vom Trainer abgenommen.",
+      "tier": "core",
+      "targetDate": "2027-02-10",
+      "sports": ["Krafttraining"],
+      "rank": 3
+    },
+    {
+      "id": "837c02a2-b36c-48d3-8127-c75ab4ffbc60",
+      "title": "6b+ flashen",
+      "outcome": "Einen 6b+ Boulder in der Halle im ersten Versuch schaffen.",
+      "tier": "supporting",
+      "targetDate": null,
+      "sports": ["Klettern"],
+      "rank": 1
+    },
+    {
+      "id": "2697fced-4309-46f1-91aa-1e52ffbfa0cd",
+      "title": "Hüfte und Brustwirbelsäule beweglicher",
+      "outcome": "Tiefe Kniebeuge mit aufrechtem Oberkörper ohne Fersen heben; Schulterbeweglichkeit für Überkopf ohne Hohlkreuz.",
+      "tier": "supporting",
+      "targetDate": null,
+      "sports": ["Mobility"],
+      "rank": 2
+    }
+  ],
+  "roadmap": {
+    "title": "Halbmarathon-Frühjahr mit Kraftaufbau",
+    "startDate": "2026-10-21",
+    "endDate": "2027-03-10",
+    "phases": [
+      {
+        "title": "Grundlage & Knie beruhigen",
+        "focus": "Umfang langsam aufbauen, flach laufen, Kraft progressiv.",
+        "startDate": "2026-10-21",
+        "endDate": "2026-12-01",
+        "milestones": [
+          {
+            "title": "5 Klimmzüge am Stück",
+            "goalIds": ["38165d04-9692-437f-a042-c4a518890bd1"],
+            "targetDate": "2026-11-11",
+            "criterion": null
+          },
+          {
+            "title": "Langer Lauf 16 km schmerzfrei",
+            "goalIds": ["00072c32-fb86-4bf4-9f18-896bc3a05c13"],
+            "targetDate": "2026-11-28",
+            "criterion": "Flache Strecke, Knie ≤ 1/10."
+          }
+        ],
+        "attention": [
+          {
+            "level": "secondary",
+            "goalId": "00072c32-fb86-4bf4-9f18-896bc3a05c13"
+          },
+          {
+            "level": "primary",
+            "goalId": "38165d04-9692-437f-a042-c4a518890bd1"
+          },
+          {
+            "level": "primary",
+            "goalId": "b1b90723-5bcf-4ea8-be86-5519f7dc7c97"
+          },
+          {
+            "level": "maintenance",
+            "goalId": "837c02a2-b36c-48d3-8127-c75ab4ffbc60"
+          }
+        ]
+      },
+      {
+        "title": "Aufbau",
+        "focus": "Schwellenläufe dazu, Kreuzheben schwerer.",
+        "startDate": "2026-12-02",
+        "endDate": "2027-01-26",
+        "milestones": [
+          {
+            "title": "Kreuzheben 95 kg × 3",
+            "goalIds": ["b1b90723-5bcf-4ea8-be86-5519f7dc7c97"],
+            "targetDate": "2027-01-13",
+            "criterion": null
+          },
+          {
+            "title": "8 Klimmzüge",
+            "goalIds": ["38165d04-9692-437f-a042-c4a518890bd1"],
+            "targetDate": "2027-01-13",
+            "criterion": null
+          }
+        ],
+        "attention": [
+          {
+            "level": "primary",
+            "goalId": "00072c32-fb86-4bf4-9f18-896bc3a05c13"
+          },
+          {
+            "level": "secondary",
+            "goalId": "38165d04-9692-437f-a042-c4a518890bd1"
+          },
+          {
+            "level": "primary",
+            "goalId": "b1b90723-5bcf-4ea8-be86-5519f7dc7c97"
+          }
+        ]
+      },
+      {
+        "title": "Spezifisch & Wettkampf",
+        "focus": "Halbmarathon-Pace, Kraft auf Erhalt, Taper in den letzten 10 Tagen.",
+        "startDate": "2027-01-27",
+        "endDate": "2027-03-10",
+        "milestones": [
+          {
+            "title": "Halbmarathon unter 1:50",
+            "goalIds": ["00072c32-fb86-4bf4-9f18-896bc3a05c13"],
+            "targetDate": "2027-03-10",
+            "criterion": null
+          }
+        ],
+        "attention": [
+          {
+            "level": "primary",
+            "goalId": "00072c32-fb86-4bf4-9f18-896bc3a05c13"
+          },
+          {
+            "level": "maintenance",
+            "goalId": "b1b90723-5bcf-4ea8-be86-5519f7dc7c97"
+          },
+          {
+            "level": "maintenance",
+            "goalId": "38165d04-9692-437f-a042-c4a518890bd1"
+          }
+        ]
+      }
+    ]
+  },
+  "marks": [
+    {
+      "phase": 0,
+      "milestone": 0,
+      "reachedOn": "2026-10-21"
+    }
+  ]
+}

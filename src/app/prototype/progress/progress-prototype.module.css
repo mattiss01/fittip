@@ -1,0 +1,1058 @@
+/* PROTOTYPE — Progress variants, in FitTip's own palette and card language. */
+
+.frame {
+  min-height: 100vh;
+  background: var(--sage);
+  color: var(--pine);
+}
+
+.page {
+  width: min(100%, 36rem);
+  margin: 0 auto;
+  padding: 3.5rem 1rem calc(7rem + env(safe-area-inset-bottom));
+  display: grid;
+  gap: 1rem;
+  justify-items: stretch;
+  text-align: left;
+}
+
+.page > * {
+  width: 100%;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 2.3rem;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.asOf {
+  margin: 0.35rem 0 0;
+  color: var(--moss);
+  font-size: 0.85rem;
+}
+
+.lede {
+  margin: 0;
+  color: var(--moss);
+  font-size: 0.95rem;
+}
+
+.nav {
+  position: fixed;
+  z-index: 30;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  padding: 0.45rem 0.55rem max(0.45rem, env(safe-area-inset-bottom));
+  border-top: 1px solid var(--line);
+  background: color-mix(in srgb, var(--paper) 88%, transparent);
+  backdrop-filter: blur(16px);
+}
+
+.navItem {
+  min-height: 3.2rem;
+  display: grid;
+  place-content: center;
+  color: var(--moss);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.navItem[data-active] {
+  color: var(--ember);
+}
+
+/* ---- Sections and type ---- */
+
+.section {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem;
+  border-radius: var(--radius-card);
+  background: var(--paper);
+  box-shadow: var(--shadow-card);
+}
+
+.sectionHead {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.label {
+  margin: 0;
+  color: var(--moss);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.sectionTitle {
+  margin: 0.2rem 0 0;
+  font-size: 1.1rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+
+.muted {
+  margin: 0;
+  color: var(--moss);
+  font-size: 0.85rem;
+}
+
+.callout {
+  margin: 0;
+  padding: 0.65rem 0.8rem;
+  border-radius: var(--radius-control);
+  background: var(--sage);
+  font-size: 0.9rem;
+}
+
+.invented {
+  margin: 0;
+  padding: 0.5rem 0.7rem;
+  border: 1.5px dashed #c9a400;
+  border-radius: var(--radius-control);
+  background: #fff8cc;
+  color: #5c4a00;
+  font-size: 0.78rem;
+}
+
+.chip {
+  display: inline-block;
+  flex: none;
+  align-self: start;
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--radius-pill);
+  background: var(--sage);
+  color: var(--pine-soft);
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.chip[data-level="primary"] {
+  background: var(--pine);
+  color: var(--paper);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.allLogs {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  border-radius: var(--radius-card);
+  background: var(--paper);
+  box-shadow: var(--shadow-card);
+  color: inherit;
+  text-decoration: none;
+  font-size: 1.3rem;
+}
+
+.allLogs span:first-child {
+  display: grid;
+  font-size: 1rem;
+}
+
+.allLogs small {
+  color: var(--moss);
+  font-size: 0.8rem;
+}
+
+/* ---- Status marks ---- */
+
+.mark {
+  display: inline-block;
+  flex: none;
+  border-radius: 50%;
+  border: 2px solid transparent;
+}
+
+.mark[data-status="completed"],
+.mark[data-status="unplanned"] {
+  background: var(--pine-soft);
+}
+
+.mark[data-status="unplanned"] {
+  border-color: var(--paper);
+  box-shadow: 0 0 0 2px var(--pine-soft);
+}
+
+.mark[data-status="partially_completed"] {
+  background: linear-gradient(90deg, var(--pine-soft) 50%, var(--fern) 50%);
+}
+
+.mark[data-status="replaced"] {
+  background: var(--recovery);
+  opacity: 0.6;
+}
+
+.mark[data-status="skipped"] {
+  background: var(--ember);
+  opacity: 0.75;
+}
+
+.mark[data-status="no-log"] {
+  border: 2px dashed var(--rule);
+}
+
+.mark[data-status="open"] {
+  border: 2px solid var(--fern);
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.8rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--moss);
+  font-size: 0.72rem;
+}
+
+.legend li {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+/* ---- Weeks ---- */
+
+.weekRows {
+  display: grid;
+  gap: 0.15rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.weekRow {
+  all: unset;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 2.75rem;
+  display: grid;
+  grid-template-columns: 5.2rem 1fr auto;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0 0.25rem;
+  border-radius: 0.6rem;
+  cursor: pointer;
+}
+
+.weekRow:focus-visible,
+.activityCard:focus-visible,
+.activityRow:focus-visible,
+.calendarDay:focus-visible {
+  outline: 2px solid var(--ember);
+  outline-offset: 2px;
+}
+
+.weekRowLabel {
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.weekRowCount {
+  color: var(--moss);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.weekMarks {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.weekList {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0.25rem 0 0.6rem;
+  padding: 0;
+  list-style: none;
+}
+
+.weekList li {
+  display: grid;
+  grid-template-columns: auto 5.6rem 1fr auto;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.weekListDay {
+  color: var(--moss);
+}
+
+.weekListTitle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.weekListStatus {
+  color: var(--pine-soft);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.weekListStatus[data-status="skipped"] {
+  color: var(--ember-dark);
+}
+
+.weekListStatus[data-status="no-log"],
+.weekListStatus[data-status="open"] {
+  color: var(--moss);
+  font-weight: 500;
+}
+
+/* ---- Goals ---- */
+
+.goalRows {
+  display: grid;
+  gap: 0.9rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.goalRow {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.goalRowHead {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.goalRowFact {
+  margin: 0;
+  color: var(--moss);
+  font-size: 0.82rem;
+}
+
+.goalRowFact strong {
+  color: var(--pine);
+}
+
+.meter {
+  height: 0.5rem;
+  border-radius: var(--radius-pill);
+  background: var(--sage);
+  overflow: hidden;
+}
+
+.meter span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--pine-soft);
+}
+
+.goalCard {
+  display: grid;
+  gap: 1rem;
+  padding: 1.1rem;
+  border-radius: var(--radius-card);
+  background: var(--paper);
+  box-shadow: var(--shadow-card);
+}
+
+.goalCardHead {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.goalCardHead h2 {
+  margin: 0;
+  font-size: 1.4rem;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+
+.goalOutcome {
+  margin: 0;
+  color: var(--moss);
+  font-size: 0.85rem;
+}
+
+.goalChart {
+  display: grid;
+  gap: 0.4rem;
+  padding: 0.8rem;
+  border-radius: var(--radius-control);
+  background: var(--sage);
+}
+
+.goalChartHead {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.goalChartHead span:last-child {
+  color: var(--moss);
+  font-weight: 500;
+  text-align: right;
+}
+
+.milestones {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.milestones li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.6rem;
+  align-items: start;
+  font-size: 0.9rem;
+}
+
+.milestones small {
+  display: block;
+  color: var(--moss);
+}
+
+.milestoneDot {
+  width: 0.85rem;
+  height: 0.85rem;
+  margin-top: 0.2rem;
+  border: 2px solid var(--pine-soft);
+  border-radius: 50%;
+}
+
+.milestones li[data-reached] .milestoneDot {
+  background: var(--pine-soft);
+}
+
+.related ul,
+.supportRows,
+.bestList,
+.activityList,
+.logList,
+.dayDetail,
+.sportTotals {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.related ul {
+  margin-top: 0.4rem;
+}
+
+.related li {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.85rem;
+}
+
+.supportRows li {
+  display: grid;
+  font-size: 0.92rem;
+}
+
+.supportRows small {
+  color: var(--moss);
+}
+
+/* ---- Roadmap bar ---- */
+
+.roadmap {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.roadmapTitle {
+  margin: 0;
+  font-size: 0.88rem;
+}
+
+.roadmapTrack {
+  position: relative;
+  height: 2.4rem;
+  border-radius: 0.6rem;
+  background: var(--sage);
+}
+
+.roadmapPhase {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 0.45rem;
+  border-right: 2px solid var(--paper);
+  background: var(--fern);
+  color: var(--pine-soft);
+  font-size: 0.66rem;
+  font-weight: 700;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.roadmapPhase:first-child {
+  border-radius: 0.6rem 0 0 0.6rem;
+}
+
+.roadmapPhase:nth-child(3) {
+  border-right: 0;
+  border-radius: 0 0.6rem 0.6rem 0;
+}
+
+.roadmapPhase[data-current] {
+  background: var(--pine-soft);
+  color: var(--paper);
+}
+
+.roadmapPhase span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.roadmapMilestone {
+  position: absolute;
+  bottom: -0.35rem;
+  width: 0.7rem;
+  height: 0.7rem;
+  margin-left: -0.35rem;
+  border: 2px solid var(--pine);
+  border-radius: 50%;
+  background: var(--paper);
+}
+
+.roadmapMilestone[data-reached] {
+  background: var(--pine);
+}
+
+.roadmapToday {
+  position: absolute;
+  top: -0.3rem;
+  bottom: -0.3rem;
+  width: 3px;
+  margin-left: -1px;
+  border-radius: 2px;
+  background: var(--ember);
+}
+
+.roadmapEnds {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.2rem;
+  color: var(--moss);
+  font-size: 0.72rem;
+}
+
+/* ---- Charts ---- */
+
+.spark {
+  display: block;
+  width: 100%;
+  overflow: visible;
+}
+
+.sparkLine {
+  fill: none;
+  stroke: var(--pine-soft);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.sparkDot {
+  fill: var(--pine-soft);
+}
+
+.sparkBest {
+  fill: var(--ember);
+}
+
+.sparkTarget {
+  stroke: var(--ember);
+  stroke-width: 1.5;
+  stroke-dasharray: 5 4;
+  vector-effect: non-scaling-stroke;
+}
+
+.sparkAxis {
+  fill: var(--moss);
+  font-size: 10px;
+}
+
+.bars {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 0.35rem;
+  align-items: end;
+  padding-bottom: 1.1rem;
+}
+
+.barCol {
+  position: relative;
+  height: 100%;
+  display: grid;
+}
+
+.barStack {
+  position: relative;
+  height: 100%;
+}
+
+.bar,
+.barGhost {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  border-radius: 0.3rem 0.3rem 0 0;
+}
+
+.barGhost {
+  background: var(--fern);
+}
+
+.bar {
+  right: 22%;
+  left: 22%;
+  background: var(--pine-soft);
+}
+
+.barLabel {
+  position: absolute;
+  bottom: -1.1rem;
+  width: 100%;
+  color: var(--moss);
+  font-size: 0.68rem;
+  text-align: center;
+}
+
+/* ---- Activities ---- */
+
+.activityGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.activityCard {
+  all: unset;
+  box-sizing: border-box;
+  display: grid;
+  gap: 0.35rem;
+  align-content: start;
+  padding: 0.7rem;
+  border-radius: var(--radius-control);
+  background: var(--sage);
+  cursor: pointer;
+}
+
+.activityCard[data-open] {
+  grid-column: 1 / -1;
+}
+
+.activityName {
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.activityBest {
+  color: var(--moss);
+  font-size: 0.72rem;
+}
+
+.activityBest strong {
+  color: var(--pine);
+}
+
+.history {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0.4rem 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.82rem;
+}
+
+.history li {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.25rem 0;
+  border-bottom: 1px solid var(--fern);
+}
+
+.history li[data-best] {
+  color: var(--ember-dark);
+  font-weight: 700;
+}
+
+.activityRow {
+  all: unset;
+  box-sizing: border-box;
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 6.5rem;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: var(--radius-control);
+  background: var(--paper);
+  box-shadow: var(--shadow-card);
+  cursor: pointer;
+}
+
+.activityRow span:first-child {
+  display: grid;
+}
+
+.activityRow small,
+.logList small,
+.bestList small {
+  color: var(--moss);
+  font-size: 0.78rem;
+}
+
+/* ---- Tabs and tiles ---- */
+
+.tabs {
+  position: sticky;
+  z-index: 5;
+  top: 3rem;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  padding: 0.25rem;
+  border-radius: var(--radius-pill);
+  background: var(--paper);
+  box-shadow: var(--shadow-card);
+}
+
+.tab {
+  all: unset;
+  min-height: 2.5rem;
+  display: grid;
+  place-content: center;
+  border-radius: var(--radius-pill);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.tab[aria-selected="true"] {
+  background: var(--pine);
+  color: var(--paper);
+}
+
+.tiles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.tile {
+  display: grid;
+  gap: 0.2rem;
+  align-content: start;
+  padding: 0.85rem;
+  border-radius: var(--radius-control);
+  background: var(--paper);
+  box-shadow: var(--shadow-card);
+}
+
+.tile strong {
+  font-size: 1.25rem;
+  letter-spacing: -0.02em;
+}
+
+.tile small {
+  color: var(--moss);
+  font-size: 0.78rem;
+}
+
+.sheet .tile {
+  background: var(--sage);
+  box-shadow: none;
+}
+
+.bestList li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.bestList span {
+  text-align: right;
+}
+
+.logList li {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  padding: 0.6rem 0.8rem;
+  border-radius: var(--radius-control);
+  background: var(--paper);
+}
+
+.logList li span:last-child {
+  display: grid;
+}
+
+.sheetBackdrop {
+  position: fixed;
+  z-index: 50;
+  inset: 0;
+  display: grid;
+  align-items: end;
+  background: rgb(23 51 46 / 0.4);
+}
+
+.sheet {
+  display: grid;
+  gap: 0.9rem;
+  max-height: 85vh;
+  overflow-y: auto;
+  padding: 1.1rem 1rem calc(1.5rem + env(safe-area-inset-bottom));
+  border-radius: 1.4rem 1.4rem 0 0;
+  background: var(--paper);
+}
+
+.sheetHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sheetHead h2 {
+  margin: 0;
+  font-size: 1.3rem;
+}
+
+.sheetHead button {
+  min-height: 2.75rem;
+  padding: 0 1rem;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--sage);
+  color: var(--pine);
+  font-weight: 700;
+}
+
+/* ---- Week review ---- */
+
+.weekPicker {
+  display: grid;
+  grid-template-columns: 2.75rem 1fr 2.75rem;
+  align-items: center;
+  padding: 0.6rem 0.5rem;
+  border-radius: var(--radius-card);
+  background: var(--paper);
+  box-shadow: var(--shadow-card);
+}
+
+.weekPicker h2 {
+  display: grid;
+  margin: 0;
+  font-size: 1.05rem;
+  text-align: center;
+}
+
+.weekPicker small {
+  color: var(--ember-dark);
+  font-size: 0.72rem;
+}
+
+.weekPicker button {
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 0;
+  border-radius: 50%;
+  background: var(--sage);
+  color: var(--pine);
+  font-size: 1.4rem;
+}
+
+.weekPicker button:disabled {
+  opacity: 0.35;
+}
+
+.compare {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.compareRow {
+  display: grid;
+  gap: 0.1rem;
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius-control);
+  background: var(--paper);
+  box-shadow: var(--shadow-card);
+}
+
+.compareRow strong {
+  font-size: 1.3rem;
+}
+
+.compareRow small {
+  color: var(--moss);
+  font-size: 0.78rem;
+}
+
+.split {
+  display: flex;
+  height: 0.9rem;
+  gap: 2px;
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+}
+
+.splitLegend,
+.sportTotals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.9rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.82rem;
+}
+
+.splitLegend li,
+.sportTotals li {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.splitLegend i,
+.sportTotals i {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 50%;
+}
+
+.sportTotals {
+  display: grid;
+}
+
+.sportTotals span {
+  margin-left: auto;
+  color: var(--moss);
+}
+
+.signals {
+  display: grid;
+  gap: 0.5rem;
+  font-size: 0.88rem;
+}
+
+.signals p,
+.signals ul {
+  margin: 0;
+}
+
+.signals ul {
+  padding-left: 1.1rem;
+}
+
+.safety {
+  padding: 0.6rem 0.75rem;
+  border-left: 3px solid var(--ember);
+  background: var(--sage);
+  color: var(--pine-soft);
+  font-size: 0.8rem;
+}
+
+/* ---- Calendar ---- */
+
+.calendar {
+  display: grid;
+  grid-template-columns: 3.1rem repeat(7, 1fr);
+  gap: 0.25rem;
+}
+
+.calendarHead {
+  color: var(--moss);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.calendarWeek {
+  display: grid;
+  align-items: center;
+  color: var(--moss);
+  font-size: 0.66rem;
+}
+
+.calendarDay {
+  all: unset;
+  box-sizing: border-box;
+  aspect-ratio: 1;
+  min-height: 2.2rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: center;
+  justify-content: center;
+  gap: 2px;
+  border-radius: 0.5rem;
+  background: var(--sage);
+  cursor: pointer;
+}
+
+.calendarDay[data-today] {
+  box-shadow: inset 0 0 0 2px var(--ember);
+}
+
+.calendarDay[data-selected] {
+  background: var(--fern);
+  box-shadow: inset 0 0 0 2px var(--pine);
+}
+
+.dayDetail li {
+  display: grid;
+  gap: 0.2rem;
+  font-size: 0.9rem;
+}
+
+.dayDetail small {
+  color: var(--moss);
+}
+
+.dayDetailHead {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.dayDetailHead strong {
+  flex: 1;
+}
+
+.dayActivity {
+  padding-left: 1.6rem;
+}
