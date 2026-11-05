@@ -1237,3 +1237,244 @@
 .primary:disabled {
   opacity: 0.45;
 }
+
+/* ---- H: done training, split by sport ---- */
+
+.monthSummary {
+  display: grid;
+  gap: 0.6rem;
+  padding: 1rem;
+  border-radius: var(--radius-card);
+  background: var(--paper);
+  box-shadow: var(--shadow-card);
+}
+
+.monthSummary[data-sport] {
+  box-shadow:
+    inset 5px 0 0 var(--sport),
+    var(--shadow-card);
+}
+
+.monthSummaryLine {
+  margin: 0;
+  font-size: 1.35rem;
+  letter-spacing: -0.02em;
+}
+
+.monthSummaryLine span {
+  color: var(--moss);
+  font-weight: 600;
+}
+
+.splitSegment {
+  all: unset;
+  cursor: pointer;
+}
+
+.outcomeCounts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.9rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--moss);
+  font-size: 0.8rem;
+}
+
+.outcomeCounts li {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.recordWeek {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.recordWeekHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 0.4rem 0.25rem 0;
+}
+
+.recordWeekHead h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+.recordWeekHead span {
+  color: var(--moss);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.recordList {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.recordCard {
+  border-radius: var(--radius-control);
+  background: var(--paper);
+  box-shadow:
+    inset 4px 0 0 var(--sport),
+    var(--shadow-card);
+  overflow: hidden;
+}
+
+.recordCard[data-outcome="skipped"] {
+  background: color-mix(in srgb, var(--paper) 60%, var(--sage));
+}
+
+.recordCardButton {
+  all: unset;
+  box-sizing: border-box;
+  width: 100%;
+  display: grid;
+  grid-template-columns: 2.4rem 1fr;
+  gap: 0.6rem;
+  padding: 0.75rem 0.85rem 0.75rem 1rem;
+  cursor: pointer;
+}
+
+.recordCardButton:focus-visible {
+  outline: 2px solid var(--ember);
+  outline-offset: -2px;
+}
+
+.recordDay {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  line-height: 1.05;
+}
+
+.recordDay strong {
+  font-size: 1.3rem;
+}
+
+.recordDay small {
+  color: var(--moss);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.recordMain {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.recordTitle {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.recordTitle strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recordFacts {
+  color: var(--moss);
+  font-size: 0.8rem;
+}
+
+.recordPeek {
+  overflow: hidden;
+  color: var(--pine-soft);
+  font-size: 0.8rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recordSignal {
+  color: var(--ember-dark);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.recordDetail {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0 0.85rem 0.85rem 4rem;
+  font-size: 0.85rem;
+}
+
+.recordDetail ul {
+  display: grid;
+  gap: 0.3rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.recordDetail li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid var(--fern);
+}
+
+.recordDetail li span:last-child {
+  color: var(--moss);
+  text-align: right;
+}
+
+.recordDetail p {
+  margin: 0;
+}
+
+.recordNote {
+  color: var(--pine-soft);
+  font-style: italic;
+}
+
+/* The app's own button:hover and :active paint every button ember and shrink
+   it; these unset buttons keep their own surface instead. */
+.frame button:active:not(:disabled) {
+  transform: none;
+}
+
+.recordCardButton:hover,
+.weekRow:hover,
+.linkButton:hover,
+.tab:hover {
+  background: transparent;
+  color: inherit;
+}
+
+.activityCard:hover,
+.calendarDay:hover {
+  background: var(--sage);
+  color: inherit;
+}
+
+.calendarDay[data-selected]:hover {
+  background: var(--fern);
+}
+
+.activityRow:hover,
+.sportCard:hover,
+.sportChip:hover {
+  background: var(--paper);
+  color: inherit;
+}
+
+.tab[aria-selected="true"]:hover,
+.sportChip[aria-selected="true"]:hover {
+  background: var(--pine);
+  color: var(--paper);
+}

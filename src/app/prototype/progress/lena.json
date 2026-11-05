@@ -11,7 +11,10 @@
       "illness": false,
       "injury": false,
       "fatigue": false,
-      "planned": true
+      "planned": true,
+      "note": null,
+      "start": null,
+      "instead": null
     },
     {
       "date": "2026-08-14",
@@ -24,7 +27,10 @@
       "illness": false,
       "injury": false,
       "fatigue": false,
-      "planned": true
+      "planned": true,
+      "note": null,
+      "start": null,
+      "instead": null
     },
     {
       "date": "2026-08-15",
@@ -37,7 +43,10 @@
       "illness": false,
       "injury": false,
       "fatigue": false,
-      "planned": true
+      "planned": true,
+      "note": "Zu schnell gelaufen, fühlte sich aber gut an.",
+      "start": null,
+      "instead": null
     },
     {
       "date": "2026-08-17",
@@ -50,7 +59,10 @@
       "illness": false,
       "injury": false,
       "fatigue": false,
-      "planned": true
+      "planned": true,
+      "note": null,
+      "start": null,
+      "instead": null
     },
     {
       "date": "2026-08-18",
@@ -63,7 +75,10 @@
       "illness": false,
       "injury": false,
       "fatigue": false,
-      "planned": true
+      "planned": true,
+      "note": null,
+      "start": null,
+      "instead": null
     },
     {
       "date": "2026-08-19",
@@ -76,7 +91,10 @@
       "illness": false,
       "injury": false,
       "fatigue": false,
-      "planned": true
+      "planned": true,
+      "note": null,
+      "start": null,
+      "instead": null
     },
     {
       "date": "2026-08-21",
@@ -89,7 +107,10 @@
       "illness": false,
       "injury": false,
       "fatigue": false,
-      "planned": true
+      "planned": true,
+      "note": null,
+      "start": null,
+      "instead": null
     },
     {
       "date": "2026-08-22",
@@ -102,7 +123,10 @@
       "illness": false,
       "injury": false,
       "fatigue": false,
-      "planned": true
+      "planned": true,
+      "note": null,
+      "start": null,
+      "instead": null
     },
     {
       "date": "2026-08-24",
@@ -115,7 +139,10 @@
       "illness": false,
       "injury": false,
       "fatigue": false,
-      "planned": true
+      "planned": true,
+      "note": null,
+      "start": null,
+      "instead": null
     },
     {
       "date": "2026-08-24",
@@ -128,7 +155,10 @@
       "illness": false,
       "injury": false,
       "fatigue": false,
-      "planned": false
+      "planned": false,
+      "note": null,
+      "start": null,
+      "instead": null
     },
     {
       "date": "2026-08-25",
@@ -141,7 +171,10 @@
       "illness": false,
       "injury": false,
       "fatigue": false,
-      "planned": true
+      "planned": true,
+      "note": null,
+      "start": null,
+      "instead": null
     },
     {
       "date": "2026-08-26",
@@ -154,7 +187,10 @@
       "illness": false,
       "injury": false,
       "fatigue": false,
-      "planned": true
+      "planned": true,
+      "note": null,
+      "start": null,
+      "instead": null
     },
     {
       "date": "2026-08-28",
@@ -167,7 +203,10 @@
       "illness": false,
       "injury": false,
       "fatigue": false,
-      "planned": true
+      "planned": true,
+      "note": "Vier Frühschichten, zu müde.",
+      "start": null,
+      "instead": null
     },
     {
       "date": "2026-08-29",
@@ -180,7 +219,10 @@
       "illness": false,
       "injury": false,
       "fatigue": false,
-      "planned": true
+      "planned": true,
+      "note": null,
+      "start": null,
+      "instead": null
     },
     {
       "date": "2026-08-31",
@@ -193,7 +235,10 @@
       "illness": false,
       "injury": false,
       "fatigue": false,
-      "planned": true
+      "planned": true,
+      "note": null,
+      "start": null,
+      "instead": null
     },
     {
       "date": "2026-09-01",
@@ -206,7 +251,10 @@
       "illness": false,
       "injury": false,
       "fatigue": false,
-      "planned": true
+      "planned": true,
+      "note": null,
+      "start": null,
+      "instead": null
     },
     {
       "date": "2026-09-02",
@@ -219,7 +267,10 @@
       "illness": false,
       "injury": false,
       "fatigue": false,
-      "planned": true
+      "planned": true,
+      "note": null,
+      "start": null,
+      "instead": null
     },
     {
       "date": "2026-09-04",
@@ -232,7 +283,10 @@
       "illness": false,
       "injury": false,
       "fatigue": false,
-      "planned": true
+      "planned": true,
+      "note": null,
+      "start": null,
+      "instead": null
     },
     {
       "date": "2026-09-05",
@@ -245,7 +299,10 @@
       "illness": false,
       "injury": false,
       "fatigue": false,
-      "planned": true
+      "planned": true,
+      "note": "Zu schnell gelaufen, fühlte sich aber gut an.",
+      "start": null,
+      "instead": null
     },
     {
       "date": "2026-09-07",
@@ -258,7 +315,10 @@
       "illness": false,
       "injury": false,
       "fatigue": false,
-      "planned": true
+      "planned": true,
+      "note": null,
+      "start": null,
+      "instead": null
     },
     {
       "date": "2026-09-08",
@@ -271,7 +331,10 @@
       "illness": false,
       "injury": false,
       "fatigue": false,
-      "planned": true
+      "planned": true,
+      "note": null,
+      "start": null,
+      "instead": null
     },
     {
       "date": "2026-09-09",
@@ -284,7 +347,10 @@
       "illness": true,
       "injury": false,
       "fatigue": false,
-      "planned": true
+      "planned": true,
+      "note": "Krank.",
+      "start": null,
+      "instead": null
     },
     {
       "date": "2026-09-11",
@@ -297,7 +363,10 @@
       "illness": true,
       "injury": false,
       "fatigue": false,
-      "planned": true
+      "planned": true,
+      "note": null,
+      "start": null,
+      "instead": null
     },
     {
       "date": "2026-09-12",
@@ -310,7 +379,10 @@
       "illness": true,
       "injury": false,
       "fatigue": false,
-      "planned": true
+      "planned": true,
+      "note": null,
+      "start": null,
+      "instead": null
     },
     {
       "date": "2026-09-14",
@@ -323,7 +395,10 @@
       "illness": true,
       "injury": false,
       "fatigue": false,
-      "planned": true
+      "planned": true,
+      "note": "Erkältet, Halskratzen.",
+      "start": null,
+      "instead": null
     },
     {
       "date": "2026-09-15",
@@ -336,7 +411,10 @@
       "illness": true,
       "injury": false,
       "fatigue": false,
-      "planned": true
+      "planned": true,
+      "note": "Noch krank.",
+      "start": null,
+      "instead": null
     },
     {
       "date": "2026-09-16",
@@ -349,7 +427,10 @@
       "illness": false,
       "injury": false,
       "fatigue": false,
-      "planned": true
+      "planned": true,
+      "note": null,
+      "start": null,
+      "instead": null
     },
     {
       "date": "2026-09-18",
@@ -362,7 +443,10 @@
       "illness": false,
       "injury": false,
       "fatigue": false,
-      "planned": true
+      "planned": true,
+      "note": null,
+      "start": null,
+      "instead": null
     },
     {
       "date": "2026-09-19",
@@ -375,7 +459,10 @@
       "illness": false,
       "injury": false,
       "fatigue": false,
-      "planned": true
+      "planned": true,
+      "note": null,
+      "start": null,
+      "instead": null
     },
     {
       "date": "2026-09-21",
@@ -388,7 +475,10 @@
       "illness": false,
       "injury": false,
       "fatigue": false,
-      "planned": true
+      "planned": true,
+      "note": null,
+      "start": null,
+      "instead": null
     },
     {
       "date": "2026-09-22",
@@ -401,7 +491,10 @@
       "illness": false,
       "injury": false,
       "fatigue": false,
-      "planned": true
+      "planned": true,
+      "note": null,
+      "start": null,
+      "instead": null
     },
     {
       "date": "2026-09-23",
@@ -414,7 +507,10 @@
       "illness": false,
       "injury": false,
       "fatigue": false,
-      "planned": true
+      "planned": true,
+      "note": null,
+      "start": null,
+      "instead": null
     },
     {
       "date": "2026-09-25",
@@ -427,7 +523,10 @@
       "illness": false,
       "injury": false,
       "fatigue": true,
-      "planned": true
+      "planned": true,
+      "note": "Vier Frühschichten, zu müde.",
+      "start": null,
+      "instead": null
     },
     {
       "date": "2026-09-26",
@@ -440,7 +539,10 @@
       "illness": false,
       "injury": false,
       "fatigue": false,
-      "planned": true
+      "planned": true,
+      "note": "Zu schnell gelaufen, fühlte sich aber gut an.",
+      "start": null,
+      "instead": null
     },
     {
       "date": "2026-09-28",
@@ -453,7 +555,10 @@
       "illness": false,
       "injury": false,
       "fatigue": false,
-      "planned": true
+      "planned": true,
+      "note": null,
+      "start": null,
+      "instead": null
     },
     {
       "date": "2026-09-29",
@@ -466,7 +571,10 @@
       "illness": false,
       "injury": false,
       "fatigue": false,
-      "planned": true
+      "planned": true,
+      "note": null,
+      "start": null,
+      "instead": null
     },
     {
       "date": "2026-09-30",
@@ -479,7 +587,10 @@
       "illness": false,
       "injury": false,
       "fatigue": false,
-      "planned": true
+      "planned": true,
+      "note": "Nach dem 4. Intervall Knie rechts außen ziehend (3/10). Abgebrochen und nach Hause gegangen.",
+      "start": null,
+      "instead": null
     },
     {
       "date": "2026-10-02",
@@ -492,7 +603,10 @@
       "illness": false,
       "injury": false,
       "fatigue": false,
-      "planned": true
+      "planned": true,
+      "note": null,
+      "start": null,
+      "instead": null
     },
     {
       "date": "2026-10-03",
@@ -505,7 +619,10 @@
       "illness": false,
       "injury": false,
       "fatigue": false,
-      "planned": false
+      "planned": false,
+      "note": null,
+      "start": null,
+      "instead": null
     },
     {
       "date": "2026-10-03",
@@ -518,7 +635,10 @@
       "illness": false,
       "injury": false,
       "fatigue": false,
-      "planned": true
+      "planned": true,
+      "note": "Knie geschont.",
+      "start": null,
+      "instead": null
     },
     {
       "date": "2026-10-05",
@@ -531,7 +651,10 @@
       "illness": false,
       "injury": false,
       "fatigue": false,
-      "planned": true
+      "planned": true,
+      "note": null,
+      "start": null,
+      "instead": null
     },
     {
       "date": "2026-10-05",
@@ -544,7 +667,10 @@
       "illness": false,
       "injury": false,
       "fatigue": false,
-      "planned": false
+      "planned": false,
+      "note": null,
+      "start": null,
+      "instead": null
     },
     {
       "date": "2026-10-06",
@@ -557,7 +683,10 @@
       "illness": false,
       "injury": false,
       "fatigue": false,
-      "planned": true
+      "planned": true,
+      "note": null,
+      "start": null,
+      "instead": null
     },
     {
       "date": "2026-10-07",
@@ -570,7 +699,10 @@
       "illness": false,
       "injury": false,
       "fatigue": false,
-      "planned": true
+      "planned": true,
+      "note": null,
+      "start": null,
+      "instead": null
     },
     {
       "date": "2026-10-09",
@@ -583,7 +715,10 @@
       "illness": false,
       "injury": false,
       "fatigue": false,
-      "planned": true
+      "planned": true,
+      "note": null,
+      "start": null,
+      "instead": null
     },
     {
       "date": "2026-10-10",
@@ -596,7 +731,10 @@
       "illness": false,
       "injury": false,
       "fatigue": false,
-      "planned": true
+      "planned": true,
+      "note": "Nach 9 km gestoppt, Knie wieder leicht (2/10). Flach gelaufen.",
+      "start": null,
+      "instead": null
     },
     {
       "date": "2026-10-12",
@@ -609,7 +747,10 @@
       "illness": false,
       "injury": false,
       "fatigue": false,
-      "planned": true
+      "planned": true,
+      "note": null,
+      "start": null,
+      "instead": null
     },
     {
       "date": "2026-10-13",
@@ -622,7 +763,10 @@
       "illness": false,
       "injury": false,
       "fatigue": false,
-      "planned": true
+      "planned": true,
+      "note": null,
+      "start": null,
+      "instead": null
     },
     {
       "date": "2026-10-14",
@@ -635,7 +779,10 @@
       "illness": false,
       "injury": false,
       "fatigue": false,
-      "planned": true
+      "planned": true,
+      "note": null,
+      "start": null,
+      "instead": null
     },
     {
       "date": "2026-10-16",
@@ -648,7 +795,10 @@
       "illness": false,
       "injury": false,
       "fatigue": false,
-      "planned": true
+      "planned": true,
+      "note": null,
+      "start": null,
+      "instead": null
     },
     {
       "date": "2026-10-17",
@@ -661,7 +811,10 @@
       "illness": false,
       "injury": false,
       "fatigue": false,
-      "planned": true
+      "planned": true,
+      "note": "Nach 9 km gestoppt, Knie wieder leicht (2/10). Flach gelaufen.",
+      "start": null,
+      "instead": null
     },
     {
       "date": "2026-10-19",
@@ -674,7 +827,10 @@
       "illness": false,
       "injury": false,
       "fatigue": false,
-      "planned": true
+      "planned": true,
+      "note": null,
+      "start": null,
+      "instead": null
     },
     {
       "date": "2026-10-19",
@@ -687,7 +843,10 @@
       "illness": false,
       "injury": false,
       "fatigue": false,
-      "planned": false
+      "planned": false,
+      "note": "Spontan mit Freunden, schön locker.",
+      "start": null,
+      "instead": null
     },
     {
       "date": "2026-10-20",
@@ -700,7 +859,10 @@
       "illness": false,
       "injury": false,
       "fatigue": false,
-      "planned": true
+      "planned": true,
+      "note": null,
+      "start": null,
+      "instead": null
     }
   ],
   "activities": [

@@ -26,6 +26,9 @@ export type Log = {
   injury: boolean;
   fatigue: boolean;
   planned: boolean;
+  note: string | null;
+  start: string | null;
+  instead: string | null;
 };
 
 type Group = { sets: number; reps?: number; seconds?: number; load?: number };
