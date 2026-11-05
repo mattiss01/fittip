@@ -13,29 +13,9 @@ before any code is written.
 
 ## Now
 
-**Recurring sessions.** Owner, 5 Nov 2026, after the new repeat picker shipped: the repeat
-and a session's content are changed in two different places, as a calendar does, and a
-one-off can become a series. Planned only; the owner says when to build. R1 builds the
-sheet R2 reuses, so R1 goes first; R2's plan is written now, as the owner asked.
+**Recurring sessions.** Owner, 5 Nov 2026: a one-off can become a series. Planned only;
+the owner says when to build. It reuses the repeat row and sheet (`repeat-sheet.tsx`).
 
-- [ ] **R1 — The repeat in its own sheet, the scope in a real dialog.** Build lane. Owner:
-      choosing a new repeat then a one-option "The whole series" step should not exist, and
-      the scope step let other fields be edited behind it.
-      - A recurring session shows one row, "Repeats · Every Friday ›", on its own page and
-        in its edit form (owner: both). The row opens `SheetLayer` (`plan-sheet.tsx`,
-        modal: the page behind is inert) with only `RecurrenceFields` and its dates.
-      - On the session page the sheet saves by itself: `edit_series` with the occurrence's
-        saved content, the button saying where it lands ("Save from Fri 6 Nov on", or "Save
-        for the whole series" when `canEditWhole`). Unchanged rule: the button is Close.
-      - In the edit form the sheet's button submits the whole form, edits and rule, as
-        `edit_series` ("Save all changes from Fri 6 Nov on"), so nothing typed is lost;
-        Cancel puts the rule back as it was (remount by key).
-      - The form's own Save opens the scope as a `SheetLayer` dialog: "Only this session",
-        "This and following" / "The whole series", "Back to editing". No in-page section.
-      - Where `occurrenceHasFutureRuleDate` is false the row says the repeat cannot change
-        from this date, and Save saves this session only, as now.
-      - Tests: the session-page and plan-manager suites, and `e2e/m3-14b` (its edit steps
-        tap the row; find forms by their Title field, not a button that changes).
 - [ ] **R2 — Make a one-off session repeat.** Careful lane: a new operation in the plan's
       change set, so a migration, RLS and pgTAP. Plan to write in full before code.
       - Outcome: the one-off itself becomes the first session of a new series from its own
@@ -45,7 +25,7 @@ sheet R2 reuses, so R1 goes first; R2's plan is written now, as the owner asked.
       - Owner: only a session dated today or later and on or before the repeats-through
         date (the 13-week window, R3b-3). A past session stays a record. Active only, and
         not already in a series.
-      - Surface: on a one-off, R1's row reads "Doesn't repeat ›" on its page and in its
+      - Surface: on a one-off, the repeat row reads "Doesn't repeat ›" on its page and in its
         edit form, and ⋯ gains "Repeat…" that opens the same sheet. The button reads
         "Repeat from Fri 6 Nov"; a session outside the window shows no row.
       - Server: a `repeat_session` operation in `apply_rolling_plan_change_set` that, in one
