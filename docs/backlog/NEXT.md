@@ -54,8 +54,8 @@ sheet R2 reuses, so R1 goes first; R2's plan is written now, as the owner asked.
         session's `series_id` and `occurrence_date` to its own date with `has_diverged`
         false, then fills the window like `add_series` (same ten-per-day skip and receipt).
         Ownership and window checked in SQL from the session row, not from the form.
-      - Open for the owner: a today session already logged stays the first occurrence with
-        its log untouched; say so, or refuse logged sessions too.
+      - Owner, 5 Nov 2026: a session already logged may become the first occurrence; its
+        log and the log's link to it stay exactly as they are.
       - Proof: pgTAP for ownership, the window, a session in a series, and that the log and
         its link are unchanged; then the founder apply (ADR-018) with `migration list` and
         advisors reported before merge.
