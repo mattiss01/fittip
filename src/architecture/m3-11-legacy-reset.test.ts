@@ -238,6 +238,10 @@ const activityLibrarySurface = [
 const allowedServerModules = [
   "@/server/completions/completion-log",
   "@/server/completions/plan-window-top-up",
+  // The reminder on Today (owner, 5 Nov 2026): past sessions with no log. It
+  // only reads the plan and the log through the two interfaces above, and
+  // writes nothing, not even the top-up.
+  "@/server/completions/unlogged-sessions",
   // The sports list (owner, 8 Oct 2026): a sport typed on a session, a
   // series or a log joins the owner's sports once that save has gone
   // through. One narrow module that reads and writes `profiles.sports` and

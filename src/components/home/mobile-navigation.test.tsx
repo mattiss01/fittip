@@ -92,6 +92,20 @@ describe("MobileNavigation", () => {
     expect(container.querySelector("[data-roadmap-attention]")).toBeNull();
   });
 
+  it("marks Today while a past session has no log", () => {
+    const { container, rerender } = render(<MobileNavigation unloggedOpen />);
+
+    expect(container.querySelectorAll("[data-unlogged-open]")).toHaveLength(1);
+    expect(
+      screen.getByRole("link", { name: "Today" }),
+    ).toHaveAccessibleDescription(
+      "A planned session from a past day has no log",
+    );
+
+    rerender(<MobileNavigation />);
+    expect(container.querySelector("[data-unlogged-open]")).toBeNull();
+  });
+
   it("is not shown during guided setup", () => {
     usePathnameMock.mockReturnValueOnce("/home/you/onboarding");
     render(<MobileNavigation />);

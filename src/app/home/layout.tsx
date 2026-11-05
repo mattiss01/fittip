@@ -5,9 +5,12 @@ import { LiveWorkoutPill } from "@/components/home/live-workout-clock";
 import { MobileNavigation } from "@/components/home/mobile-navigation";
 import { OwnedSportsProvider } from "@/components/sports/owned-sports";
 import { isoDateInTimezone } from "@/lib/date/local-date";
+import { readUnloggedSessions } from "@/server/completions/unlogged-sessions";
 import { readOpenDecisions } from "@/server/profile/open-decisions";
+import { createCompletionLog } from "@/server/repositories/completion-log-repository";
 import { createLiveWorkouts } from "@/server/repositories/live-workout-repository";
 import { createProfileRepository } from "@/server/repositories/profile-repository";
+import { createRollingPlan } from "@/server/repositories/rolling-plan-repository";
 import {
   readRoadmapAttention,
   type RoadmapAttention,
@@ -33,6 +36,7 @@ export default async function HomeLayout({
     decisionsOpen,
     noGoal,
     roadmapAttention,
+    unloggedOpen,
     sports,
     liveWorkout,
   } = await readShell();
@@ -51,6 +55,7 @@ export default async function HomeLayout({
         decisionsOpen={decisionsOpen}
         noGoal={noGoal}
         roadmapAttention={roadmapAttention}
+        unloggedOpen={unloggedOpen}
       />
     </div>
   );
@@ -70,6 +75,7 @@ async function readShell(): Promise<{
   decisionsOpen: boolean;
   noGoal: boolean;
   roadmapAttention: RoadmapAttention;
+  unloggedOpen: boolean;
   sports: string[];
   liveWorkout: {
     title: string;
@@ -90,18 +96,27 @@ async function readShell(): Promise<{
     // on the Roadmap chip marks Plan.
     // A running workout's clock on every page (owner, 21 Oct 2026); like the
     // marks, only a shortcut, so a failed read shows none.
-    const [decisions, roadmapAttention, liveWorkout] = await Promise.all([
-      readOpenDecisions(),
-      readRoadmapAttention(today).catch(() => null),
-      createLiveWorkouts()
-        .then((workouts) => workouts.current())
-        .catch(() => null),
-    ]);
+    // A past session with no log marks Today (owner, 5 Nov 2026), where the
+    // reminder lists it. Without a confirmed zone there is no past to judge.
+    const [decisions, roadmapAttention, liveWorkout, unlogged] =
+      await Promise.all([
+        readOpenDecisions(),
+        readRoadmapAttention(today).catch(() => null),
+        createLiveWorkouts()
+          .then((workouts) => workouts.current())
+          .catch(() => null),
+        shell.timezoneName === null
+          ? []
+          : Promise.all([createRollingPlan(), createCompletionLog()])
+              .then(([plan, log]) => readUnloggedSessions(plan, log, today))
+              .catch(() => []),
+      ]);
     return {
       setupOpen: shell.setupOpen,
       decisionsOpen: decisions.goals || decisions.memory,
       noGoal: decisions.noGoal,
       roadmapAttention,
+      unloggedOpen: unlogged.length > 0,
       sports: shell.sports,
       liveWorkout:
         liveWorkout === null
@@ -119,6 +134,7 @@ async function readShell(): Promise<{
       decisionsOpen: false,
       noGoal: false,
       roadmapAttention: null,
+      unloggedOpen: false,
       sports: [],
       liveWorkout: null,
     };
