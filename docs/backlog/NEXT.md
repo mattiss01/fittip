@@ -13,6 +13,53 @@ before any code is written.
 
 ## Now
 
+**Recurring sessions.** Owner, 5 Nov 2026, after the new repeat picker shipped: the repeat
+and a session's content are changed in two different places, as a calendar does, and a
+one-off can become a series. Planned only; the owner says when to build. R1 builds the
+sheet R2 reuses, so R1 goes first; R2's plan is written now, as the owner asked.
+
+- [ ] **R1 — The repeat in its own sheet, the scope in a real dialog.** Build lane. Owner:
+      choosing a new repeat then a one-option "The whole series" step should not exist, and
+      the scope step let other fields be edited behind it.
+      - A recurring session shows one row, "Repeats · Every Friday ›", on its own page and
+        in its edit form (owner: both). The row opens `SheetLayer` (`plan-sheet.tsx`,
+        modal: the page behind is inert) with only `RecurrenceFields` and its dates.
+      - On the session page the sheet saves by itself: `edit_series` with the occurrence's
+        saved content, the button saying where it lands ("Save from Fri 6 Nov on", or "Save
+        for the whole series" when `canEditWhole`). Unchanged rule: the button is Close.
+      - In the edit form the sheet's button submits the whole form, edits and rule, as
+        `edit_series` ("Save all changes from Fri 6 Nov on"), so nothing typed is lost;
+        Cancel puts the rule back as it was (remount by key).
+      - The form's own Save opens the scope as a `SheetLayer` dialog: "Only this session",
+        "This and following" / "The whole series", "Back to editing". No in-page section.
+      - Where `occurrenceHasFutureRuleDate` is false the row says the repeat cannot change
+        from this date, and Save saves this session only, as now.
+      - Tests: the session-page and plan-manager suites, and `e2e/m3-14b` (its edit steps
+        tap the row; find forms by their Title field, not a button that changes).
+- [ ] **R2 — Make a one-off session repeat.** Careful lane: a new operation in the plan's
+      change set, so a migration, RLS and pgTAP. Plan to write in full before code.
+      - Outcome: the one-off itself becomes the first session of a new series from its own
+        date, keeping its id, activities, notes, coach note and any log. Never copied and
+        deleted. A copy would lose what hangs off the session; a delete removes a log's
+        session, which only the owner's own delete may do (ADR-031).
+      - Owner: only a session dated today or later and on or before the repeats-through
+        date (the 13-week window, R3b-3). A past session stays a record. Active only, and
+        not already in a series.
+      - Surface: on a one-off, R1's row reads "Doesn't repeat ›" on its page and in its
+        edit form, and ⋯ gains "Repeat…" that opens the same sheet. The button reads
+        "Repeat from Fri 6 Nov"; a session outside the window shows no row.
+      - Server: a `repeat_session` operation in `apply_rolling_plan_change_set` that, in one
+        transaction and under the plan revision check, creates the series from the
+        session's content (its activities copied to the series template), sets the
+        session's `series_id` and `occurrence_date` to its own date with `has_diverged`
+        false, then fills the window like `add_series` (same ten-per-day skip and receipt).
+        Ownership and window checked in SQL from the session row, not from the form.
+      - Open for the owner: a today session already logged stays the first occurrence with
+        its log untouched; say so, or refuse logged sessions too.
+      - Proof: pgTAP for ownership, the window, a session in a series, and that the log and
+        its link are unchanged; then the founder apply (ADR-018) with `migration list` and
+        advisors reported before merge.
+
 **Activities in training.** The owner named this on 24 Sep 2026. A session can now hold
 activities and the editor writes them; what is left is everywhere else they should appear.
 The live tables are `rolling_plan_activities` and `completion_activities`; M3-11 dropped
@@ -115,12 +162,6 @@ Not worth their own slot; do them when work lands nearby.
   series. To decide: a dismissed suggestion leaves an empty session in the plan rather
   than nothing. Filling an unsaved form instead would be careful lane (AI data boundary,
   a proposal with no session behind it) for little more.
-- **Make an existing session repeat — idea.** Owner, 29 Sep 2026. "Repeat this session" is
-  offered only while creating a session; a one-off already in the plan cannot become a
-  series later, so today it means creating a new series and deleting the single one. The
-  idea: offer the switch when editing a one-off, turning it into the first occurrence of a
-  new series from its date. Careful lane (how a series and its occurrences are stored,
-  ADR-017), and it has to say what happens to any log already on the session.
 - **"Why today" — idea.** Owner, 29 Sep 2026. The Today prototype showed one line above the
   sessions saying why the day looks as it does; R2 tried quoting the first open session's
   intent there, and the owner put the intent back on its card. What a real line would need:
