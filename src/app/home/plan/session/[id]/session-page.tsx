@@ -32,8 +32,10 @@ import {
 import {
   RecurringDeleteControls,
   RecurringSessionControls,
+  seriesEditScope,
   type PlanSeriesView,
 } from "../../recurring-session-controls";
+import { RepeatRow, RepeatSheet, ruleOf } from "../../repeat-sheet";
 import { SaveToLibrary } from "../../saved/save-to-library";
 import { INITIAL_SERIES_ACTION_STATE } from "../../series-action-state";
 import { changeSeriesAction } from "../../series-actions";
@@ -160,6 +162,7 @@ export function SessionPage({
   );
 
   const [panel, setPanel] = useState<Panel | null>(null);
+  const [repeating, setRepeating] = useState(false);
   const closePanel = useCallback(() => setPanel(null), []);
   // A save closes the panel it came from, during render against the
   // submission it answered, as the Plan's edit disclosure did: an effect would
@@ -308,7 +311,11 @@ export function SessionPage({
   const plannable = !past && session.log === undefined && !cancelled;
   const recurring =
     series !== undefined && session.occurrenceDate !== null
-      ? { series, occurrenceDate: session.occurrenceDate }
+      ? {
+          series,
+          occurrenceDate: session.occurrenceDate,
+          ...seriesEditScope(session.occurrenceDate, series, today),
+        }
       : null;
   const logHref = session.log
     ? // Opened from here, a delete comes back here (owner, 16 Oct 2026).
@@ -495,7 +502,12 @@ export function SessionPage({
             .join(" · ")}
         </p>
         <div className={page.marks}>
-          {session.seriesId === null ? null : <span>Recurring</span>}
+          {/* A session the plan may still change shows its repeat as a row
+              instead, below. */}
+          {session.seriesId === null ||
+          (plannable && recurring !== null) ? null : (
+            <span>Recurring</span>
+          )}
           {session.hasDiverged ? (
             <span data-mark="changed">Changed</span>
           ) : null}
@@ -508,6 +520,23 @@ export function SessionPage({
             </span>
           ) : null}
         </div>
+        {plannable && recurring !== null ? (
+          <div className={page.repeat}>
+            <RepeatRow
+              rule={ruleOf(recurring.series)}
+              disabled={busy}
+              onOpen={
+                recurring.canChangeFuture ? () => setRepeating(true) : undefined
+              }
+            />
+            {recurring.canChangeFuture ? null : (
+              <p className={page.aside}>
+                This date is no longer one its series repeats from, so the
+                repeat cannot be changed from here.
+              </p>
+            )}
+          </div>
+        ) : null}
         {session.intent === null ? null : (
           <p className={page.text}>{session.intent}</p>
         )}
@@ -697,6 +726,30 @@ export function SessionPage({
           ) : null}
         </div>
       </article>
+
+      {repeating && recurring !== null ? (
+        <RepeatSheet
+          idPrefix={`repeat-${session.id}`}
+          series={recurring.series}
+          occurrenceDate={recurring.occurrenceDate}
+          canEditWhole={recurring.canEditWhole}
+          pending={busy}
+          onSave={(formData) => {
+            // The series takes this session as it is saved, as the edit
+            // form's own future scope would.
+            for (const [key, value] of Object.entries(draftOf(session))) {
+              formData.set(key, value);
+            }
+            formData.set("activities", JSON.stringify(session.activities));
+            formData.set("operation", "edit_series");
+            formData.set("sessionId", session.id);
+            formData.set("expectedRevision", String(expectedRevision));
+            setRepeating(false);
+            trackedSeriesAction(formData);
+          }}
+          onClose={() => setRepeating(false)}
+        />
+      ) : null}
 
       {/* Everything ⋯ offers is a pop-up over the page, short and to the
           point (owner, 19 Oct 2026); Edit has a page of its own. */}

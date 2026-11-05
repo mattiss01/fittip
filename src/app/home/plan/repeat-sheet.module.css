@@ -1,0 +1,69 @@
+/* A recurring session's repeat in one line, and the way into its sheet. */
+.row {
+  width: 100%;
+  min-height: 2.75rem;
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0.65rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: white;
+  color: var(--pine);
+  text-align: left;
+}
+
+button.row {
+  cursor: pointer;
+}
+
+button.row:hover:not(:disabled) {
+  border-color: var(--pine);
+  background: white;
+}
+
+button.row:focus-visible {
+  outline: 3px solid var(--ledger-ink);
+  outline-offset: 2px;
+}
+
+/* Only read, so it does not look like something to tap. */
+p.row {
+  border-color: transparent;
+  background: var(--ledger-wash);
+}
+
+.rowLabel {
+  flex: none;
+  color: var(--ledger-muted, var(--muted));
+  font: 500 0.62rem var(--font-mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.rowValue {
+  flex: 1;
+  min-width: 0;
+  font: 700 0.95rem/1.3 var(--font-sans);
+}
+
+.chevron {
+  flex: none;
+  align-self: center;
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.scope {
+  margin: 0.35rem 0 0;
+  color: var(--moss);
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.form {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1rem;
+}

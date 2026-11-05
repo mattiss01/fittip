@@ -132,11 +132,12 @@ test.describe("M3-14B recurring series surface", () => {
       // Only this session changes one occurrence and marks it as diverged.
       await openSession(page, dailyStart, "Aerobic base");
       await page.getByRole("link", { name: "Edit", exact: true }).click();
-      // One form for both scopes; Save asks which one.
+      // One form for both scopes; Save asks which one, in a dialog.
       const onlyThis = recurringEditForm(sessionPanel(page, "Edit session"));
       await onlyThis.getByLabel("Title").fill("Diverged aerobic");
       await onlyThis.getByRole("button", { name: "Save changes" }).click();
-      await onlyThis
+      await page
+        .getByRole("dialog", { name: /^Save changes to / })
         .getByRole("button", { name: /^Only this session/ })
         .click();
       await expect(
@@ -162,13 +163,19 @@ test.describe("M3-14B recurring series surface", () => {
       await page.getByRole("link", { name: "Edit", exact: true }).click();
       const future = recurringEditForm(sessionPanel(page, "Edit session"));
       await future.getByLabel("Title").fill("Future steady");
-      await choose(future, "radio", "Every day");
-      await future.getByRole("button", { name: "Save changes" }).click();
-      // A changed repeat applies from here on, so only that scope is offered.
+      // The repeat has a sheet of its own, which saves the whole form from
+      // this session on: a changed repeat means nothing for one session.
+      await future.getByRole("button", { name: /^Repeats/ }).click();
+      const repeat = page.getByRole("dialog", { name: "Repeat" });
+      await choose(repeat, "radio", "Every day");
       await expect(
-        future.getByRole("button", { name: /^Only this session/ }),
+        repeat.getByRole("button", { name: /^Only this session/ }),
       ).toHaveCount(0);
-      await future.getByRole("button", { name: /^This and following/ }).click();
+      await repeat
+        .getByRole("button", {
+          name: `Save all changes from ${shortDate(secondDaily)} on`,
+        })
+        .click();
       await expect(
         page.getByRole("heading", { level: 1, name: "Plan", exact: true }),
       ).toBeVisible();
@@ -352,10 +359,7 @@ async function choose(
     .click();
 }
 
-/**
- * The edit form, found by its Title field: its Save button gives way to the
- * scope choice once tapped, so it cannot be what the form is found by.
- */
+/** The edit form, found by its Title field. */
 function recurringEditForm(card: Locator) {
   return card.locator("form").filter({
     has: card.page().getByLabel("Title", { exact: true }),

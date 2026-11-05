@@ -373,6 +373,36 @@ export function recurrenceProblem(
   ).problem;
 }
 
+/** A saved rule in one line, as a recurring session's repeat row shows it. */
+export function describeRule(value: RecurrenceFieldsValue) {
+  const sentence = summarize({
+    frequency: value.frequency,
+    intervalText: String(value.intervalCount),
+    weekdays: value.weekdays ?? [],
+    noEnd: value.endDate === undefined,
+    endDate: value.endDate ?? "",
+  });
+  return value.endDate === undefined
+    ? sentence
+    : `${sentence}, until ${shortDate(value.endDate)}`;
+}
+
+/**
+ * Adds a saved rule to a submission under the names these fields use, for a
+ * save that keeps the repeat as it is.
+ */
+export function appendRule(formData: FormData, value: RecurrenceFieldsValue) {
+  formData.set("frequency", value.frequency);
+  formData.set("intervalCount", String(value.intervalCount));
+  if (value.frequency === "weekly") {
+    for (const day of value.weekdays ?? []) {
+      formData.append("weekdays", String(day));
+    }
+  }
+  formData.set("noEnd", value.endDate === undefined ? "true" : "false");
+  if (value.endDate !== undefined) formData.set("endDate", value.endDate);
+}
+
 /** The rule's first dates, or why it has none, read the same for preview and save. */
 function checkRule(
   draft: Draft,
