@@ -1,10 +1,10 @@
 /*
- * Progress in the Coach's note direction (R3): one month between two arrows,
- * the days it holds down the page with the date beside them as on the Plan,
- * and each logged session as the receipt Today folds it into - the same mark,
- * the same outcome stamp, the same facts - so one outcome never looks like two
- * different facts. Nothing here totals, ranks, streaks, or charts, and no
- * figure on it is computed.
+ * Progress split by sport (owner, 5 Nov 2026, P1): the owner's sports as
+ * chips, one month between two arrows, what the month holds of the sport
+ * chosen, and its logs a week at a time. Each log is a card edged in its
+ * sport's colour, with the same outcome stamp Today uses, so one outcome
+ * never looks like two different facts. It counts the owner's own logs and
+ * nothing else; nothing here ranks, streaks, scores or charts a trend.
  *
  * One completion is drawn beside the plan it was measured against. What
  * happened sits on paper; what was planned is a copy taken at the time, on a
@@ -14,6 +14,17 @@
 
 .page {
   --progress-mark: var(--ember);
+  /* The sports' palette, given out most-logged first (`sport-colours.ts`).
+     Local to Progress, as colours that encode something stay with their
+     module. */
+  --sport-1: var(--pine-soft);
+  --sport-2: var(--ember);
+  --sport-3: #b7892d;
+  --sport-4: #4f6a9e;
+  --sport-5: #8a5a9e;
+  --sport-6: #3d8a8c;
+  --sport-7: #a3485f;
+  --sport-8: #6b7d2e;
 }
 
 .header {
@@ -86,48 +97,182 @@
   text-decoration: none;
 }
 
-/* ---- Days, with the date beside them ---- */
+/* ---- The sports ---- */
 
-.days {
+/* One row that scrolls sideways, edge to edge, so any number of sports fits
+   at 390px without wrapping into a second row. */
+.sportChips {
+  display: flex;
+  gap: 0.45rem;
+  margin: 0 calc(-1 * var(--shell-inset, 1rem));
+  padding: 0.2rem var(--shell-inset, 1rem) 0.4rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.sportChips::-webkit-scrollbar {
+  display: none;
+}
+
+.sportChip {
+  flex: none;
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0 1rem;
+  border-radius: var(--radius-pill);
+  background: var(--ledger-paper);
+  box-shadow: var(--shadow-card);
+  color: var(--ledger-ink);
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.sportChip[aria-current="page"] {
+  background: var(--ledger-ink);
+  color: var(--ledger-paper);
+}
+
+.sportDot {
+  flex: none;
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 50%;
+  background: var(--sport);
+}
+
+/* ---- What the month holds ---- */
+
+.summary {
   display: grid;
-  gap: 1rem;
+  gap: 0.65rem;
+  padding: 1rem 1.1rem;
+  border-radius: var(--radius-card);
+  background: var(--ledger-paper);
+  box-shadow: var(--shadow-card);
+}
+
+.summary[data-sport] {
+  box-shadow:
+    inset 5px 0 0 var(--sport),
+    var(--shadow-card);
+}
+
+.summaryLine {
+  margin: 0;
+  font-size: 1.35rem;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.summaryLine span {
+  color: var(--ledger-muted);
+  font-weight: 600;
+}
+
+.summaryNote {
+  margin: 0;
+  color: var(--ledger-muted);
+  font-size: 0.85rem;
+}
+
+.sportBar {
+  display: flex;
+  height: 0.9rem;
+  gap: 2px;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+}
+
+.sportBarPart {
+  min-width: 0.5rem;
+  background: var(--sport);
+}
+
+.sportLegend,
+.outcomeCounts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.9rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.85rem;
+}
+
+.outcomeCounts li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+/* Each sport under the bar is the way into it, so it is a full touch target
+   with the page's focus ring, which the bar's clipped parts could not be. */
+.sportLegend {
+  gap: 0.25rem 0.4rem;
+}
+
+.sportLegend a {
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0 0.6rem;
+  border-radius: var(--radius-pill);
+  background: var(--ledger-wash);
+  color: var(--ledger-ink);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.outcomeCounts {
+  color: var(--ledger-muted);
+}
+
+.outcomeCounts li > span {
+  transform: scale(0.8);
+}
+
+/* ---- Weeks ---- */
+
+.weeks {
+  display: grid;
+  gap: 1.1rem;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.day {
+.week {
   display: grid;
-  grid-template-columns: 2.6rem minmax(0, 1fr);
-  gap: 0.6rem;
+  gap: 0.5rem;
 }
 
-.dayMark {
-  display: grid;
-  justify-items: center;
-  align-content: start;
+.weekHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0 0.25rem;
+}
+
+.weekHead h3 {
   margin: 0;
-  padding-top: 0.9rem;
-  color: var(--ledger-ink);
-}
-
-.dayWeekday {
-  order: -1;
-  color: var(--ledger-muted);
-  font: 400 0.62rem var(--font-mono);
-  text-transform: uppercase;
-}
-
-.dayNumber {
-  font-size: 1.15rem;
+  font-size: 0.95rem;
   font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  line-height: 1.1;
 }
 
-/* The day is already announced by the date beside it; this gives the
-   grouping a heading a screen reader can navigate by without printing the
-   date twice. */
+.weekHead p {
+  margin: 0;
+  color: var(--ledger-muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 .visuallyHidden {
   position: absolute;
   width: 1px;
@@ -140,30 +285,63 @@
 }
 
 .entries {
-  grid-column: 2;
   display: grid;
-  gap: 0.6rem;
+  gap: 0.5rem;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-/* ---- A logged session, as Today's receipt ---- */
+/* ---- A logged session, edged in its sport's colour ---- */
 
 .entry {
   position: relative;
   display: grid;
-  gap: 0.6rem;
-  padding: 1rem 1.1rem;
+  grid-template-columns: 2.4rem minmax(0, 1fr);
+  gap: 0.65rem;
+  padding: 0.85rem 1rem 0.85rem 1.1rem;
   border-radius: var(--radius-card);
   background: var(--ledger-paper);
-  box-shadow: var(--shadow-card);
+  box-shadow:
+    inset 4px 0 0 var(--sport),
+    var(--shadow-card);
+}
+
+/* A skip records no training: the card steps back, its sport edge stays. */
+.entry[data-outcome="skipped"] {
+  background: color-mix(in srgb, var(--ledger-paper) 55%, var(--ledger-wash));
+}
+
+.entryDay {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  margin: 0;
+  line-height: 1.05;
+}
+
+.entryDayNumber {
+  font-size: 1.3rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.entryWeekday {
+  color: var(--ledger-muted);
+  font: 400 0.62rem var(--font-mono);
+  text-transform: uppercase;
+}
+
+.entryBody {
+  display: grid;
+  gap: 0.3rem;
+  min-width: 0;
 }
 
 .entryHeader {
   display: flex;
-  align-items: center;
-  gap: 0.7rem;
+  align-items: baseline;
+  gap: 0.6rem;
 }
 
 .entryHeader h4 {
@@ -171,9 +349,74 @@
   min-width: 0;
   margin: 0;
   overflow-wrap: anywhere;
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   font-weight: 700;
-  line-height: 1.2;
+  line-height: 1.25;
+}
+
+.entryFacts {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0;
+  color: var(--ledger-muted);
+  font-size: 0.85rem;
+}
+
+.entryFacts span + span::before {
+  padding: 0 0.35rem;
+  content: "·";
+}
+
+.entryAside {
+  margin: 0;
+  color: var(--ledger-muted);
+  font-size: 0.82rem;
+}
+
+.entryAside a {
+  color: var(--ledger-ink);
+  font-weight: 600;
+  text-underline-offset: 0.2rem;
+}
+
+.entryActivities {
+  display: grid;
+  gap: 0.1rem;
+  margin: 0.15rem 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.85rem;
+}
+
+.entryActivities li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 0.4rem;
+}
+
+.entryActivityDetail {
+  color: var(--pine-soft);
+  font-weight: 600;
+}
+
+/* The owner's own words, two lines of them; the record holds the rest. */
+.entryNote {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  color: var(--ledger-ink);
+  font-size: 0.88rem;
+  font-style: italic;
+  line-height: 1.4;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.entry .signals {
+  margin-top: 0.2rem;
+  padding: 0.4rem 0.65rem;
+  font-size: 0.82rem;
 }
 
 .entryLink {

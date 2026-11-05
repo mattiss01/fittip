@@ -6,6 +6,7 @@ import {
   CompletionFutureDateError,
   CompletionTimezoneRequiredError,
   CompletionValidationError,
+  rankSportUse,
   type Completion,
   type CompletionActivity,
   type CompletionChange,
@@ -15,6 +16,7 @@ import {
   type CompletionReceipt,
   type ReplacementDraft,
   type ParsedCompletionWindow,
+  type SportUse,
 } from "./completion-log";
 
 import { RollingPlanRuleError } from "@/server/rolling-plan/rolling-plan";
@@ -94,6 +96,15 @@ export class InMemoryCompletionLogAdapter implements CompletionLogAdapter {
           left.id.localeCompare(right.id),
       )
       .map((completion) => this.view(completion));
+  }
+
+  async sportUse(): Promise<SportUse[]> {
+    return rankSportUse(
+      [...this.completions.values()].map((completion) => ({
+        status: completion.status,
+        sport: completion.sport ?? completion.plannedSnapshot?.sport ?? null,
+      })),
+    );
   }
 
   async get(completionId: string): Promise<Completion | null> {

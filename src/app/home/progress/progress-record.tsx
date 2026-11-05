@@ -42,8 +42,8 @@ export type ProgressCompletionView = {
   /** The planned sessions this unplanned training stood in for, by name. */
   replaces: { id: string; label: string }[];
   /**
-   * What was actually done, in the order it was done, already in words. Only
-   * the detail page draws it, so only that page builds it.
+   * What was actually done, in the order it was done, already in words. The
+   * detail page draws all of it and the month's card the first few (P1).
    */
   activities?: { position: number; name: string; detail: string | null }[];
   pain: boolean;
