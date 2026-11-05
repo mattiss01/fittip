@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { CSSProperties } from "react";
 
-import { formatMonth, shiftMonth } from "./month";
+import { formatMonth, monthWindow, shiftMonth } from "./month";
 import styles from "./progress.module.css";
 import { longDay, type ProgressCompletionView } from "./progress-record";
 import {
@@ -9,8 +9,10 @@ import {
   countRecord,
   formatMinutes,
   groupByWeek,
+  sessionCount,
   sessionsBySport,
-} from "./record-weeks";
+  type RecordCount,
+} from "./record-counts";
 import { colourOf, type SportColour } from "./sport-colours";
 
 import {
@@ -81,6 +83,8 @@ export function ProgressMonth({
     sport === null ? entries : entries.filter((entry) => entry.sport === sport);
   const weeks = groupByWeek(shown);
   const thisWeek = mondayOf(today);
+  const { startDate, endDate } = monthWindow(month);
+  const style = (of: string | null) => sportStyleOf(sports, of);
 
   return (
     <section
@@ -97,9 +101,7 @@ export function ProgressMonth({
               className={styles.sportChip}
               href={progressHref(month, currentMonth, chip)}
               aria-current={chip === sport ? "page" : undefined}
-              style={
-                chip === null ? undefined : sportStyle(colourOf(sports, chip))
-              }
+              style={chip === null ? undefined : style(chip)}
             >
               {chip === null ? null : (
                 <span className={styles.sportDot} aria-hidden="true" />
@@ -115,7 +117,7 @@ export function ProgressMonth({
       <header className={styles.monthHead}>
         <Link
           className={styles.step}
-          href={progressHref(previousMonth, currentMonth, sport, true)}
+          href={monthHref(previousMonth, sport)}
           rel="prev"
           aria-label={`Previous month, ${formatMonth(previousMonth)}`}
         >
@@ -124,7 +126,7 @@ export function ProgressMonth({
         <h2 id="progress-month-heading">{formatMonth(month)}</h2>
         <Link
           className={styles.step}
-          href={progressHref(nextMonth, currentMonth, sport, true)}
+          href={monthHref(nextMonth, sport)}
           rel="next"
           aria-label={`Next month, ${formatMonth(nextMonth)}`}
         >
@@ -151,23 +153,30 @@ export function ProgressMonth({
           />
           <ol className={styles.weeks}>
             {weeks.map((week) => {
-              const count = countRecord(week.entries);
+              // A week is counted only as far as it lies in this month, so
+              // its heading names those days and no others.
+              const first = week.monday < startDate ? startDate : week.monday;
+              const sunday = shiftIsoDate(week.monday, 6);
+              const last = sunday > endDate ? endDate : sunday;
+              const whole = first === week.monday && last === sunday;
               return (
                 <li key={week.monday} className={styles.week}>
                   <div className={styles.weekHead}>
                     <h3>
-                      {week.monday === thisWeek
+                      {whole && week.monday === thisWeek
                         ? "This week"
-                        : `${dayMonth(week.monday)} – ${dayMonth(shiftIsoDate(week.monday, 6))}`}
+                        : first === last
+                          ? dayMonth(first)
+                          : `${dayMonth(first)} – ${dayMonth(last)}`}
                     </h3>
-                    <p>{sessionsText(count.sessions, count.minutes)}</p>
+                    <p>{weekCountText(countRecord(week.entries))}</p>
                   </div>
                   <ol className={styles.entries}>
                     {week.entries.map((entry) => (
                       <Entry
                         key={entry.id}
                         entry={entry}
-                        colour={colourOf(sports, entry.sport)}
+                        style={style(entry.sport)}
                       />
                     ))}
                   </ol>
@@ -191,7 +200,8 @@ export function ProgressMonth({
 /**
  * What the month holds of the sport shown: the sessions that record training
  * and their time, then each outcome by count. On all sports, a bar of the
- * month's sessions by sport, each part opening that sport.
+ * month's sessions by sport, and under it each sport as a link that opens it:
+ * the bar's parts are a picture, too thin to tap, so the legend is the target.
  */
 function MonthSummary({
   month,
@@ -207,6 +217,7 @@ function MonthSummary({
   entries: ProgressCompletionView[];
 }) {
   const count = countRecord(entries);
+  const style = (of: string | null) => sportStyleOf(sports, of);
   const bySport =
     sport === null
       ? sessionsBySport(
@@ -220,22 +231,14 @@ function MonthSummary({
       className={styles.summary}
       data-progress-summary
       aria-label={`${sport ?? "All sports"} in ${formatMonth(month)}`}
-      style={sport === null ? undefined : sportStyle(colourOf(sports, sport))}
+      style={sport === null ? undefined : style(sport)}
       data-sport={sport === null ? undefined : true}
     >
       <p className={styles.summaryLine}>
-        {count.sessions === 0 ? (
-          <strong>No training recorded</strong>
-        ) : (
-          <>
-            <strong>
-              {count.sessions} {count.sessions === 1 ? "session" : "sessions"}
-            </strong>
-            {count.minutes > 0 ? (
-              <span> · {formatMinutes(count.minutes)}</span>
-            ) : null}
-          </>
-        )}
+        <strong>{sessionCount(count.sessions)}</strong>
+        {count.minutes > 0 ? (
+          <span> · {formatMinutes(count.minutes)}</span>
+        ) : null}
       </p>
       {count.withoutDuration === 0 ? null : (
         <p className={styles.summaryNote}>
@@ -246,28 +249,26 @@ function MonthSummary({
       )}
       {bySport.length === 0 ? null : (
         <>
-          <div className={styles.sportBar}>
+          <div className={styles.sportBar} aria-hidden="true">
             {bySport.map((part) => (
-              <Link
+              <span
                 key={part.sport}
                 className={styles.sportBarPart}
-                href={progressHref(month, currentMonth, part.sport)}
-                style={{
-                  ...sportStyle(colourOf(sports, part.sport)),
-                  flexGrow: part.sessions,
-                }}
-                aria-label={`${part.sport}: ${part.sessions} ${part.sessions === 1 ? "session" : "sessions"}`}
+                style={{ ...style(part.sport), flexGrow: part.sessions }}
               />
             ))}
           </div>
           <ul className={styles.sportLegend}>
             {bySport.map((part) => (
-              <li
-                key={part.sport}
-                style={sportStyle(colourOf(sports, part.sport))}
-              >
-                <span className={styles.sportDot} aria-hidden="true" />
-                {part.sport} {part.sessions}
+              <li key={part.sport}>
+                <Link
+                  href={progressHref(month, currentMonth, part.sport)}
+                  style={style(part.sport)}
+                  aria-label={`${part.sport}: ${sessionCount(part.sessions)}`}
+                >
+                  <span className={styles.sportDot} aria-hidden="true" />
+                  {part.sport} {part.sessions}
+                </Link>
               </li>
             ))}
           </ul>
@@ -287,10 +288,11 @@ function MonthSummary({
 
 function Entry({
   entry,
-  colour,
+  style,
 }: {
   entry: ProgressCompletionView;
-  colour: string;
+  /** Carries the sport's colour as `--sport`. */
+  style: CSSProperties;
 }) {
   const signals = COMPLETION_SIGNAL_STAMPS.filter(({ key }) => entry[key]).map(
     ({ label }) => label,
@@ -317,7 +319,7 @@ function Entry({
       className={styles.entry}
       data-progress-entry={entry.id}
       data-outcome={entry.outcome}
-      style={sportStyle(colour)}
+      style={style}
     >
       <p className={styles.entryDay}>
         <span className={styles.entryDayNumber}>
@@ -487,29 +489,46 @@ function ChevronIcon({ direction }: { direction: "left" | "right" }) {
 /**
  * The month and the sport in the URL. The current month is left out, as it
  * always was, so "Back to this month" and the chips of this month read
- * `/home/progress`; the arrows always name the month they open.
+ * `/home/progress`.
  */
 function progressHref(
   month: string,
   currentMonth: string,
   sport: string | null,
-  alwaysNameMonth = false,
 ) {
-  const query = new URLSearchParams();
-  if (alwaysNameMonth || month !== currentMonth) query.set("month", month);
-  if (sport !== null) query.set("sport", sport);
-  const search = query.toString();
+  return month === currentMonth
+    ? withSport({}, sport)
+    : monthHref(month, sport);
+}
+
+/** The arrows always name the month they open. */
+function monthHref(month: string, sport: string | null) {
+  return withSport({ month }, sport);
+}
+
+function withSport(query: Record<string, string>, sport: string | null) {
+  const search = new URLSearchParams(
+    sport === null ? query : { ...query, sport },
+  ).toString();
   return search === "" ? "/home/progress" : `/home/progress?${search}`;
 }
 
-function sessionsText(sessions: number, minutes: number) {
-  if (sessions === 0) return "No training recorded";
-  const done = `${sessions} done`;
-  return minutes > 0 ? `${done} · ${formatMinutes(minutes)}` : done;
+/** A week's line: its sessions, their time, and any it could not time. */
+function weekCountText(count: RecordCount) {
+  return [
+    sessionCount(count.sessions),
+    count.minutes > 0 ? formatMinutes(count.minutes) : null,
+    count.withoutDuration > 0
+      ? `${count.withoutDuration} without a duration`
+      : null,
+  ]
+    .filter((part): part is string => part !== null)
+    .join(" · ");
 }
 
-function sportStyle(colour: string) {
-  return { "--sport": colour } as CSSProperties;
+/** A sport's colour, as the `--sport` its card, chip and legend draw with. */
+function sportStyleOf(sports: SportColour[], sport: string | null) {
+  return { "--sport": colourOf(sports, sport) } as CSSProperties;
 }
 
 function dayNumber(date: string) {

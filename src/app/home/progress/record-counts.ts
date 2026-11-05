@@ -98,3 +98,13 @@ export function formatMinutes(minutes: number) {
   if (hours === 0) return `${rest} min`;
   return rest === 0 ? `${hours} h` : `${hours} h ${rest}`;
 }
+
+/**
+ * "1 session", "3 sessions": the one word the month and its weeks share for
+ * logs that record training. Never "done", which a partly completed log is
+ * not. None at all is said in words rather than as a zero.
+ */
+export function sessionCount(sessions: number) {
+  if (sessions === 0) return "No training recorded";
+  return `${sessions} ${sessions === 1 ? "session" : "sessions"}`;
+}

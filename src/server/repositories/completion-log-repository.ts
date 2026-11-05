@@ -96,7 +96,7 @@ export class PostgresCompletionLogAdapter implements CompletionLogAdapter {
     for (let from = 0; ; from += SPORT_USE_PAGE) {
       const { data, error } = await this.client
         .from("completions")
-        .select("id, status, sport, snapshot_sport:planned_snapshot->>sport")
+        .select("status, sport, snapshot_sport:planned_snapshot->>sport")
         .eq("user_id", userId)
         .order("id", { ascending: true })
         .range(from, from + SPORT_USE_PAGE - 1);
@@ -106,7 +106,11 @@ export class PostgresCompletionLogAdapter implements CompletionLogAdapter {
         if (!isChoice(record.status, COMPLETION_STATUSES)) {
           throw new CompletionPersistenceError();
         }
-        const own = typeof record.sport === "string" ? record.sport : null;
+        // A blank sport of its own is no sport; the plan's stands in.
+        const own =
+          typeof record.sport === "string" && record.sport.trim() !== ""
+            ? record.sport
+            : null;
         const planned =
           typeof record.snapshot_sport === "string"
             ? record.snapshot_sport

@@ -214,16 +214,22 @@ export type SportUse = { sport: string; logs: number };
 
 /**
  * Counts every log that records training by its sport, its own or else the
- * plan's, and orders them most-logged first, then by name. A skip names a
- * sport it did not train, so it is not counted. Both adapters answer through
- * this, so they cannot disagree on the order.
+ * plan's, and orders them most-logged first, then by name. A skip or a
+ * replacement names a sport it did not train, so neither is counted: the same
+ * outcomes Progress leaves out of a month's sessions (`recordsTraining`).
+ * Both adapters answer through this, so they cannot disagree on the order.
  */
 export function rankSportUse(
   rows: { status: CompletionStatus; sport: string | null }[],
 ): SportUse[] {
   const counts = new Map<string, number>();
   for (const { status, sport } of rows) {
-    if (status === "skipped" || sport === null || sport.trim() === "") {
+    if (
+      status === "skipped" ||
+      status === "replaced" ||
+      sport === null ||
+      sport.trim() === ""
+    ) {
       continue;
     }
     counts.set(sport, (counts.get(sport) ?? 0) + 1);

@@ -203,11 +203,29 @@
   font-size: 0.85rem;
 }
 
-.sportLegend li,
 .outcomeCounts li {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
+}
+
+/* Each sport under the bar is the way into it, so it is a full touch target
+   with the page's focus ring, which the bar's clipped parts could not be. */
+.sportLegend {
+  gap: 0.25rem 0.4rem;
+}
+
+.sportLegend a {
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0 0.6rem;
+  border-radius: var(--radius-pill);
+  background: var(--ledger-wash);
+  color: var(--ledger-ink);
+  font-weight: 600;
+  text-decoration: none;
 }
 
 .outcomeCounts {

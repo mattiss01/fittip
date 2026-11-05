@@ -7,6 +7,7 @@ import {
   CompletionValidationError,
   describeReplacement,
   parseCompletionChange,
+  rankSportUse,
   type Completion,
   type CompletionPlannedSnapshot,
 } from "./completion-log";
@@ -256,5 +257,27 @@ describe("describeReplacement", () => {
 
   it("says nothing for a log that replaced nothing", () => {
     expect(describeReplacement(replaced({ status: "completed" }))).toBe(null);
+  });
+});
+
+describe("rankSportUse (P1)", () => {
+  it("counts only logs that record training, most first, then by name", () => {
+    expect(
+      rankSportUse([
+        { status: "completed", sport: "Swimming" },
+        { status: "unplanned", sport: "Cycling" },
+        { status: "partially_completed", sport: "Cycling" },
+        { status: "completed", sport: "Running" },
+        // Neither records training, so neither lifts its sport's rank.
+        { status: "skipped", sport: "Running" },
+        { status: "replaced", sport: "Running" },
+        { status: "completed", sport: null },
+        { status: "completed", sport: "  " },
+      ]),
+    ).toEqual([
+      { sport: "Cycling", logs: 2 },
+      { sport: "Running", logs: 1 },
+      { sport: "Swimming", logs: 1 },
+    ]);
   });
 });

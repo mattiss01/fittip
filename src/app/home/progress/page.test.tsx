@@ -347,6 +347,36 @@ describe("Progress", () => {
     expect(document.body.textContent).not.toMatch(/total|streak|average/i);
   });
 
+  it("heads a week by the days of it in the month, and names what it cannot time", async () => {
+    // 1 March 2026 is a Sunday: its week began in February, which this month
+    // does not count, so its heading says only the day it does.
+    listCompletions.mockResolvedValue([
+      {
+        ...completion(),
+        id: OTHER_ID,
+        actualLocalDate: "2026-03-02",
+        durationMinutes: null,
+      },
+      { ...completion(), actualLocalDate: "2026-03-01" },
+    ]);
+
+    render(
+      await ProgressPage({
+        searchParams: Promise.resolve({ month: "2026-03" }),
+      }),
+    );
+
+    const weeks = [
+      ...document.querySelectorAll("[data-progress-month] > ol > li"),
+    ];
+    expect(weeks.map((week) => week.querySelector("h3")?.textContent)).toEqual([
+      "2 Mar – 8 Mar",
+      "1 Mar",
+    ]);
+    expect(weeks[0]?.textContent).toContain("1 session · 1 without a duration");
+    expect(weeks[1]?.textContent).toContain("1 session · 42 min");
+  });
+
   it("says which sport an empty month has none of", async () => {
     sportUse.mockResolvedValue([{ sport: "Swimming", logs: 2 }]);
 

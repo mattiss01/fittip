@@ -6,7 +6,7 @@ import {
   formatMinutes,
   groupByWeek,
   sessionsBySport,
-} from "./record-weeks";
+} from "./record-counts";
 
 const log = (
   actualLocalDate: string,
