@@ -648,8 +648,9 @@
 .field > span,
 .field > label {
   color: var(--moss);
-  font: 500 0.7rem var(--font-mono);
-  text-transform: uppercase;
+  font: var(--font-field-label);
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .field input {

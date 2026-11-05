@@ -138,6 +138,12 @@
   color: var(--ledger-muted);
 }
 
+/* A recurring session's repeat row, and why it cannot change when it cannot. */
+.repeat {
+  display: grid;
+  gap: 0.35rem;
+}
+
 .text {
   margin: 0;
   overflow-wrap: anywhere;

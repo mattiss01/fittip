@@ -299,11 +299,9 @@ describe("SessionPage", () => {
     ).toHaveValue("cancel");
 
     choose("Delete");
-    const warning = screen.getByText(/gone for good/i);
-    // A one-off delete really is permanent, so it says so, briefly (owner,
-    // 19 Oct 2026), and says nothing about a series it does not belong to.
-    expect(warning.textContent).toMatch(/no undo/i);
-    expect(warning.textContent).not.toMatch(/repeats/i);
+    // The dialog's title and its button say it; no sentence (owner, 5 Nov
+    // 2026).
+    expect(screen.queryByText(/gone for good|no undo/i)).toBeNull();
     const form = screen
       .getByRole("button", { name: "Delete session" })
       .closest("form")!;
@@ -504,7 +502,7 @@ describe("SessionPage", () => {
     expect(replaceMock).not.toHaveBeenCalled();
   });
 
-  it("edits a recurring session in one form and asks the scope on Save", async () => {
+  it("edits a recurring session in one form and asks the scope in a dialog", async () => {
     const diverged = occurrence({
       hasDiverged: true,
       activities: [
@@ -519,28 +517,43 @@ describe("SessionPage", () => {
       ],
     });
     render(page(diverged, series()));
-    expect(screen.getByText("Recurring")).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: /^Repeats Every day/ }),
+    ).toBeVisible();
     expect(screen.getByText("Changed")).toBeVisible();
     cleanup();
     render(editPage(diverged, series()));
+    const form = screen
+      .getByLabelText("Title", { exact: true })
+      .closest("form")!;
 
+    // The repeat is a row here, not fields of the form.
+    expect(screen.queryByRole("radio", { name: "Custom" })).toBeNull();
     expect(screen.queryByRole("button", { name: FUTURE_SCOPE })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
-    const only = screen.getByRole("button", { name: /^Only this session/ });
-    const future = screen.getByRole("button", { name: FUTURE_SCOPE });
-    const form = only.closest("form")!;
-    expect(future.closest("form")).toBe(form);
-    // Asserted on what is submitted: React drops a submitter's name and value
-    // when it has a `formAction`, which an attribute check cannot see.
-    await act(async () => fireEvent.click(only));
+    const dialog = screen.getByRole("dialog", {
+      name: "Save changes to Aerobic run",
+    });
+    expect(dialog).toHaveAttribute("aria-modal", "true");
+    await act(async () =>
+      fireEvent.click(
+        screen.getByRole("button", { name: /^Only this session/ }),
+      ),
+    );
     expect(
       (planDispatch.mock.calls.at(-1) as [FormData])[0].get("operation"),
     ).toBe("edit");
-    await act(async () => fireEvent.click(future));
+    expect(screen.queryByRole("dialog")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+    await act(async () =>
+      fireEvent.click(screen.getByRole("button", { name: FUTURE_SCOPE })),
+    );
     const sent = (seriesDispatch.mock.calls.at(-1) as [FormData])[0];
     expect(sent.get("operation")).toBe("edit_series");
-    // The rule goes as the series action reads it, though the owner never
-    // opened Custom: a daily series sends no weekdays.
+    expect(sent.get("title")).toBe("Aerobic run");
+    // The repeat goes as the series has it, as the series action reads it:
+    // a daily series sends no weekdays.
     expect(sent.get("frequency")).toBe("daily");
     expect(sent.get("intervalCount")).toBe("1");
     expect(sent.getAll("weekdays")).toEqual([]);
@@ -558,26 +571,161 @@ describe("SessionPage", () => {
     ).toEqual(["Strides"]);
   });
 
-  it("offers only the future scope once the repeat itself was changed", () => {
+  it("changes the repeat in its own sheet, which saves the whole edit form", async () => {
     render(editPage(occurrence(), series()));
+    fireEvent.change(screen.getByLabelText("Title", { exact: true }), {
+      target: { value: "Tempo run" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /^Repeats/ }));
+    const sheet = screen.getByRole("dialog", { name: "Repeat" });
+    expect(sheet).toHaveAttribute("aria-modal", "true");
+    // Unchanged, the sheet only closes.
+    expect(
+      screen.queryByRole("button", { name: /^Save all changes/ }),
+    ).toBeNull();
+
     fireEvent.click(screen.getByRole("radio", { name: "Custom" }));
     fireEvent.click(screen.getByRole("button", { name: "Repeat less often" }));
-    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
-
+    // A changed repeat counts from here on, so nothing asks "only this one?".
     expect(
       screen.queryByRole("button", { name: /^Only this session/ }),
     ).toBeNull();
+    await act(async () =>
+      fireEvent.click(
+        screen.getByRole("button", {
+          name: "Save all changes to the whole series",
+        }),
+      ),
+    );
+    const sent = (seriesDispatch.mock.calls.at(-1) as [FormData])[0];
+    expect(sent.get("operation")).toBe("edit_series");
+    expect(sent.get("title")).toBe("Tempo run");
+    expect(sent.get("frequency")).toBe("daily");
+    expect(sent.get("intervalCount")).toBe("2");
+    expect(sent.getAll("intervalCount")).toEqual(["2"]);
+    expect(sent.get("noEnd")).toBe("true");
+  });
+
+  it("puts the repeat back as it was when its sheet is cancelled", () => {
+    render(editPage(occurrence(), series()));
+    fireEvent.click(screen.getByRole("button", { name: /^Repeats/ }));
+    fireEvent.click(screen.getByRole("radio", { name: "Every Monday" }));
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(
+      screen.getByRole("button", { name: /^Repeats Every day/ }),
+    ).toBeVisible();
+
+    fireEvent.click(screen.getByRole("button", { name: /^Repeats/ }));
+    expect(screen.getByRole("radio", { name: "Every day" })).toBeChecked();
+    expect(seriesDispatch).not.toHaveBeenCalled();
+  });
+
+  it("saves a new repeat from the session page with the session as saved", async () => {
+    render(
+      page(
+        occurrence({ note: "Easy pace", startTime: "07:30" }),
+        series({ note: "Easy pace" }),
+      ),
+    );
+    fireEvent.click(screen.getByRole("button", { name: /^Repeats Every day/ }));
+    fireEvent.click(screen.getByRole("radio", { name: "Every Monday" }));
+    await act(async () =>
+      fireEvent.click(
+        screen.getByRole("button", { name: "Save to the whole series" }),
+      ),
+    );
+    const sent = (seriesDispatch.mock.calls.at(-1) as [FormData])[0];
+    expect(sent.get("operation")).toBe("edit_series");
+    expect(sent.get("sessionId")).toBe(session().id);
+    expect(sent.get("expectedRevision")).toBe("3");
+    expect(sent.get("title")).toBe("Aerobic run");
+    expect(sent.get("note")).toBe("Easy pace");
+    expect(sent.get("startTime")).toBe("07:30");
+    expect(sent.get("activities")).toBe("[]");
+    expect(sent.get("frequency")).toBe("weekly");
+    expect(sent.getAll("weekdays")).toEqual(["1"]);
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("names the date a later occurrence's repeat change starts from", () => {
+    render(
+      page(
+        occurrence({ localDate: DATES[3], occurrenceDate: DATES[3] }),
+        series(),
+      ),
+    );
+    fireEvent.click(screen.getByRole("button", { name: /^Repeats/ }));
+    fireEvent.click(
+      screen.getByRole("radio", { name: "Every other Thursday" }),
+    );
+    expect(
+      screen.getByRole("button", { name: "Save from Thu 20 Aug on" }),
+    ).toBeVisible();
+  });
+
+  it("keeps a weekly repeat with an end date as it is on a this-and-following save", async () => {
+    const weekly = series({
+      frequency: "weekly",
+      weekdays: [1, 4],
+      endDate: "2026-09-30",
+    });
+    render(
+      editPage(
+        occurrence({ localDate: DATES[3], occurrenceDate: DATES[3] }),
+        weekly,
+      ),
+    );
+    expect(
+      screen.getByRole("button", {
+        name: /^Repeats Every week on Monday and Thursday, until Wed 30 Sep/,
+      }),
+    ).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+    await act(async () =>
+      fireEvent.click(
+        screen.getByRole("button", { name: /^This and following/ }),
+      ),
+    );
+    const sent = (seriesDispatch.mock.calls.at(-1) as [FormData])[0];
+    expect(sent.get("frequency")).toBe("weekly");
+    expect(sent.getAll("weekdays")).toEqual(["1", "4"]);
+    expect(sent.get("noEnd")).toBe("false");
+    expect(sent.get("endDate")).toBe("2026-09-30");
+  });
+
+  it("moves an occurrence from its edit form, which saves it alone", async () => {
+    render(editPage(occurrence(), series()));
+    const date = screen.getByLabelText("Date", { exact: true });
+    expect(date).toHaveValue(TODAY);
+    fireEvent.change(date, { target: { value: DATES[2] } });
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+
+    // A series has no date to move to, so only this session is offered.
+    expect(screen.queryByRole("button", { name: FUTURE_SCOPE })).toBeNull();
     expect(
       screen.getByText(
-        "You changed how it repeats, which applies from this session on.",
+        /moved it to another day, so this saves this session only/,
       ),
     ).toBeVisible();
-    expect(screen.getByRole("button", { name: FUTURE_SCOPE })).toBeVisible();
+    await act(async () =>
+      fireEvent.click(
+        screen.getByRole("button", { name: /^Only this session/ }),
+      ),
+    );
+    const sent = (planDispatch.mock.calls.at(-1) as [FormData])[0];
+    expect(sent.get("operation")).toBe("edit");
+    expect(sent.get("localDate")).toBe(DATES[2]);
+  });
 
-    // Put back as it was, the repeat is the series' own again.
-    fireEvent.click(screen.getByRole("button", { name: "Repeat more often" }));
+  it("only shows the repeat of an occurrence its series no longer fills", () => {
+    render(page(occurrence(), series({ endDate: "2026-08-16" })));
+    expect(screen.queryByRole("button", { name: /^Repeats/ })).toBeNull();
     expect(
-      screen.getByRole("button", { name: /^Only this session/ }),
+      screen.getByText("Every day, until Sun 16 Aug").closest("p"),
+    ).toHaveTextContent("Repeats Every day, until Sun 16 Aug");
+    expect(
+      screen.getByText(/repeat cannot be changed from here/),
     ).toBeVisible();
   });
 
@@ -602,20 +750,15 @@ describe("SessionPage", () => {
     expect(
       only.closest("form")!.querySelector("input[name='operation']"),
     ).toHaveValue("delete");
-    // M3-20: the series records the deleted date and leaves it empty.
-    expect(
-      screen.getByText(/series will not write this date back/i),
-    ).toBeVisible();
+    // Two buttons and nothing else (owner, 5 Nov 2026).
+    expect(screen.queryByText(/gone for good|no undo/i)).toBeNull();
     const future = screen.getByRole("button", {
       name: "Delete this and all future sessions",
     });
     expect(
       future.closest("form")!.querySelector("input[name='operation']"),
     ).toHaveValue("end_series");
-    expect(
-      screen.getByText(/A session with training logged against it is kept/),
-    ).toBeVisible();
-    expect(screen.queryByText(/[Ll]ocked/)).toBeNull();
+    expect(screen.queryByText(/Permanent\./)).toBeNull();
     expect(screen.queryByRole("button", { name: "Delete session" })).toBeNull();
   });
 

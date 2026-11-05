@@ -209,9 +209,9 @@
 .form label {
   display: block;
   color: var(--ledger-muted);
-  font: 500 0.62rem var(--font-mono);
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
+  font: var(--font-field-label);
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .form input,
@@ -330,22 +330,17 @@
   font-weight: 700;
 }
 
-/* Where an edited occurrence's Save button was: the scope is chosen in the
-   same place the thumb already is, in the flow of the form. */
-.scopeSheet {
+/* Save on an edited occurrence asks its scope in a dialog that holds the form
+   still until it is answered (owner, 5 Nov 2026). */
+.scopeDialog {
   display: grid;
-  gap: 0.55rem;
-  padding: 0.9rem;
-  border: 1px solid var(--ledger-rule);
-  border-radius: var(--radius-card);
-  background: var(--ledger-paper);
-  box-shadow: var(--shadow-card);
+  gap: 0.6rem;
 }
 
-.scopeSheet h4 {
+.scopeDialog h2 {
   margin: 0 0 0.15rem;
-  font-size: 1.05rem;
-  font-weight: 700;
+  font-size: 1.2rem;
+  overflow-wrap: anywhere;
 }
 
 .scopeChoice {
@@ -376,16 +371,6 @@
 
 .scopeChoice:disabled {
   opacity: 0.45;
-}
-
-.permanentConsequence {
-  margin: 0;
-  padding: 0.75rem 0.9rem;
-  border-radius: var(--radius-control);
-  background: #fff0e1;
-  color: #67311e;
-  font-size: 0.88rem;
-  line-height: 1.5;
 }
 
 .dangerAction {
@@ -467,9 +452,9 @@
 .seriesForm label {
   display: block;
   color: var(--ledger-muted);
-  font: 500 0.62rem var(--font-mono);
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
+  font: var(--font-field-label);
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .seriesForm input,

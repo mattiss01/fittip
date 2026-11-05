@@ -2,7 +2,6 @@ import {
   expect,
   test,
   type APIRequestContext,
-  type Locator,
   type Page,
 } from "@playwright/test";
 import path from "node:path";
@@ -578,11 +577,8 @@ test.describe("M3-15B today and logging", () => {
         .getByRole("link", { name: "Aerobic base", exact: true })
         .click();
       await chooseMore(page, "Delete");
-      await scope(
-        page.locator('[data-session-panel="Delete session"]'),
-        "This and all future sessions",
-      )
-        .last()
+      await page
+        .locator('[data-session-panel="Delete session"]')
         .getByRole("button", { name: "Delete this and all future sessions" })
         .click();
       await expect(page.locator(`[data-today-date="${tomorrow}"]`)).toBeVisible(
@@ -661,10 +657,6 @@ function todayCard(page: Page, title: string) {
   return page
     .locator("[data-today-session]")
     .filter({ has: page.getByRole("heading", { name: title, exact: true }) });
-}
-
-function scope(container: Locator, heading: string) {
-  return container.locator("section").filter({ hasText: heading });
 }
 
 async function addSession(

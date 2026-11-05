@@ -15,9 +15,9 @@
   margin-bottom: 0.45rem;
   padding: 0;
   color: var(--ledger-muted, var(--muted));
-  font: 500 0.62rem var(--font-mono);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font: var(--font-field-label);
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .picker .hiddenInput {
@@ -209,53 +209,79 @@
   display: grid;
   gap: 0.55rem;
   padding: 0.85rem 0.9rem;
-  border-left: 4px solid var(--plan-today, var(--ember));
-  border-radius: 0;
+  border-radius: var(--radius-card);
   background: var(--sage);
 }
 
-.sentence {
-  margin: 0;
-  color: var(--pine);
-  font: 700 1rem/1.3 var(--font-sans);
+.summaryTitle {
+  margin: 0 0 0.55rem;
+  color: var(--ledger-muted, var(--muted));
+  font: var(--font-field-label);
+  letter-spacing: 0;
+  text-transform: none;
 }
 
+/* The next dates as small calendar leaves: the weekday on a band, the day
+   large, the month under it. The first is the one this session starts. */
 .dates {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.4rem;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
 .dates li {
-  padding: 0.25rem 0.55rem;
+  display: grid;
+  justify-items: center;
+  overflow: hidden;
   border: 1px solid var(--line);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-control);
   background: white;
   color: var(--pine);
-  font: 500 0.78rem var(--font-mono);
+}
+
+.dow {
+  width: 100%;
+  padding: 0.15rem 0;
+  background: var(--pine);
+  color: var(--paper);
+  font: 600 0.62rem var(--font-mono);
+  letter-spacing: 0.06em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.dates li:first-child .dow {
+  background: var(--plan-today, var(--ember));
+}
+
+.dateDay {
+  padding-top: 0.2rem;
+  font: 800 1.35rem/1 var(--font-sans);
+  letter-spacing: -0.02em;
+}
+
+.month {
+  padding: 0.1rem 0 0.3rem;
+  color: var(--ledger-muted, var(--muted));
+  font: 500 0.66rem var(--font-mono);
 }
 
 .dates .more {
-  border-color: transparent;
+  align-content: center;
+  border-style: dashed;
   background: transparent;
+  color: var(--ledger-muted, var(--muted));
+  font: 700 1.1rem var(--font-sans);
 }
 
-.hint,
 .problem {
   margin: 0;
+  color: var(--danger);
   font-size: 0.78rem;
   line-height: 1.4;
-}
-
-.hint {
-  color: var(--ledger-muted, var(--muted));
-}
-
-.problem {
-  color: var(--danger);
 }
 
 @media (prefers-reduced-motion: reduce) {

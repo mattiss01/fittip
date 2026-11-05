@@ -122,13 +122,12 @@ test.describe("M3-19 delete a planned session", () => {
 
       await openSession(page, tomorrow, "Delete me");
 
-      // Delete keeps nothing, says the opposite of what cancel says, and
-      // returns to the Plan because the page's session is gone.
+      // Delete keeps nothing and returns to the Plan because the page's
+      // session is gone. The dialog says no more than its title and button
+      // (owner, 5 Nov 2026).
       await chooseMore(page, "Delete");
       const remove = sessionPanel(page, "Delete session");
-      const warning = remove.getByText(/gone for good/i);
-      await expect(warning).toBeVisible();
-      await expect(warning).toContainText("no undo");
+      await expect(remove.getByText(/gone for good/i)).toHaveCount(0);
       await remove.getByRole("button", { name: "Delete session" }).click();
       await expect(
         page.getByRole("heading", { level: 1, name: "Plan", exact: true }),
