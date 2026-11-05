@@ -153,6 +153,9 @@ function choose(label: string) {
   fireEvent.click(screen.getByRole("button", { name: label }));
 }
 
+/** The future scope reads "The whole series" before any date has passed. */
+const FUTURE_SCOPE = /^(The whole series|This and following)/;
+
 describe("SessionPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -473,10 +476,9 @@ describe("SessionPage", () => {
 
   it("calls a this-and-future edit that replaced the occurrence a save", () => {
     const { rerender } = render(editPage(occurrence(), series()));
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
     act(() => {
-      fireEvent.click(
-        screen.getByRole("button", { name: "Change this and future sessions" }),
-      );
+      fireEvent.click(screen.getByRole("button", { name: FUTURE_SCOPE }));
     });
     seriesState = {
       status: "saved",
@@ -502,7 +504,7 @@ describe("SessionPage", () => {
     expect(replaceMock).not.toHaveBeenCalled();
   });
 
-  it("edits a recurring session in one form whose two buttons choose the scope", async () => {
+  it("edits a recurring session in one form and asks the scope on Save", async () => {
     const diverged = occurrence({
       hasDiverged: true,
       activities: [
@@ -522,12 +524,10 @@ describe("SessionPage", () => {
     cleanup();
     render(editPage(diverged, series()));
 
-    const only = screen.getByRole("button", {
-      name: "Change only this session",
-    });
-    const future = screen.getByRole("button", {
-      name: "Change this and future sessions",
-    });
+    expect(screen.queryByRole("button", { name: FUTURE_SCOPE })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+    const only = screen.getByRole("button", { name: /^Only this session/ });
+    const future = screen.getByRole("button", { name: FUTURE_SCOPE });
     const form = only.closest("form")!;
     expect(future.closest("form")).toBe(form);
     // Asserted on what is submitted: React drops a submitter's name and value
@@ -550,6 +550,23 @@ describe("SessionPage", () => {
         ({ name }) => name,
       ),
     ).toEqual(["Strides"]);
+  });
+
+  it("offers only the future scope once the repeat itself was changed", () => {
+    render(editPage(occurrence(), series()));
+    fireEvent.click(screen.getByRole("radio", { name: "Custom" }));
+    fireEvent.click(screen.getByRole("button", { name: "More" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+
+    expect(
+      screen.queryByRole("button", { name: /^Only this session/ }),
+    ).toBeNull();
+    expect(
+      screen.getByText(
+        "You changed how it repeats, which applies from this session on.",
+      ),
+    ).toBeVisible();
+    expect(screen.getByRole("button", { name: FUTURE_SCOPE })).toBeVisible();
   });
 
   it("cancels an occurrence alone; removing the future is a delete", () => {

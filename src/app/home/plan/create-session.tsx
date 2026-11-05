@@ -1,36 +1,28 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState, type FormEvent } from "react";
 
-import { RecurrenceFields } from "./recurrence-fields";
+import { RecurrenceFields, recurrenceProblem } from "./recurrence-fields";
 import type { PlanActionState } from "./action-state";
 import {
   summarizeSkippedDates,
-  type SeriesActionState,
   type SeriesSkippedDate,
 } from "./series-action-state";
-import { seriesOccurrenceDates } from "./series-recurrence";
 import { SessionFields } from "./session-fields";
 import styles from "./plan.module.css";
 
 import type { SavedSessionOption } from "@/components/training/saved-session-picker";
-import { shiftIsoDate } from "@/lib/date/local-date";
 
 type FormAction = (formData: FormData) => void;
 
-type Preview = {
-  dates: string[];
-  openEnded: boolean;
-  seriesSubmission: number;
-};
-
 /**
  * The one session editor, for one date (R3a): a day's "+" opens it in a
- * sheet, so the date is the day's and not a field. "Repeat this session"
- * turns the same form into a series starting there; it is withheld on a day
- * past the dates recurring sessions are written through (R3b-3), where a
- * series could not start. `startFrom` is a saved
- * session picked in the sheet; its values are copied, nothing links back.
+ * sheet, so the date is the day's and not a field. Any repeat other than
+ * "Doesn't repeat" turns the same form into a series starting there; the
+ * repeat picker is withheld on a day past the dates recurring sessions are
+ * written through (R3b-3), where a series could not start. `startFrom` is a
+ * saved session picked in the sheet; its values are copied, nothing links
+ * back.
  */
 export function CreateSession({
   date,
@@ -41,7 +33,6 @@ export function CreateSession({
   planState,
   planPending,
   seriesAction,
-  seriesState,
   seriesPending,
 }: {
   date: string;
@@ -53,12 +44,10 @@ export function CreateSession({
   planState: PlanActionState;
   planPending: boolean;
   seriesAction: FormAction;
-  seriesState: SeriesActionState;
   seriesPending: boolean;
 }) {
   const [repeat, setRepeat] = useState(false);
-  const [preview, setPreview] = useState<Preview | null>(null);
-  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [ruleError, setRuleError] = useState<string | null>(null);
   // A refused save re-seeds the fields from what was sent; a refusal from an
   // earlier opening of the sheet does not.
   const [openedAt] = useState(planState.submission);
@@ -68,73 +57,24 @@ export function CreateSession({
     planState.submission > openedAt
       ? planState.draft
       : undefined;
-  const formRef = useRef<HTMLFormElement>(null);
   const pending = repeat ? seriesPending : planPending;
-  const reviewedPreview =
-    preview?.seriesSubmission === seriesState.submission ? preview : null;
 
-  function invalidatePreview() {
-    setPreview(null);
-    setPreviewError(null);
-  }
-
-  function reviewOccurrences() {
-    const form = formRef.current;
-    if (!form || !form.reportValidity()) return;
-    const values = new FormData(form);
-    const frequency = values.get("frequency");
-    const intervalCount = Number(values.get("intervalCount"));
-    const noEnd = values.get("noEnd") === "true";
-    const selectedEnd = noEnd ? undefined : values.get("endDate");
-    const weekdays = values
-      .getAll("weekdays")
-      .map(Number)
-      .filter(Number.isInteger);
-    if (
-      (frequency !== "daily" && frequency !== "weekly") ||
-      (selectedEnd !== undefined && typeof selectedEnd !== "string") ||
-      !Number.isInteger(intervalCount) ||
-      (frequency === "weekly" && weekdays.length === 0)
-    ) {
-      setPreviewError(
-        frequency === "weekly" && weekdays.length === 0
-          ? "Choose at least one weekday before reviewing."
-          : "Check the recurrence before reviewing.",
-      );
-      return;
-    }
-    const searchEnd = selectedEnd ?? shiftIsoDate(date, 3700);
-    const occurrenceDates = seriesOccurrenceDates(
-      {
-        frequency,
-        intervalCount,
-        ...(frequency === "weekly" ? { weekdays } : {}),
-        startDate: date,
-        ...(selectedEnd === undefined ? {} : { endDate: selectedEnd }),
-      },
-      date,
-      searchEnd,
-      5,
-    );
-    if (occurrenceDates.length === 0) {
-      setPreviewError(
-        "This rule has no occurrence in its date range. Change the dates or weekdays.",
-      );
-      return;
-    }
-    setPreviewError(null);
-    setPreview({
-      dates: occurrenceDates,
-      openEnded: noEnd,
-      seriesSubmission: seriesState.submission,
-    });
+  // The picker lists the next dates as the rule changes, so there is no
+  // separate review (owner, 5 Nov 2026). A rule with no date at all is stopped
+  // here, before the action: the action refuses it too, but the form is
+  // emptied on the way.
+  function checkRule(event: FormEvent<HTMLFormElement>) {
+    if (!repeat) return;
+    const message = recurrenceProblem(new FormData(event.currentTarget), date);
+    setRuleError(message);
+    if (message !== null) event.preventDefault();
   }
 
   return (
     <form
-      ref={formRef}
       className={styles.seriesForm}
       action={repeat ? seriesAction : planAction}
+      onSubmit={checkRule}
       data-create-session
     >
       <input
@@ -172,80 +112,24 @@ export function CreateSession({
       />
 
       {canRepeat ? (
-        <label className={styles.checkField}>
-          <input
-            type="checkbox"
-            checked={repeat}
-            onChange={(event) => {
-              setRepeat(event.target.checked);
-              invalidatePreview();
-            }}
-          />
-          <span>Repeat this session</span>
-        </label>
-      ) : null}
-
-      {repeat ? (
         <RecurrenceFields
           idPrefix="create-session-recurrence"
           startDate={date}
-          onRuleChange={invalidatePreview}
+          repeats={repeat}
+          onRepeatsChange={setRepeat}
+          onRuleChange={() => setRuleError(null)}
         />
       ) : null}
 
-      {previewError === null ? null : (
+      {ruleError === null ? null : (
         <p className={styles.inlineError} role="alert">
-          {previewError}
+          {ruleError}
         </p>
       )}
 
-      {!repeat ? (
-        <button className={styles.primary} type="submit" disabled={pending}>
-          Create session
-        </button>
-      ) : reviewedPreview === null ? (
-        <button
-          className={styles.primary}
-          type="button"
-          onClick={reviewOccurrences}
-          disabled={pending}
-        >
-          Review recurring sessions
-        </button>
-      ) : (
-        <section
-          className={styles.reviewCard}
-          aria-labelledby="create-review-title"
-        >
-          <p className={styles.sectionLabel}>Review before saving</p>
-          <h2 id="create-review-title">First occurrences</h2>
-          <ol className={styles.previewDates}>
-            {reviewedPreview.dates.map((occurrence) => (
-              <li key={occurrence}>{stampDate(occurrence)}</li>
-            ))}
-          </ol>
-          <p className={styles.consequenceStandalone}>
-            {reviewedPreview.openEnded
-              ? "This series has no end date. FitTip creates the next thirteen weeks of it and extends them on later Plan visits."
-              : "The series stops on the end date you chose."}{" "}
-            If a date already has ten sessions, that date is skipped and named
-            after the save.
-          </p>
-          <div className={styles.reviewActions}>
-            <button
-              className={styles.action}
-              type="button"
-              onClick={invalidatePreview}
-              disabled={pending}
-            >
-              Change recurrence
-            </button>
-            <button className={styles.primary} type="submit" disabled={pending}>
-              Create recurring sessions
-            </button>
-          </div>
-        </section>
-      )}
+      <button className={styles.primary} type="submit" disabled={pending}>
+        {repeat ? "Create recurring sessions" : "Create session"}
+      </button>
     </form>
   );
 }

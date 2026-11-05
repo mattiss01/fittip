@@ -379,7 +379,7 @@ describe("PlanManager", () => {
       within(day(DATES[2])).getByRole("button", { name: /^Add to / }),
     );
     fireEvent.click(screen.getByRole("button", { name: "New session" }));
-    expect(screen.getByLabelText("Repeat this session")).toBeVisible();
+    expect(screen.getByRole("radio", { name: "Doesn't repeat" })).toBeChecked();
     fireEvent.click(screen.getByText("Close"));
 
     // ...and one past it still has its "+", for a session without one.
@@ -390,7 +390,7 @@ describe("PlanManager", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: "New session" }));
     expect(screen.getByLabelText("Title")).toBeVisible();
-    expect(screen.queryByLabelText("Repeat this session")).toBeNull();
+    expect(screen.queryByRole("radio", { name: "Doesn't repeat" })).toBeNull();
   });
 
   it("says nothing about repeats to an owner who has none", () => {
@@ -651,36 +651,54 @@ describe("PlanManager", () => {
     expect(
       screen.getByRole("button", { name: "Create session" }),
     ).toBeVisible();
-    expect(screen.queryByText("Recurrence", { selector: "legend" })).toBeNull();
+    expect(screen.getByRole("radio", { name: "Doesn't repeat" })).toBeChecked();
+    expect(screen.queryByText("Ends", { selector: "legend" })).toBeNull();
 
-    fireEvent.click(screen.getByLabelText("Repeat this session"));
+    // DATES[2] is a Friday, so the presets are built from it.
+    fireEvent.click(screen.getByRole("radio", { name: "Every Friday" }));
     expect(operation).toHaveValue("add_series");
-    expect(
-      screen.getByText("Recurrence", { selector: "legend" }),
-    ).toBeVisible();
-    // DATES[2] is a Friday.
-    expect(screen.getByLabelText("Fri")).toBeChecked();
-    expect(screen.getByLabelText("Mon")).not.toBeChecked();
-
-    fireEvent.change(createTitleInput(), {
-      target: { value: "Friday tempo" },
-    });
-    fireEvent.change(form.querySelector("#create-session-sport")!, {
-      target: { value: "Running" },
-    });
-    fireEvent.change(screen.getByLabelText("Repeat"), {
-      target: { value: "daily" },
-    });
-    fireEvent.click(
-      screen.getByRole("button", { name: "Review recurring sessions" }),
-    );
-
-    expect(
-      screen.getByRole("heading", { name: "First occurrences" }),
-    ).toBeVisible();
+    expect(screen.getByText("Every week on Friday")).toBeVisible();
     expect(
       screen.getByRole("button", { name: "Create recurring sessions" }),
     ).toBeVisible();
+
+    fireEvent.click(screen.getByRole("radio", { name: "Custom" }));
+    expect(screen.getByRole("checkbox", { name: "Friday" })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "Monday" })).not.toBeChecked();
+    fireEvent.click(screen.getByRole("checkbox", { name: "Monday" }));
+
+    // The sentence and the next dates follow the rule as it is built, and
+    // the rule is sent under the names the series action reads.
+    expect(screen.getByText("Every week on Monday and Friday")).toBeVisible();
+    const next = within(screen.getByRole("list", { name: "Next sessions" }));
+    expect(next.getAllByRole("listitem")[0]).toHaveTextContent(/^Fri /);
+    expect(next.getAllByRole("listitem")[1]).toHaveTextContent(/^Mon /);
+    const sent = new FormData(form);
+    expect(sent.get("frequency")).toBe("weekly");
+    expect(sent.get("intervalCount")).toBe("1");
+    expect(sent.getAll("weekdays").toSorted()).toEqual(["1", "5"]);
+    expect(sent.get("noEnd")).toBe("true");
+
+    fireEvent.click(screen.getByRole("radio", { name: "Doesn't repeat" }));
+    expect(operation).toHaveValue("add");
+    expect(new FormData(form).get("frequency")).toBeNull();
+  });
+
+  it("stops a repeat with no day before it reaches the action", () => {
+    renderManager();
+    openNewSession(DATES[2]);
+    const form = document.querySelector<HTMLFormElement>(
+      "[data-create-session]",
+    )!;
+    fireEvent.change(createTitleInput(), { target: { value: "Tempo" } });
+    fireEvent.click(screen.getByRole("radio", { name: "Custom" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Friday" }));
+
+    expect(screen.getByText("Choose at least one day.")).toBeVisible();
+    fireEvent.submit(form);
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Choose at least one day.",
+    );
   });
 
   it("keeps a cancelled session on the record rather than hiding it", () => {

@@ -330,6 +330,54 @@
   font-weight: 700;
 }
 
+/* Where an edited occurrence's Save button was: the scope is chosen in the
+   same place the thumb already is, in the flow of the form. */
+.scopeSheet {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.9rem;
+  border: 1px solid var(--ledger-rule);
+  border-radius: var(--radius-card);
+  background: var(--ledger-paper);
+  box-shadow: var(--shadow-card);
+}
+
+.scopeSheet h4 {
+  margin: 0 0 0.15rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.scopeChoice {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: white;
+  color: var(--ledger-ink);
+  font: 400 0.84rem/1.4 var(--font-sans);
+  text-align: left;
+  cursor: pointer;
+}
+
+.scopeChoice strong {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.scopeChoice span {
+  color: var(--ledger-muted);
+}
+
+.scopeChoice:hover {
+  border-color: var(--pine);
+}
+
+.scopeChoice:disabled {
+  opacity: 0.45;
+}
+
 .permanentConsequence {
   margin: 0;
   padding: 0.75rem 0.9rem;

@@ -1,8 +1,10 @@
 "use client";
 
+import { useState } from "react";
+
 import { CancelReasonFields } from "./cancel-reason-fields";
 import type { FillProposal } from "./fill/fill-state";
-import { RecurrenceFields } from "./recurrence-fields";
+import { RecurrenceFields, recurrenceProblem } from "./recurrence-fields";
 import type { SeriesActionState } from "./series-action-state";
 import { seriesOccurrenceDates } from "./series-recurrence";
 import { SessionFields } from "./session-fields";
@@ -118,100 +120,18 @@ export function RecurringSessionControls({
       shiftIsoDate(session.occurrenceDate, -1),
       1,
     ).length === 0;
-  const defaultRule = {
-    frequency: series.frequency,
-    intervalCount: series.intervalCount,
-    weekdays: series.weekdays,
-    ...(series.endDate === null ? {} : { endDate: series.endDate }),
-  };
-
   if (mode === "edit") {
-    // One form, two submits, so the fields are filled in once and the scope is
-    // chosen last. Each button sets its own operation inside its own
-    // `formAction`: React drops a submitter's name and value whenever the
-    // submitter carries one, so `name`/`value` would never arrive.
-    // The form opens with this occurrence's content, which is what its card
-    // shows; the future scope makes that the template from here on.
     return (
-      <form className={styles.form}>
-        {/* Enter in a field submits with the form's first button. A disabled
-            first button makes Enter do nothing, so neither scope is ever
-            chosen by a keystroke meant for a field. */}
-        <button
-          type="submit"
-          disabled
-          hidden
-          aria-hidden="true"
-          tabIndex={-1}
-        />
-        <input type="hidden" name="sessionId" value={session.id} />
-        <input type="hidden" name="expectedRevision" value={expectedRevision} />
-        <SessionFields
-          idPrefix={"series-edit-" + session.id}
-          draft={draftOf(session)}
-          activities={session.activities}
-          fill={{ sessionId: session.id, open: session.openFill }}
-        />
-        {canChangeFuture ? (
-          <RecurrenceFields
-            idPrefix={"series-edit-" + session.id}
-            startDate={canEditWhole ? series.startDate : session.occurrenceDate}
-            initial={defaultRule}
-          />
-        ) : null}
-
-        <section className={styles.scope}>
-          <h4>Only this session</h4>
-          <p className={styles.consequenceStandalone}>
-            Changes this occurrence only. It becomes visibly changed and the
-            recurring rule never overwrites it.
-            {canChangeFuture ? " The repeat settings are not used." : ""}
-          </p>
-          <button
-            className={styles.primary}
-            type="submit"
-            formAction={(formData: FormData) => {
-              formData.set("operation", "edit");
-              planAction(formData);
-            }}
-            disabled={planPending || seriesPending}
-          >
-            Change only this session
-          </button>
-        </section>
-
-        {canChangeFuture ? (
-          <section className={styles.scope}>
-            <h4>This and all future sessions</h4>
-            <p className={styles.consequenceStandalone}>
-              {canEditWhole
-                ? "No occurrence has passed, so this changes the whole series."
-                : "This closes the current series segment here and starts its successor."}{" "}
-              Earlier occurrences, changed occurrences before this date, and
-              completed training stay exactly as they are.
-            </p>
-            <button
-              className={styles.primary}
-              type="submit"
-              formAction={(formData: FormData) => {
-                formData.set("operation", "edit_series");
-                seriesAction(formData);
-              }}
-              disabled={planPending || seriesPending}
-            >
-              Change this and future sessions
-            </button>
-          </section>
-        ) : (
-          // The predicate withholds the future scope both when the occurrence
-          // lies outside its segment's dates and when its rule date has fallen
-          // behind today, so the copy names neither cause alone.
-          <p className={styles.consequence}>
-            This occurrence is no longer on a date its series repeats from, so
-            only this session can be changed.
-          </p>
-        )}
-      </form>
+      <RecurringEditForm
+        session={session}
+        series={series}
+        expectedRevision={expectedRevision}
+        canChangeFuture={canChangeFuture}
+        canEditWhole={canEditWhole}
+        planAction={planAction}
+        seriesAction={seriesAction}
+        pending={planPending || seriesPending}
+      />
     );
   }
 
@@ -243,6 +163,181 @@ export function RecurringSessionControls({
       </section>
     </>
   );
+}
+
+/**
+ * Editing an occurrence asks for the scope last, as a calendar does (owner,
+ * 5 Nov 2026): the fields are filled in once, Save asks "only this one or
+ * this and following", and each choice says in a line what it leaves alone.
+ * A changed repeat only means something from here on, so once the repeat is
+ * touched "Only this session" is not offered.
+ *
+ * The form opens with this occurrence's content, which is what its card
+ * shows; the future scope makes that the template from here on.
+ */
+function RecurringEditForm({
+  session,
+  series,
+  expectedRevision,
+  canChangeFuture,
+  canEditWhole,
+  planAction,
+  seriesAction,
+  pending,
+}: {
+  session: RecurringSessionView;
+  series: PlanSeriesView;
+  expectedRevision: number;
+  canChangeFuture: boolean;
+  canEditWhole: boolean;
+  planAction: PlanFormAction;
+  seriesAction: PlanFormAction;
+  pending: boolean;
+}) {
+  const [choosing, setChoosing] = useState(false);
+  const [ruleChanged, setRuleChanged] = useState(false);
+  const [ruleError, setRuleError] = useState<string | null>(null);
+  const ruleStart = canEditWhole ? series.startDate : session.occurrenceDate;
+  const scopeTitle = `scope-${session.id}`;
+  // Each submit sets its own operation inside its own `formAction`: React
+  // drops a submitter's name and value whenever the submitter carries one,
+  // so `name`/`value` would never arrive.
+  const onlyThis = (formData: FormData) => {
+    formData.set("operation", "edit");
+    planAction(formData);
+  };
+
+  return (
+    <form className={styles.form}>
+      {/* Enter in a field submits with the form's first button. A disabled
+          first button makes Enter do nothing, so no scope is ever chosen by a
+          keystroke meant for a field. */}
+      <button type="submit" disabled hidden aria-hidden="true" tabIndex={-1} />
+      <input type="hidden" name="sessionId" value={session.id} />
+      <input type="hidden" name="expectedRevision" value={expectedRevision} />
+      <SessionFields
+        idPrefix={"series-edit-" + session.id}
+        draft={draftOf(session)}
+        activities={session.activities}
+        fill={{ sessionId: session.id, open: session.openFill }}
+      />
+      {canChangeFuture ? (
+        <RecurrenceFields
+          idPrefix={"series-edit-" + session.id}
+          startDate={ruleStart}
+          initial={{
+            frequency: series.frequency,
+            intervalCount: series.intervalCount,
+            weekdays: series.weekdays,
+            ...(series.endDate === null ? {} : { endDate: series.endDate }),
+          }}
+          onRuleChange={() => {
+            setRuleChanged(true);
+            setRuleError(null);
+          }}
+        />
+      ) : (
+        // The predicate withholds the future scope both when the occurrence
+        // lies outside its segment's dates and when its rule date has fallen
+        // behind today, so the copy names neither cause alone.
+        <p className={styles.consequence}>
+          This occurrence is no longer on a date its series repeats from, so
+          only this session can be changed.
+        </p>
+      )}
+
+      {!canChangeFuture ? (
+        <button
+          className={styles.primary}
+          type="submit"
+          formAction={onlyThis}
+          disabled={pending}
+        >
+          Save changes
+        </button>
+      ) : !choosing ? (
+        <button
+          className={styles.primary}
+          type="button"
+          onClick={() => setChoosing(true)}
+          disabled={pending}
+        >
+          Save changes
+        </button>
+      ) : (
+        <section className={styles.scopeSheet} aria-labelledby={scopeTitle}>
+          <h4 id={scopeTitle}>Save changes to {session.title}</h4>
+          {ruleChanged ? (
+            <p className={styles.consequenceStandalone}>
+              You changed how it repeats, which applies from this session on.
+            </p>
+          ) : (
+            <button
+              className={styles.scopeChoice}
+              type="submit"
+              formAction={onlyThis}
+              disabled={pending}
+            >
+              <strong>Only this session</strong>
+              <span>
+                {shortDate(session.occurrenceDate)} becomes a one-off change;
+                the series never overwrites it.
+              </span>
+            </button>
+          )}
+          <button
+            className={styles.scopeChoice}
+            type="submit"
+            onClick={(event) => {
+              const form = event.currentTarget.form;
+              const problem =
+                form === null
+                  ? null
+                  : recurrenceProblem(new FormData(form), ruleStart);
+              setRuleError(problem);
+              if (problem !== null) event.preventDefault();
+            }}
+            formAction={(formData: FormData) => {
+              formData.set("operation", "edit_series");
+              seriesAction(formData);
+            }}
+            disabled={pending}
+          >
+            <strong>
+              {canEditWhole ? "The whole series" : "This and following"}
+            </strong>
+            <span>
+              {canEditWhole
+                ? "Every session of it, since none has passed yet. Logged training stays as it is."
+                : `From ${shortDate(session.occurrenceDate)} on. Earlier sessions, one-off changes before this date, and logged training stay as they are.`}
+            </span>
+          </button>
+          {ruleError === null ? null : (
+            <p className={styles.inlineError} role="alert">
+              {ruleError}
+            </p>
+          )}
+          <button
+            className={styles.action}
+            type="button"
+            onClick={() => setChoosing(false)}
+            disabled={pending}
+          >
+            Back to editing
+          </button>
+        </section>
+      )}
+    </form>
+  );
+}
+
+function shortDate(isoDate: string) {
+  return new Intl.DateTimeFormat("en-GB", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    timeZone: "UTC",
+  }).format(new Date(`${isoDate}T12:00:00.000Z`));
 }
 
 /**

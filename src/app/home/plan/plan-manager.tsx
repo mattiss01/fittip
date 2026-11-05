@@ -546,7 +546,6 @@ export function PlanManager({
               planState={state}
               planPending={pending}
               seriesAction={trackedSeriesAction}
-              seriesState={seriesState}
               seriesPending={seriesPending}
             />
           ) : sheet.view === "menu" ? (

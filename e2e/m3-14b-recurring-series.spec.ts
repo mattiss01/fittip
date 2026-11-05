@@ -99,27 +99,26 @@ test.describe("M3-14B recurring series surface", () => {
       );
       await page.locator("[data-back-link]").click();
 
-      // The same create flow reveals recurrence only when requested, with an
-      // explicit occurrence review before the bounded series write.
+      // The same create flow repeats only when asked, and lists the next
+      // dates as the rule is built rather than on a separate review.
       create = await openNewSession(page, dailyStart);
       await create.getByLabel("Title").fill("Aerobic base");
       await create.getByLabel("Sport").fill("Running");
       await create.getByLabel("Minutes").fill("45");
-      await create.getByLabel("Repeat this session").check();
-
-      // Bounded daily interval, with an explicit review before the write.
-      await create.getByLabel("Repeat", { exact: true }).selectOption("daily");
-      await create.getByLabel("Every").fill("2");
-      await create.getByText("No end date", { exact: true }).click();
-      await fillDate(create, "End date", dailyEnd);
-      await create
-        .getByRole("button", { name: "Review recurring sessions" })
-        .click();
       await expect(
-        page.getByRole("heading", { name: "First occurrences" }),
-      ).toBeVisible();
-      await expect(page.getByText(longDate(dailyStart))).toBeVisible();
-      await expect(page.getByText(longDate(secondDaily))).toBeVisible();
+        create.getByRole("radio", { name: "Doesn't repeat" }),
+      ).toBeChecked();
+
+      // Bounded daily interval, its next dates shown before the write.
+      await create.getByText("Custom", { exact: true }).click();
+      await create.getByText("day", { exact: true }).click();
+      await create.getByLabel("Every", { exact: true }).fill("2");
+      await create.getByText("On a date", { exact: true }).click();
+      await fillDate(create, "End date", dailyEnd);
+      await expect(create.getByText("Every 2 days")).toBeVisible();
+      const dailyNext = create.getByRole("list", { name: "Next sessions" });
+      await expect(dailyNext).toContainText(shortDate(dailyStart));
+      await expect(dailyNext).toContainText(shortDate(secondDaily));
       await create
         .getByRole("button", { name: "Create recurring sessions" })
         .click();
@@ -133,11 +132,12 @@ test.describe("M3-14B recurring series surface", () => {
       // Only this session changes one occurrence and marks it as diverged.
       await openSession(page, dailyStart, "Aerobic base");
       await page.getByRole("link", { name: "Edit", exact: true }).click();
-      // One form for both scopes; the button chosen at the end is the scope.
+      // One form for both scopes; Save asks which one.
       const onlyThis = recurringEditForm(sessionPanel(page, "Edit session"));
       await onlyThis.getByLabel("Title").fill("Diverged aerobic");
+      await onlyThis.getByRole("button", { name: "Save changes" }).click();
       await onlyThis
-        .getByRole("button", { name: "Change only this session" })
+        .getByRole("button", { name: /^Only this session/ })
         .click();
       await expect(
         page.getByRole("heading", { level: 1, name: "Diverged aerobic" }),
@@ -162,11 +162,13 @@ test.describe("M3-14B recurring series surface", () => {
       await page.getByRole("link", { name: "Edit", exact: true }).click();
       const future = recurringEditForm(sessionPanel(page, "Edit session"));
       await future.getByLabel("Title").fill("Future steady");
-      await future.getByLabel("Repeat", { exact: true }).selectOption("daily");
-      await future.getByLabel("Every").fill("1");
-      await future
-        .getByRole("button", { name: "Change this and future sessions" })
-        .click();
+      await future.getByText("Every day", { exact: true }).click();
+      await future.getByRole("button", { name: "Save changes" }).click();
+      // A changed repeat applies from here on, so only that scope is offered.
+      await expect(
+        future.getByRole("button", { name: /^Only this session/ }),
+      ).toHaveCount(0);
+      await future.getByRole("button", { name: /^This and following/ }).click();
       await expect(
         page.getByRole("heading", { level: 1, name: "Plan", exact: true }),
       ).toBeVisible();
@@ -226,26 +228,22 @@ test.describe("M3-14B recurring series surface", () => {
       const weeklyCreate = await openNewSession(page, capDate);
       await weeklyCreate.getByLabel("Title").fill("Weekly strength");
       await weeklyCreate.getByLabel("Sport").fill("Strength");
-      await weeklyCreate.getByLabel("Repeat this session").check();
-      await weeklyCreate
-        .getByLabel("Repeat", { exact: true })
-        .selectOption("weekly");
-      await weeklyCreate.getByLabel("Every").fill("1");
+      await weeklyCreate.getByText("Custom", { exact: true }).click();
       await expect(
-        weeklyCreate.locator(
-          `input[name="weekdays"][value="${weekday(capDate)}"]`,
-        ),
+        weeklyCreate.getByRole("checkbox", { name: dayName(capDate) }),
       ).toBeChecked();
       await weeklyCreate
-        .locator(
-          `input[name="weekdays"][value="${weekday(weeklyVisibleDate)}"]`,
-        )
-        .check();
-      await weeklyCreate
-        .getByRole("button", { name: "Review recurring sessions" })
+        .locator("label", {
+          has: page.getByRole("checkbox", {
+            name: dayName(weeklyVisibleDate),
+          }),
+        })
         .click();
-      await expect(page.getByText(longDate(capDate))).toBeVisible();
-      await expect(page.getByText(longDate(weeklyVisibleDate))).toBeVisible();
+      const weeklyNext = weeklyCreate.getByRole("list", {
+        name: "Next sessions",
+      });
+      await expect(weeklyNext).toContainText(shortDate(capDate));
+      await expect(weeklyNext).toContainText(shortDate(weeklyVisibleDate));
       await weeklyCreate
         .getByRole("button", { name: "Create recurring sessions" })
         .click();
@@ -346,7 +344,7 @@ async function backToPlan(page: Page) {
 
 function recurringEditForm(card: Locator) {
   return card.locator("form").filter({
-    has: card.page().getByRole("button", { name: "Change only this session" }),
+    has: card.page().getByRole("button", { name: "Save changes" }),
   });
 }
 
@@ -378,8 +376,21 @@ function ownerDate(offset: number) {
   return date.toISOString().slice(0, 10);
 }
 
-function weekday(isoDate: string) {
-  return new Date(isoDate + "T00:00:00.000Z").getUTCDay();
+function dayName(isoDate: string) {
+  return new Intl.DateTimeFormat("en-GB", {
+    weekday: "long",
+    timeZone: "UTC",
+  }).format(new Date(isoDate + "T12:00:00.000Z"));
+}
+
+/** A date as the repeat picker lists it, e.g. "Fri 6 Nov". */
+function shortDate(isoDate: string) {
+  return new Intl.DateTimeFormat("en-GB", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    timeZone: "UTC",
+  }).format(new Date(isoDate + "T12:00:00.000Z"));
 }
 
 function longDate(isoDate: string) {
