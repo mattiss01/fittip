@@ -24,6 +24,7 @@ export function MobileNavigation({
   decisionsOpen = false,
   noGoal = false,
   roadmapAttention = null,
+  unloggedOpen = false,
 }: {
   /** Guided setup is not finished: "You", where it is reached, is marked. */
   setupOpen?: boolean;
@@ -36,6 +37,11 @@ export function MobileNavigation({
   noGoal?: boolean;
   /** The Plan's Roadmap chip has a dot, so "Plan" has one (owner, 19 Oct). */
   roadmapAttention?: keyof typeof ROADMAP_ATTENTION_NOTES | null;
+  /**
+   * A planned session from a past day has no log (owner, 5 Nov 2026):
+   * "Today", where the reminder lists it, is marked.
+   */
+  unloggedOpen?: boolean;
 }) {
   const pathname = usePathname();
 
@@ -63,7 +69,9 @@ export function MobileNavigation({
                 ]
               : href === "/home/plan" && roadmapAttention !== null
                 ? [ROADMAP_ATTENTION_NOTES[roadmapAttention]]
-                : [];
+                : href === "/home/today" && unloggedOpen
+                  ? ["A planned session from a past day has no log"]
+                  : [];
           const marked = notes.length > 0;
           const noteId = `${href.slice("/home/".length)}-open-note`;
           return (
@@ -90,6 +98,9 @@ export function MobileNavigation({
                       }
                       data-roadmap-attention={
                         href === "/home/plan" ? "" : undefined
+                      }
+                      data-unlogged-open={
+                        href === "/home/today" ? "" : undefined
                       }
                     />
                   ) : null}

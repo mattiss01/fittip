@@ -7,12 +7,14 @@ const {
   createCompletionLogMock,
   readPlanWindowToppedUpMock,
   listCoachCancellationsMock,
+  readUnloggedSessionsMock,
 } = vi.hoisted(() => ({
   createPlanMock: vi.fn(),
   createProfileMock: vi.fn(),
   createCompletionLogMock: vi.fn(),
   readPlanWindowToppedUpMock: vi.fn(),
   listCoachCancellationsMock: vi.fn(),
+  readUnloggedSessionsMock: vi.fn(),
 }));
 
 vi.mock("@/server/repositories/rolling-plan-repository", async (original) => {
@@ -52,6 +54,9 @@ vi.mock(
 vi.mock("@/server/completions/plan-window-top-up", () => ({
   readPlanWindowToppedUp: readPlanWindowToppedUpMock,
 }));
+vi.mock("@/server/completions/unlogged-sessions", () => ({
+  readUnloggedSessions: readUnloggedSessionsMock,
+}));
 
 import TodayPage from "./page";
 import type { RollingPlanSession } from "@/server/rolling-plan/rolling-plan";
@@ -84,6 +89,7 @@ describe("Today", () => {
       findByPlanSessions,
     });
     readPlanWindowToppedUpMock.mockResolvedValue(planWindow());
+    readUnloggedSessionsMock.mockResolvedValue([]);
   });
 
   afterEach(cleanup);
@@ -483,6 +489,53 @@ describe("Today", () => {
 
     expect(document.querySelector('[data-today-state="no-zone"]')).toBeTruthy();
     expect(readPlanWindowToppedUpMock).not.toHaveBeenCalled();
+  });
+
+  it("lists past sessions with no log above today, and on no other day", async () => {
+    readUnloggedSessionsMock.mockResolvedValue([
+      {
+        id: SESSION_ID,
+        localDate: shiftIsoDate(today(), -2),
+        position: 0,
+        title: "Easy run",
+        sport: "Running",
+        status: "active",
+      },
+    ]);
+
+    render(await TodayPage({ searchParams: Promise.resolve({}) }));
+
+    expect(readUnloggedSessionsMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      today(),
+    );
+    const reminder = document.querySelector("[data-unlogged-reminder]");
+    expect(reminder).toBeTruthy();
+    expect(
+      within(reminder as HTMLElement).getByRole("link", { name: "Log it" }),
+    ).toBeTruthy();
+
+    cleanup();
+    readUnloggedSessionsMock.mockClear();
+    render(
+      await TodayPage({
+        searchParams: Promise.resolve({ date: shiftIsoDate(today(), -1) }),
+      }),
+    );
+    expect(readUnloggedSessionsMock).not.toHaveBeenCalled();
+    expect(document.querySelector("[data-unlogged-reminder]")).toBeNull();
+  });
+
+  it("shows the day when the reminder cannot be read", async () => {
+    readUnloggedSessionsMock.mockRejectedValue(new Error("down"));
+
+    render(await TodayPage({ searchParams: Promise.resolve({}) }));
+
+    expect(document.querySelector("[data-unlogged-reminder]")).toBeNull();
+    expect(
+      document.querySelector(`[data-today-date="${today()}"]`),
+    ).toBeTruthy();
   });
 });
 

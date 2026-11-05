@@ -7,6 +7,8 @@ import {
   type TodaySessionView,
 } from "./today-day";
 import styles from "./today.module.css";
+import { UnloggedReminder } from "./unlogged-reminder";
+import type { UnloggedSessionView } from "./unlogged-state";
 
 import homeStyles from "../home.module.css";
 import { readReplacedByCoach } from "../plan/plan-read";
@@ -19,6 +21,10 @@ import {
   type Completion,
 } from "@/server/completions/completion-log";
 import { readPlanWindowToppedUp } from "@/server/completions/plan-window-top-up";
+import {
+  readUnloggedSessions,
+  type UnloggedSession,
+} from "@/server/completions/unlogged-sessions";
 import {
   CompletionAuthenticationError,
   createCompletionLog,
@@ -103,6 +109,7 @@ async function renderDay(timezoneName: string, requested: string | null) {
   let window;
   let completions;
   let running;
+  let unlogged: UnloggedSession[];
   try {
     const [plan, log] = await Promise.all([
       createRollingPlan(),
@@ -111,7 +118,7 @@ async function renderDay(timezoneName: string, requested: string | null) {
     // ADR-017 consequence 3: a consumer that is not the Plan has to top the
     // window up before reading it, or knowingly read an incomplete plan. Both
     // reads are bounded by the one day this view shows.
-    [window, completions, running] = await Promise.all([
+    [window, completions, running, unlogged] = await Promise.all([
       readPlanWindowToppedUp(plan, date, date),
       log.list(date, date),
       // A workout already running is offered to continue, not a new one to
@@ -119,6 +126,12 @@ async function renderDay(timezoneName: string, requested: string | null) {
       createLiveWorkouts()
         .then((workouts) => workouts.current())
         .catch(() => null),
+      // Past sessions with no log, listed above today only (owner, 5 Nov
+      // 2026). Like the navigation's marks, a reminder: a failed read shows
+      // none rather than failing the day.
+      date === today
+        ? readUnloggedSessions(plan, log, today).catch(() => [])
+        : Promise.resolve([]),
     ]);
   } catch (error) {
     redirectOnAuthError(error);
@@ -170,24 +183,43 @@ async function renderDay(timezoneName: string, requested: string | null) {
   );
 
   return (
-    <TodayDay
-      date={date}
-      today={today}
-      lastPlannedDate={lastDate}
-      lastPlaceableDate={lastPlaceableDate}
-      isRecoveryDay={window.slice.recoveryDates.includes(date)}
-      toppedUp={window.toppedUp}
-      runningWorkout={
-        running == null
-          ? null
-          : { title: running.title, planSessionId: running.planSessionId }
-      }
-      sessions={sessions}
-      unattached={completions
-        .filter((completion) => !carried.has(completion.id))
-        .map(toCompletionView)}
-    />
+    <>
+      <TodayDay
+        date={date}
+        today={today}
+        lastPlannedDate={lastDate}
+        lastPlaceableDate={lastPlaceableDate}
+        isRecoveryDay={window.slice.recoveryDates.includes(date)}
+        toppedUp={window.toppedUp}
+        runningWorkout={
+          running == null
+            ? null
+            : { title: running.title, planSessionId: running.planSessionId }
+        }
+        sessions={sessions}
+        unattached={completions
+          .filter((completion) => !carried.has(completion.id))
+          .map(toCompletionView)}
+      />
+      {/* Below the day (owner, 5 Nov 2026): the date strip and today's
+          sessions stay on top. Rendered on today even when empty: a row just
+          answered stays as its receipt, which only the component remembers. */}
+      {date === today ? (
+        <UnloggedReminder sessions={unlogged.map(toUnloggedView)} />
+      ) : null}
+    </>
   );
+}
+
+function toUnloggedView(session: UnloggedSession): UnloggedSessionView {
+  return {
+    id: session.id,
+    localDate: session.localDate,
+    title: session.title,
+    sport: session.sport,
+    expectedDurationMinutes: session.expectedDurationMinutes ?? null,
+    startTime: session.startTime ?? null,
+  };
 }
 
 /** Only what the surface renders crosses out of the server module. */

@@ -1,0 +1,190 @@
+/*
+ * The reminder below today's day (owner, 5 Nov 2026): one card listing
+ * past sessions with no log, each with its two answers. Lighter than a
+ * session card, so it reads as a list to clear rather than as today's plan.
+ */
+
+.reminder {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding: 1rem 1.1rem 1.1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: color-mix(in srgb, var(--ledger-paper) 70%, transparent);
+}
+
+.head h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.head p {
+  margin: 0.2rem 0 0;
+  color: var(--ledger-muted);
+  font-size: 0.9rem;
+}
+
+.rows {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: grid;
+  gap: 0.6rem;
+  padding: 0.8rem 0;
+  border-top: 1px solid var(--line);
+}
+
+.row:last-child {
+  padding-bottom: 0;
+}
+
+.what {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.when {
+  color: var(--ledger-muted);
+  font: 500 0.66rem var(--font-mono);
+  text-transform: uppercase;
+}
+
+.what h3 {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: 1.1rem;
+  font-weight: 800;
+  letter-spacing: -0.015em;
+  line-height: 1.15;
+}
+
+.row[data-skipped="true"] .what h3 {
+  color: var(--ledger-muted);
+}
+
+.detail {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--ledger-muted);
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.actions form {
+  display: grid;
+  margin: 0;
+}
+
+.logAction,
+.skipAction {
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0 0.9rem;
+  border-radius: var(--radius-control);
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition:
+    background-color 150ms ease,
+    transform 150ms var(--ease-out);
+}
+
+.logAction {
+  background: var(--ember);
+  color: var(--ledger-paper);
+}
+
+.logAction:active {
+  background: var(--ember-dark);
+  transform: scale(0.98);
+}
+
+.skipAction {
+  border: 1.5px solid var(--ledger-rule);
+  background: transparent;
+  color: var(--ledger-ink);
+  cursor: pointer;
+}
+
+.skipAction:active {
+  background: var(--line);
+  transform: scale(0.98);
+}
+
+.skipAction:disabled {
+  color: var(--ledger-muted);
+  cursor: progress;
+}
+
+.logAction:focus-visible,
+.skipAction:focus-visible,
+.textAction:focus-visible {
+  outline: 3px solid var(--ember);
+  outline-offset: 2px;
+}
+
+.receipt {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0;
+}
+
+.stamp {
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--radius-pill);
+  background: var(--ledger-wash);
+  color: var(--ledger-muted);
+  font: 500 0.62rem var(--font-mono);
+  text-transform: uppercase;
+}
+
+.textAction {
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  color: var(--ledger-ink);
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-underline-offset: 0.2rem;
+}
+
+.error {
+  margin: 0;
+  padding: 0.6rem 0.8rem;
+  border-radius: var(--radius-control);
+  background: #fff0e1;
+  color: #67311e;
+  font-size: 0.88rem;
+  line-height: 1.4;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .logAction,
+  .skipAction {
+    transition: none;
+  }
+
+  .logAction:active,
+  .skipAction:active {
+    transform: none;
+  }
+}
