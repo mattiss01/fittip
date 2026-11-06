@@ -28,6 +28,23 @@
 
 -- 1. The table ----------------------------------------------------------------
 
+-- A sport's name as a person reads it: trimmed, and a run of spaces inside it
+-- read as one, as the application keeps a typed name (`tidySportName`). The
+-- list, its functions and a rename's match against records all go through it,
+-- so "Trail  running" and "Trail running" are one sport everywhere.
+create function public.tidy_sport_name(p_raw text)
+returns text
+language sql
+immutable
+set search_path = ''
+as $$
+  select pg_catalog.regexp_replace(pg_catalog.btrim(p_raw), '\s+', ' ', 'g')
+$$;
+
+revoke all privileges on function public.tidy_sport_name(text)
+  from public, anon, authenticated, service_role;
+grant execute on function public.tidy_sport_name(text) to authenticated;
+
 create table public.sports (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null default auth.uid(),
@@ -41,9 +58,10 @@ create table public.sports (
     references public.profiles (user_id)
     on delete cascade,
   -- The rule `keep_sports` has applied since 15 Oct 2026: trimmed, up to sixty
-  -- characters, and no comma, since names are still sent as a list.
+  -- characters, and no comma, since names are still sent as a list; and its
+  -- spaces as `tidy_sport_name` keeps them.
   constraint sports_name_check check (
-    name = pg_catalog.btrim(name)
+    name = pg_catalog.regexp_replace(pg_catalog.btrim(name), '\s+', ' ', 'g')
     and pg_catalog.char_length(name) between 1 and 60
     and pg_catalog.strpos(name, ',') = 0
   ),
@@ -150,17 +168,17 @@ from (
       partition by listed_first.user_id order by listed_first.ord
     ) as rank
   from (
-    select distinct on (profile.user_id, pg_catalog.lower(pg_catalog.btrim(listed.raw)))
+    select distinct on (profile.user_id, pg_catalog.lower(public.tidy_sport_name(listed.raw)))
       profile.user_id,
-      pg_catalog.btrim(listed.raw) as name,
+      public.tidy_sport_name(listed.raw) as name,
       listed.ord
     from public.profiles as profile
     cross join lateral pg_catalog.unnest(profile.sports)
       with ordinality as listed(raw, ord)
-    where pg_catalog.btrim(listed.raw) <> ''
-      and pg_catalog.char_length(pg_catalog.btrim(listed.raw)) <= 60
+    where public.tidy_sport_name(listed.raw) <> ''
+      and pg_catalog.char_length(public.tidy_sport_name(listed.raw)) <= 60
       and pg_catalog.strpos(listed.raw, ',') = 0
-    order by profile.user_id, pg_catalog.lower(pg_catalog.btrim(listed.raw)),
+    order by profile.user_id, pg_catalog.lower(public.tidy_sport_name(listed.raw)),
       listed.ord
   ) as listed_first
 ) as kept;
@@ -196,7 +214,7 @@ begin
   if not found then return; end if;
 
   foreach v_raw in array coalesce(p_names, '{}'::text[]) loop
-    v_name := pg_catalog.btrim(v_raw);
+    v_name := public.tidy_sport_name(v_raw);
     continue when v_name is null or v_name = ''
       or pg_catalog.char_length(v_name) > 60
       or pg_catalog.strpos(v_name, ',') > 0;
@@ -224,7 +242,7 @@ security invoker
 set search_path = ''
 as $$
   insert into public.sports (user_id, name)
-  values (auth.uid(), pg_catalog.btrim(p_name))
+  values (auth.uid(), public.tidy_sport_name(p_name))
   returning id;
 $$;
 
@@ -256,7 +274,7 @@ begin
   where owned.user_id = v_user_id
     and not exists (
       select 1 from pg_catalog.unnest(coalesce(p_names, '{}'::text[])) as chosen(raw)
-      where pg_catalog.lower(pg_catalog.btrim(chosen.raw))
+      where pg_catalog.lower(public.tidy_sport_name(chosen.raw))
         = pg_catalog.lower(owned.name)
     );
   perform public.keep_sports(p_names);
@@ -284,8 +302,9 @@ grant execute on function public.set_sports(text[]) to authenticated;
 -- plan's, so one whose plan named the old sport is given the new one.
 --
 -- A record whose surface sends back the revision it read (a log, a saved
--- session, a workout in progress) has it moved on, so a form opened before
--- the rename is refused rather than writing the old name back. The plan's
+-- session, a workout in progress) has it moved on, its own sport or one of
+-- its activities' renamed, so a form opened before the rename is refused
+-- rather than writing the old name back. The plan's
 -- revision is not moved: each plan revision is a change set's, and this is
 -- not one (ADR-041).
 --
@@ -308,7 +327,7 @@ as $$
 declare
   v_user_id uuid := auth.uid();
   v_old text;
-  v_new text := pg_catalog.btrim(p_name);
+  v_new text := public.tidy_sport_name(p_name);
   v_kept uuid;
   v_existing text;
 begin
@@ -343,50 +362,85 @@ begin
       raise exception using errcode = '23505',
         message = 'You already have that sport.';
     end if;
-    delete from public.sports where id = p_sport_id;
+    delete from public.sports where id = p_sport_id and user_id = v_user_id;
     v_new := v_existing;
   else
-    update public.sports set name = v_new where id = p_sport_id;
+    update public.sports set name = v_new
+    where id = p_sport_id and user_id = v_user_id;
     v_kept := p_sport_id;
   end if;
 
   update public.rolling_plan_sessions set sport = v_new
   where user_id = v_user_id
-    and pg_catalog.lower(pg_catalog.btrim(sport)) = pg_catalog.lower(v_old);
+    and pg_catalog.lower(public.tidy_sport_name(sport)) = pg_catalog.lower(v_old);
   update public.rolling_plan_activities set sport = v_new
   where user_id = v_user_id
-    and pg_catalog.lower(pg_catalog.btrim(sport)) = pg_catalog.lower(v_old);
+    and pg_catalog.lower(public.tidy_sport_name(sport)) = pg_catalog.lower(v_old);
   update public.rolling_plan_series set sport = v_new
   where user_id = v_user_id
-    and pg_catalog.lower(pg_catalog.btrim(sport)) = pg_catalog.lower(v_old);
+    and pg_catalog.lower(public.tidy_sport_name(sport)) = pg_catalog.lower(v_old);
   update public.rolling_plan_series_activities set sport = v_new
   where user_id = v_user_id
-    and pg_catalog.lower(pg_catalog.btrim(sport)) = pg_catalog.lower(v_old);
-  update public.saved_sessions set sport = v_new, revision = revision + 1
-  where user_id = v_user_id
-    and pg_catalog.lower(pg_catalog.btrim(sport)) = pg_catalog.lower(v_old);
-  update public.saved_session_activities set sport = v_new
-  where user_id = v_user_id
-    and pg_catalog.lower(pg_catalog.btrim(sport)) = pg_catalog.lower(v_old);
-  update public.personal_activities set sport = v_new
-  where user_id = v_user_id
-    and pg_catalog.lower(pg_catalog.btrim(sport)) = pg_catalog.lower(v_old);
-  update public.live_workouts set sport = v_new, revision = revision + 1
-  where user_id = v_user_id
-    and pg_catalog.lower(pg_catalog.btrim(sport)) = pg_catalog.lower(v_old);
-  update public.completion_activities set sport = v_new
-  where user_id = v_user_id
-    and pg_catalog.lower(pg_catalog.btrim(sport)) = pg_catalog.lower(v_old);
-  update public.completions set sport = v_new, revision = revision + 1
-  where user_id = v_user_id
+    and pg_catalog.lower(public.tidy_sport_name(sport)) = pg_catalog.lower(v_old);
+  update public.saved_sessions as saved
+  set
+    sport = case
+      when pg_catalog.lower(public.tidy_sport_name(saved.sport))
+        = pg_catalog.lower(v_old) then v_new
+      else saved.sport
+    end,
+    revision = saved.revision + 1
+  where saved.user_id = v_user_id
     and (
-      pg_catalog.lower(pg_catalog.btrim(sport)) = pg_catalog.lower(v_old)
-      or (
-        sport is null
-        and pg_catalog.lower(pg_catalog.btrim(planned_snapshot ->> 'sport'))
-          = pg_catalog.lower(v_old)
+      pg_catalog.lower(public.tidy_sport_name(saved.sport)) = pg_catalog.lower(v_old)
+      or exists (
+        select 1 from public.saved_session_activities as activity
+        where activity.saved_session_id = saved.id
+          and pg_catalog.lower(public.tidy_sport_name(activity.sport))
+            = pg_catalog.lower(v_old)
       )
     );
+  update public.saved_session_activities set sport = v_new
+  where user_id = v_user_id
+    and pg_catalog.lower(public.tidy_sport_name(sport)) = pg_catalog.lower(v_old);
+  update public.personal_activities set sport = v_new
+  where user_id = v_user_id
+    and pg_catalog.lower(public.tidy_sport_name(sport)) = pg_catalog.lower(v_old);
+  update public.live_workouts set sport = v_new, revision = revision + 1
+  where user_id = v_user_id
+    and pg_catalog.lower(public.tidy_sport_name(sport)) = pg_catalog.lower(v_old);
+  update public.completions as log
+  set
+    sport = case
+      when pg_catalog.lower(public.tidy_sport_name(log.sport))
+        = pg_catalog.lower(v_old)
+        or (
+          log.sport is null
+          and pg_catalog.lower(public.tidy_sport_name(log.planned_snapshot ->> 'sport'))
+            = pg_catalog.lower(v_old)
+        )
+      then v_new
+      else log.sport
+    end,
+    revision = log.revision + 1
+  where log.user_id = v_user_id
+    and (
+      pg_catalog.lower(public.tidy_sport_name(log.sport)) = pg_catalog.lower(v_old)
+      or (
+        log.sport is null
+        and pg_catalog.lower(public.tidy_sport_name(log.planned_snapshot ->> 'sport'))
+          = pg_catalog.lower(v_old)
+      )
+      or exists (
+        select 1 from public.completion_activities as activity
+        where activity.completion_id = log.id
+          and pg_catalog.lower(public.tidy_sport_name(activity.sport))
+            = pg_catalog.lower(v_old)
+      )
+    );
+  update public.completion_activities set sport = v_new
+  where user_id = v_user_id
+    and pg_catalog.lower(public.tidy_sport_name(sport)) = pg_catalog.lower(v_old);
 
   -- A goal names each sport once, so a merge leaves one of the two.
   update public.goals as goal
@@ -397,7 +451,7 @@ begin
       from (
         select
           case
-            when pg_catalog.lower(pg_catalog.btrim(listed.raw))
+            when pg_catalog.lower(public.tidy_sport_name(listed.raw))
               = pg_catalog.lower(v_old) then v_new
             else listed.raw
           end as name,
@@ -411,7 +465,7 @@ begin
   where goal.user_id = v_user_id
     and exists (
       select 1 from pg_catalog.unnest(goal.sports) as listed(raw)
-      where pg_catalog.lower(pg_catalog.btrim(listed.raw)) = pg_catalog.lower(v_old)
+      where pg_catalog.lower(public.tidy_sport_name(listed.raw)) = pg_catalog.lower(v_old)
     );
 
   return v_kept;

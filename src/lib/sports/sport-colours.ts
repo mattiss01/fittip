@@ -60,10 +60,11 @@ export function swatchColour(swatch: SportSwatch): string {
 
 /**
  * How a record's sport is matched to the list: as a person reads it, ignoring
- * case and surrounding space. The database matches the same way.
+ * case, surrounding space and a run of spaces inside. The database matches
+ * the same way (`tidy_sport_name`).
  */
 export function sportKey(sport: string): string {
-  return sport.trim().toLocaleLowerCase("en");
+  return sport.trim().replace(/\s+/g, " ").toLocaleLowerCase("en");
 }
 
 /** The colour a sport is drawn in, given the owner's list. */

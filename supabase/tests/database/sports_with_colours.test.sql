@@ -7,7 +7,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(58);
+select plan(64);
 
 -- The objects --------------------------------------------------------------------
 
@@ -180,6 +180,16 @@ select lives_ok(
     (clock_timestamp() at time zone 'utc')::date),
   'and so does a log, in another case'
 );
+select lives_ok(
+  format($$select * from public.apply_completion_change('create', null, null,
+    jsonb_build_object('status', 'unplanned', 'actualLocalDate', %L,
+      'title', 'Gym', 'sport', 'Strength',
+      'activities', jsonb_build_array(
+        jsonb_build_object('position', 0, 'name', 'Warm-up jog',
+          'sport', ' running ', 'measurementMode', 'unmeasured'))))$$,
+    (clock_timestamp() at time zone 'utc')::date),
+  'and an activity of a log of another sport'
+);
 
 select set_config('request.jwt.claims',
   '{"sub":"72000000-0000-4000-8000-000000000002","role":"authenticated"}', true);
@@ -195,6 +205,15 @@ select lives_ok(
 
 select is((select pg_catalog.count(*)::int from public.sports), 1,
   'another owner reads only their own sports');
+select lives_ok(
+  $$select public.add_sport('  Open   water ')$$,
+  'another owner adds a sport typed with stray spaces'
+);
+select is(
+  (select name from public.sports where pg_catalog.lower(name) like 'open%'),
+  'Open water',
+  'and it is kept as a person reads it, its spaces tidied'
+);
 select is_empty(
   $$update public.sports set colour = 'sport-12'
     where user_id = '72000000-0000-4000-8000-000000000001' returning id$$,
@@ -236,7 +255,7 @@ select throws_ok(
 );
 reset role;
 create temporary table before_rename as
-  select revision from public.completions
+  select title, revision from public.completions
   where user_id = '72000000-0000-4000-8000-000000000001';
 grant select on before_rename to public;
 set local role authenticated;
@@ -257,19 +276,36 @@ select is(
   'the saved session follows'
 );
 select is(
-  (select sport from public.completions),
+  (select sport from public.completions where title = 'Easy run'),
   'Trail running',
   'the log follows, whatever case it was in'
 );
 select is(
-  (select sport from public.completion_activities),
+  (select sport from public.completion_activities
+   where completion_id = (select id from public.completions where title = 'Easy run')),
   'Trail running',
   'and so does its activity'
 );
 select is(
-  (select revision from public.completions),
-  (select revision + 1 from before_rename),
+  (select revision from public.completions where title = 'Easy run'),
+  (select revision + 1 from before_rename where title = 'Easy run'),
   'and the log''s revision moves on, so a form opened before is refused'
+);
+select is(
+  (select sport from public.completions where title = 'Gym'),
+  'Strength',
+  'a log of another sport keeps its own'
+);
+select is(
+  (select sport from public.completion_activities
+   where completion_id = (select id from public.completions where title = 'Gym')),
+  'Trail running',
+  'while its activity of the renamed sport follows'
+);
+select is(
+  (select revision from public.completions where title = 'Gym'),
+  (select revision + 1 from before_rename where title = 'Gym'),
+  'and that log''s revision moves on too, since its form rewrites its activities'
 );
 select is(
   (select sports from public.goals),
@@ -316,7 +352,7 @@ select is(
   'the renamed one is gone and the other keeps its name and colour'
 );
 select is(
-  (select sport from public.completions),
+  (select sport from public.completions where title = 'Easy run'),
   'Cycling',
   'its log is now Cycling'
 );
@@ -330,7 +366,7 @@ select is(
 
 delete from public.sports where name = 'Cycling';
 select is(
-  (select sport from public.completions),
+  (select sport from public.completions where title = 'Easy run'),
   'Cycling',
   'a deleted sport''s log keeps it'
 );

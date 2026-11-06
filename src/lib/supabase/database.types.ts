@@ -3092,6 +3092,7 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      tidy_sport_name: { Args: { p_raw: string }; Returns: string };
       write_roadmap: {
         Args: { p_content: Json; p_expected_head_revision: number };
         Returns: Database["public"]["CompositeTypes"]["roadmap_acceptance_receipt"];
