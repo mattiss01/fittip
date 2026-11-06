@@ -12,9 +12,10 @@ export const dynamic = "force-dynamic";
  * Settings, reached from the gear on You: a list of the settings, each on a
  * page of its own (owner, 6 Nov 2026), in place of one long page that held
  * them all. Each row is the setting's name and nothing else (owner's
- * choice). What setup asks is first, then the units and the time zone, and
- * deleting the account is a row of its own at the end, in red (owner,
- * 23 Oct 2026; ADR-039). Sign out stays on You (owner, 2 Oct 2026).
+ * choice). What setup asks is first, then the units and the time zone; the
+ * account's own rows come last, changing the password (ADR-042) and
+ * deleting the account, in red (owner, 23 Oct 2026; ADR-039). Sign out
+ * stays on You (owner, 2 Oct 2026).
  */
 const SETTINGS = [
   { href: "/home/you/settings/about", name: "About you" },
@@ -24,7 +25,23 @@ const SETTINGS = [
   { href: "/home/you/settings/units", name: "Units and time zone" },
 ] as const;
 
-export default async function SettingsPage() {
+/** What a changed password comes back with; nothing else is read from it. */
+const PASSWORD_NOTES: Record<string, string> = {
+  changed: "Password changed. Your other devices are signed out.",
+  partial:
+    "Password changed. Some of your other devices may still be signed in; sign out there.",
+};
+
+export default async function SettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ password?: string }>;
+}) {
+  const { password } = await searchParams;
+  const passwordNote =
+    typeof password === "string" && Object.hasOwn(PASSWORD_NOTES, password)
+      ? PASSWORD_NOTES[password]
+      : null;
   // Signed out or without a profile, there is nothing to set.
   await readOwnProfile((profiles) => profiles.getCurrentProfile());
 
@@ -34,6 +51,11 @@ export default async function SettingsPage() {
       <header className={styles.header}>
         <h1>Settings</h1>
       </header>
+      {passwordNote === null ? null : (
+        <p className={styles.kept} role="status">
+          {passwordNote}
+        </p>
+      )}
       <ul className={styles.places} aria-label="Settings">
         {SETTINGS.map(({ href, name }) => (
           <li key={href}>
@@ -45,6 +67,12 @@ export default async function SettingsPage() {
         ))}
       </ul>
       <ul className={styles.places} aria-label="Account">
+        <li>
+          <Link className={styles.place} href="/home/you/settings/password">
+            <strong>Change password</strong>
+            <Chevron />
+          </Link>
+        </li>
         <li>
           <Link
             className={styles.place}
