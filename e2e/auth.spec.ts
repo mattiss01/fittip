@@ -266,14 +266,17 @@ test.describe("public account authentication", () => {
     await expect(page).toHaveURL(
       /\/home\/you\/settings\/password\?error=current$/,
     );
-    await expect(page.getByRole("alert")).toContainText(
+    // Within the page: Next.js keeps its own empty role="alert" announcer.
+    await expect(page.locator("main").getByRole("alert")).toContainText(
       "That is not your current password",
     );
 
     // The right one changes it; this device stays signed in, on Settings.
     await change(password);
     await expect(page).toHaveURL(/\/home\/you\/settings\?password=changed$/);
-    await expect(page.getByRole("status")).toContainText("Password changed");
+    await expect(page.locator("main").getByRole("status")).toContainText(
+      "Password changed",
+    );
 
     // The old password no longer signs in and the new one does.
     await page.getByRole("link", { name: "Back to You" }).click();
