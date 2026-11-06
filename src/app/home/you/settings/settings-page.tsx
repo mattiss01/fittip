@@ -19,16 +19,19 @@ import styles from "../you.module.css";
 export function SettingPage({
   title,
   children,
+  back = { href: "/home/you/settings", label: "Settings" },
 }: {
   title: string;
   children: ReactNode;
+  /** Where the way back goes; Settings, unless the page is under another. */
+  back?: { href: string; label: string };
 }) {
   return (
     <main
       className={`${homeStyles.shell} ${setupStyles.page}`}
       id="main-content"
     >
-      <BackLink href="/home/you/settings" label="Settings" />
+      <BackLink href={back.href} label={back.label} />
       <header className={styles.header}>
         <h1>{title}</h1>
       </header>

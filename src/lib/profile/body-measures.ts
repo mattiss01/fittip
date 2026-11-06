@@ -39,6 +39,11 @@ export function kgToPounds(kg: number): number {
   return round(kg / KG_PER_POUND, 1);
 }
 
+/** A stored weight as the owner reads it: "80.5 kg" or "177.5 lb". */
+export function formatWeight(kg: number, units: UnitsSystem): string {
+  return units === "metric" ? `${kg} kg` : `${kgToPounds(kg)} lb`;
+}
+
 /**
  * The units a browser's language suggests. Three countries use pounds and
  * feet day to day; everywhere else is metric. It is a starting value the

@@ -9,6 +9,7 @@ import { cmToFeetAndInches, UNITS_SYSTEMS } from "@/lib/profile/body-measures";
 import {
   parseProfileDetails,
   parseProfileSports,
+  parseWeightEntry,
   ABOUT_YOU_ANSWERS,
   ProfileDetailsValidationError,
 } from "@/server/profile/profile-records";
@@ -126,6 +127,28 @@ export async function saveTrainingSetupAction(
   return run(previous, "Your training setup is saved.", (profiles) =>
     profiles.saveTrainingSetup(parseTrainingSetup(formData)),
   );
+}
+
+/**
+ * A weight added on its history page, for today or a day before; a day that
+ * has one already is corrected (owner, 6 Nov 2026). Read in the owner's units
+ * and their own day.
+ */
+export async function addWeightEntryAction(
+  previous: ProfileActionState,
+  formData: FormData,
+): Promise<ProfileActionState> {
+  return run(previous, "The weight is saved.", async (profiles) => {
+    const details = await profiles.getDetails();
+    if (!details) throw new ProfileDetailsValidationError();
+    const today = isoDateInTimezone(new Date(), details.timezoneName ?? "UTC");
+    const entry = parseWeightEntry(
+      formData,
+      details.unitsSystem ?? "metric",
+      today,
+    );
+    await profiles.recordWeight(entry.measuredOn, entry.weightKg);
+  });
 }
 
 export async function deleteWeightEntryAction(

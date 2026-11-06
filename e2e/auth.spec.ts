@@ -495,7 +495,6 @@ async function completeGuidedSetup(
   const settings = page.getByRole("list", { name: "Settings" });
   for (const name of [
     "About you",
-    "Weight history",
     "Your sports",
     "Training setup",
     "Units and time zone",
@@ -508,8 +507,11 @@ async function completeGuidedSetup(
 
   await settings.getByRole("link", { name: "About you" }).click();
   await expect(page.getByRole("textbox", { name: "Name" })).toHaveValue("Alex");
-  await page.goto("/home/you/settings/weight");
-  await expect(page.getByText("80.5 kg")).toBeVisible();
+  // The weight history is under About you, opened from its weight row
+  // (owner, 6 Nov 2026).
+  await page.getByRole("link", { name: /^Weight/ }).click();
+  await expect(page).toHaveURL(/\/home\/you\/settings\/about\/weight$/);
+  await expect(page.getByText("80.5 kg", { exact: true })).toBeVisible();
   // Changing the units changes how a measure is shown, not what is stored.
   await page.goto("/home/you/settings/units");
   await expect(page.getByLabel("Units")).toHaveValue("metric");
@@ -517,8 +519,17 @@ async function completeGuidedSetup(
   await page.getByLabel("Units").selectOption("imperial");
   await page.getByRole("button", { name: "Save settings" }).click();
   await expect(page.getByText("Your settings are saved.")).toBeVisible();
-  await page.goto("/home/you/settings/weight");
-  await expect(page.getByText("177.5 lb")).toBeVisible();
+  await page.goto("/home/you/settings/about/weight");
+  await expect(page.getByText("177.5 lb", { exact: true })).toBeVisible();
+  // A weight for a day before, in the units the owner reads (owner, 6 Nov
+  // 2026). It joins the list; the latest day is still the latest.
+  await page.getByLabel("Day", { exact: true }).fill("2026-01-15");
+  await page.getByLabel("Weight in lb", { exact: true }).fill("176");
+  await page.getByRole("button", { name: "Save weight" }).click();
+  await expect(page.getByText("The weight is saved.")).toBeVisible();
+  await expect(
+    page.getByRole("listitem").filter({ hasText: "15 Jan 2026" }),
+  ).toContainText("176 lb");
   // The sports setup chose are the owner's own list, each with a colour
   // (owner, 6 Nov 2026), not setup's catalogue.
   await page.goto("/home/you/settings/sports");

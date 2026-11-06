@@ -11,7 +11,8 @@ export const dynamic = "force-dynamic";
 /**
  * Settings, reached from the gear on You: a list of the settings, each on a
  * page of its own (owner, 6 Nov 2026), in place of one long page that held
- * them all. Each row is the setting's name and nothing else (owner's
+ * them all, the weight history under About you (owner, 6 Nov 2026). Each
+ * row is the setting's name and nothing else (owner's
  * choice). What setup asks is first, then the units and the time zone; the
  * account's own rows come last, changing the password (ADR-042) and
  * deleting the account, in red (owner, 23 Oct 2026; ADR-039). Sign out
@@ -19,7 +20,6 @@ export const dynamic = "force-dynamic";
  */
 const SETTINGS = [
   { href: "/home/you/settings/about", name: "About you" },
-  { href: "/home/you/settings/weight", name: "Weight history" },
   { href: "/home/you/settings/sports", name: "Your sports" },
   { href: "/home/you/settings/training", name: "Training setup" },
   { href: "/home/you/settings/units", name: "Units and time zone" },
