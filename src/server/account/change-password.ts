@@ -11,8 +11,6 @@ import type { ServerUserClient } from "@/lib/supabase/server-user-client";
 /** Each outcome is a fixed key; the page maps it to copy (ADR-042). */
 export type ChangePasswordResult =
   | "changed"
-  /** Changed, but the other devices could not all be signed out. */
-  | "changed-partial"
   /** The new password is too short, or the two do not match. */
   | "validation"
   /** No signed-in person, or one this environment does not allow. */
@@ -20,7 +18,8 @@ export type ChangePasswordResult =
   /** The current password is not the account's. */
   | "current"
   /** Auth refused the new password, for one the account already has. */
-  | "password"
+  | "refused"
+  /** Auth did not answer, or limited the attempts; nothing was changed. */
   | "error";
 
 /** A client that can sign in once without becoming the browser's session. */
@@ -29,7 +28,7 @@ export type CheckingClient = {
     signInWithPassword(credentials: {
       email: string;
       password: string;
-    }): Promise<{ error: unknown }>;
+    }): Promise<{ error: { code?: string } | null }>;
     signOut(options: { scope: "local" }): Promise<{ error: unknown }>;
   };
 };
@@ -40,8 +39,9 @@ export type CheckingClient = {
  * In this order, and nothing after a refusal: the new pair is checked, then
  * the session; the current password is checked by signing in with the
  * session's own address on a client with no cookies, which is signed out
- * again at once; then the new password is set on the browser's session and
- * every other session of the account ends. This one stays signed in.
+ * again at once; then the new password is set on the browser's session,
+ * which Auth does by ending every other session of the account in the same
+ * step. This one stays signed in.
  */
 export async function changeOwnPassword(
   client: ServerUserClient,
@@ -73,7 +73,10 @@ export async function changeOwnPassword(
       email,
       password: current,
     });
-    if (error) return "current";
+    // Only a wrong password is called wrong: a limit or an outage is not.
+    if (error) {
+      return error.code === "invalid_credentials" ? "current" : "error";
+    }
     // Its session lives for this request only; the sign-out of the others
     // below ends it as well, should this fail.
     await checker.auth.signOut({ scope: "local" }).catch(() => undefined);
@@ -85,13 +88,13 @@ export async function changeOwnPassword(
     .updateUser({ password })
     .then(({ error }) => !error)
     .catch(() => false);
-  if (!changed) return "password";
+  if (!changed) return "refused";
 
-  const othersOut = await client.auth
-    .signOut({ scope: "others" })
-    .then(({ error }) => !error)
-    .catch(() => false);
-  return othersOut ? "changed" : "changed-partial";
+  // Auth has already ended the other sessions with the change (checked
+  // against the local stack, 6 Nov 2026). Asked again only as a backstop,
+  // so its answer changes nothing the owner is told.
+  await client.auth.signOut({ scope: "others" }).catch(() => undefined);
+  return "changed";
 }
 
 /**

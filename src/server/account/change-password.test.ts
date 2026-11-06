@@ -95,7 +95,7 @@ describe("changeOwnPassword (ADR-042)", () => {
 
   it("changes nothing when the current password is wrong", async () => {
     checker.auth.signInWithPassword.mockResolvedValue({
-      error: { message: "Invalid login credentials" },
+      error: { code: "invalid_credentials" },
     });
     await expect(change()).resolves.toBe("current");
     expect(session.auth.updateUser).not.toHaveBeenCalled();
@@ -106,13 +106,21 @@ describe("changeOwnPassword (ADR-042)", () => {
     session.auth.updateUser.mockResolvedValue({
       error: { message: "New password should be different" },
     });
-    await expect(change()).resolves.toBe("password");
+    await expect(change()).resolves.toBe("refused");
     expect(session.auth.signOut).not.toHaveBeenCalled();
   });
 
-  it("says so when the password changed but the others could not be signed out", async () => {
-    session.auth.signOut.mockResolvedValue({ error: { message: "network" } });
-    await expect(change()).resolves.toBe("changed-partial");
+  it("does not call a limit or an outage a wrong password", async () => {
+    checker.auth.signInWithPassword.mockResolvedValue({
+      error: { code: "over_request_rate_limit" },
+    });
+    await expect(change()).resolves.toBe("error");
+    expect(session.auth.updateUser).not.toHaveBeenCalled();
+  });
+
+  it("is changed even when the backstop sign-out of the others fails", async () => {
+    session.auth.signOut.mockRejectedValue(new Error("network"));
+    await expect(change()).resolves.toBe("changed");
   });
 
   it("still changes it when the check's own sign-out fails", async () => {

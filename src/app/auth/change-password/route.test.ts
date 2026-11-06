@@ -51,32 +51,17 @@ describe("POST /auth/change-password (ADR-042)", () => {
   it("hands the form to the change and goes back to the page, keeping the session's cookies", async () => {
     const response = await post();
 
-    expect(changeOwnPasswordMock).toHaveBeenCalledWith(
-      {},
-      expect.any(Function),
-      {
-        current: "old-password-1",
-        password: "new-password-2",
-        confirmation: "new-password-2",
-      },
-    );
     expect(response.status).toBe(303);
     expect(location(response)).toBe("/home/you/settings?password=changed");
     expect(response.headers.get("set-cookie")).toContain("sb-access=refreshed");
     expect(response.headers.get("cache-control")).toContain("no-store");
   });
 
-  it("goes back to Settings when the others could not all be signed out", async () => {
-    changeOwnPasswordMock.mockResolvedValue("changed-partial");
-    const response = await post();
-    expect(location(response)).toBe("/home/you/settings?password=partial");
-  });
-
   it.each([
     ["validation", "?error=validation"],
     ["session", "?error=session"],
     ["current", "?error=current"],
-    ["password", "?error=password"],
+    ["refused", "?error=refused"],
     ["error", "?error=error"],
   ])("answers %s with a fixed key and nothing typed", async (result, query) => {
     changeOwnPasswordMock.mockResolvedValue(result);

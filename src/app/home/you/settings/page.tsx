@@ -28,8 +28,6 @@ const SETTINGS = [
 /** What a changed password comes back with; nothing else is read from it. */
 const PASSWORD_NOTES: Record<string, string> = {
   changed: "Password changed. Your other devices are signed out.",
-  partial:
-    "Password changed. Some of your other devices may still be signed in; sign out there.",
 };
 
 export default async function SettingsPage({

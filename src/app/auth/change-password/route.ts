@@ -37,15 +37,8 @@ export async function POST(request: Request) {
 
   // Changed, it goes back to Settings, which says so (owner, 6 Nov 2026);
   // refused, back to the form, which says why.
-  const changed = result === "changed" || result === "changed-partial";
+  const changed = result === "changed";
   const target = new URL(changed ? SETTINGS : PAGE, request.url);
-  if (changed) {
-    target.searchParams.set(
-      "password",
-      result === "changed" ? "changed" : "partial",
-    );
-  } else {
-    target.searchParams.set("error", result);
-  }
+  target.searchParams.set(changed ? "password" : "error", result);
   return mergeAuthResponseHeaders(privateRedirect(target), pending);
 }

@@ -5,10 +5,11 @@ const REFUSALS: Record<string, string> = {
   validation:
     "Use matching new passwords with at least 8 characters. Nothing was changed.",
   current: "That is not your current password. Nothing was changed.",
-  password:
+  refused:
     "Your new password could not be set. It may be the one you have now; choose another and try again.",
   session: "Your session ended. Sign in again to change your password.",
-  error: "Your password could not be changed. Nothing was changed; try again.",
+  error:
+    "Your password could not be changed just now. Nothing was changed; try again in a minute.",
 };
 
 /**
