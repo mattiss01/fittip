@@ -31,9 +31,10 @@ ours yet (ADR-022, Consequences).
    cookies and no stored session. It then signs that client out at once. A wrong password
    changes nothing, and Auth's sign-in rate limit applies to guesses.
 3. **The new password is set on the browser's own session.** After that, every other session
-   of the account ends and this one stays (owner's choice). The page then says "Password
-   changed". If ending the others fails, the password is still changed and the page says the
-   other devices may still be signed in.
+   of the account ends in the same step, as Auth does it, and this one stays (owner's
+   choice; checked against the local stack on 6 November 2026). The route asks for the
+   others' sign-out again as a backstop, and its answer does not change the message. Settings
+   then says "Password changed".
 4. **A route, not a Server Action** (`POST /auth/change-password`), like
    `/auth/delete-account`, because it writes the session cookies on the response it returns.
    It refuses a request from another origin. Every outcome is a fixed key in the address,
@@ -45,12 +46,15 @@ ours yet (ADR-022, Consequences).
 ## Consequences
 
 - A second path sets a password. Both share the 8-character rule
-  (`validateSignUpCredentials`); Auth's own minimum is the backstop.
+  (`validateSignUpCredentials`); Auth's own minimum is the backstop. Only Auth's
+  `invalid_credentials` is called a wrong current password; a rate limit or an outage says
+  the password could not be changed just now.
 - The check sign-in creates a session that lives for one request. It is signed out
   immediately, and the sign-out of the other sessions in step 3 ends it again if that failed.
 - "Signed out" means their sessions are revoked, so none of them can refresh. A device keeps
-  the access token it already holds until it expires (`jwt_expiry`, an hour), because the
-  application verifies the token's claims rather than asking Auth about each request. A
+  the access token it already holds until it expires (`jwt_expiry`, an hour) where the
+  project signs tokens with asymmetric keys, since `getClaims` then checks them without
+  asking Auth. With a shared secret it asks Auth, which refuses an ended session at once. A
   reset by link (ADR-022) has always behaved the same way.
 - Nothing is stored by FitTip: no password, no attempt count, no record of the change beyond
   Auth's own.
