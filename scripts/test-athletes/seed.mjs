@@ -59,7 +59,6 @@ async function seedAthlete(athlete) {
     height_cm: p.heightCm,
     gender: p.gender,
     units_system: p.units,
-    sports: p.sports,
     sessions_per_week: p.sessionsPerWeek,
     unavailable_days: p.unavailableDays ?? [],
     availability_note: p.availabilityNote ?? null,
@@ -67,6 +66,8 @@ async function seedAthlete(athlete) {
     home_equipment: p.homeEquipment ?? [],
     setup_finished_at: new Date().toISOString(),
   });
+  // Their own list since 6 Nov 2026, each sport taking the next colour.
+  await api.rpc("keep_sports", { p_names: p.sports });
   for (const [offset, kg] of athlete.weights ?? []) {
     await api.insert("weight_entries", {
       user_id: user.id,

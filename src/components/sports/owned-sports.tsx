@@ -9,33 +9,38 @@ import {
   type ReactNode,
 } from "react";
 
+import { colourOfSport, type OwnedSport } from "@/lib/sports/sport-colours";
 import { keepsAsSport } from "@/lib/sports/sport-presets";
 
 type OwnedSportsValue = {
   sports: readonly string[];
+  colourOf: (sport: string | null) => string;
   remember: (names: readonly string[]) => void;
 };
 
 const OwnedSports = createContext<OwnedSportsValue>({
   sports: [],
+  colourOf: (sport) => colourOfSport([], sport),
   remember: () => {},
 });
 
 /**
  * The owner's sports, for every field under Home where a sport is typed
- * (owner, 5 and 8 Oct 2026). Read once by the layout and handed down here, so
- * a form several components deep does not have to be passed the list.
+ * (owner, 5 and 8 Oct 2026), and the colour each is drawn in (owner, 6 Nov
+ * 2026). Read once by the layout and handed down here, so a form or a card
+ * several components deep does not have to be passed the list.
  *
  * A sport typed into a form that is sent joins the owner's sports on the
  * server, and is offered here from then on in this page too, rather than only
  * once the layout is read again. Should the save be refused, it is offered
- * until the next load, which costs no more than a suggestion.
+ * until the next load, which costs no more than a suggestion. Its colour comes
+ * with the next read, since the database chooses it.
  */
 export function OwnedSportsProvider({
   sports,
   children,
 }: {
-  sports: readonly string[];
+  sports: readonly OwnedSport[];
   children: ReactNode;
 }) {
   const [sent, setSent] = useState<readonly string[]>([]);
@@ -43,7 +48,14 @@ export function OwnedSportsProvider({
     setSent((current) => withNew(current, names.filter(keepsAsSport)));
   }, []);
   const value = useMemo(
-    () => ({ sports: withNew(sports, sent), remember }),
+    () => ({
+      sports: withNew(
+        sports.map((sport) => sport.name),
+        sent,
+      ),
+      colourOf: (sport: string | null) => colourOfSport(sports, sport),
+      remember,
+    }),
     [sports, sent, remember],
   );
   return <OwnedSports value={value}>{children}</OwnedSports>;
@@ -52,6 +64,11 @@ export function OwnedSportsProvider({
 /** Empty outside Home, where a sport field is then a plain field. */
 export function useOwnedSports(): readonly string[] {
   return useContext(OwnedSports).sports;
+}
+
+/** The colour a sport is drawn in; the muted ink for one not on the list. */
+export function useSportColour(): (sport: string | null) => string {
+  return useContext(OwnedSports).colourOf;
 }
 
 /** Tells the list about sports a form is sending. */

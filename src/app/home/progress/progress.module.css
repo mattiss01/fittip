@@ -14,17 +14,6 @@
 
 .page {
   --progress-mark: var(--ember);
-  /* The sports' palette, given out most-logged first (`sport-colours.ts`).
-     Local to Progress, as colours that encode something stay with their
-     module. */
-  --sport-1: var(--pine-soft);
-  --sport-2: var(--ember);
-  --sport-3: #b7892d;
-  --sport-4: #4f6a9e;
-  --sport-5: #8a5a9e;
-  --sport-6: #3d8a8c;
-  --sport-7: #a3485f;
-  --sport-8: #6b7d2e;
 }
 
 .header {

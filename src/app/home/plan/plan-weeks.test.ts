@@ -7,8 +7,6 @@ import {
   phaseOfWeek,
   planHistoryStart,
   planWeeks,
-  sportKey,
-  sportTones,
   weekIndexOf,
 } from "./plan-weeks";
 
@@ -108,14 +106,6 @@ describe("plan weeks", () => {
     expect(dayLoad([30])).toBe(1);
     expect(dayLoad([45])).toBe(2);
     expect(dayLoad([60, 90])).toBe(3);
-  });
-
-  it("gives each sport its own tone, whatever its case or spacing", () => {
-    const tones = sportTones(["Running", "Strength", " running ", "Mobility"]);
-    expect(tones.get(sportKey("RUNNING"))).toBe(1);
-    expect(tones.get("mobility")).toBe(0);
-    expect(tones.get("strength")).toBe(2);
-    expect(tones.size).toBe(3);
   });
 
   it("places a week in the phase holding its Thursday", () => {

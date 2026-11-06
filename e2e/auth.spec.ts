@@ -422,10 +422,15 @@ async function completeGuidedSetup(
   await page.getByLabel("Units").selectOption("imperial");
   await page.getByRole("button", { name: "Save settings" }).click();
   await expect(page.getByText("177.5 lb")).toBeVisible();
+  // The sports setup chose are the owner's own list, each with a colour
+  // (owner, 6 Nov 2026), not setup's catalogue.
+  const sports = page.getByRole("list", { name: "Your sports" });
   await expect(
-    page.getByRole("checkbox", { name: "Running", exact: true }),
-  ).toBeChecked();
-  await expect(page.getByRole("checkbox", { name: "Latzug" })).toBeChecked();
+    sports.getByRole("button", { name: "Rename Running", exact: true }),
+  ).toBeVisible();
+  await expect(
+    sports.getByRole("button", { name: "Rename Latzug" }),
+  ).toBeVisible();
   await expect(page.getByLabel("Sessions a week", { exact: true })).toHaveValue(
     "3",
   );

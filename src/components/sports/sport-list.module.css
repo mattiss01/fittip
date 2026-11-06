@@ -1,0 +1,263 @@
+/* "Your sports" in Settings: a row per sport, its colour dot, its name and
+   ×; the swatches, a rename or a question open under the row they belong
+   to. Targets are 44px; the dot is drawn smaller inside its button. */
+
+.list {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.explainer,
+.empty {
+  margin: 0;
+  color: var(--ledger-muted);
+  line-height: 1.5;
+}
+
+.notice {
+  margin: 0;
+  padding: 0.75rem 0.9rem;
+  border-radius: var(--radius-control);
+  background: #fff0e1;
+  color: #6c2718;
+  line-height: 1.45;
+}
+
+.rows {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: grid;
+  gap: 0.6rem;
+  padding: 0.35rem 0;
+  border-top: 1px solid var(--line);
+}
+
+.row:first-child {
+  border-top: 0;
+}
+
+.line {
+  min-height: 2.75rem;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.dot,
+.remove {
+  width: 2.75rem;
+  height: 2.75rem;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--ledger-muted);
+  cursor: pointer;
+}
+
+.dot span {
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: var(--radius-pill);
+  background: var(--dot);
+  box-shadow: inset 0 0 0 2px rgb(255 255 255 / 0.35);
+}
+
+.dot[aria-expanded="true"] span {
+  box-shadow:
+    0 0 0 2px var(--ledger-paper),
+    0 0 0 4px var(--dot);
+}
+
+.remove {
+  font: 400 1.5rem/1 var(--font-sans);
+}
+
+/* Not the global button's fill: these read as a dot, a name and a mark. */
+.dot:hover,
+.remove:hover,
+.name:hover,
+.quiet:hover {
+  background: transparent;
+}
+
+.remove:hover {
+  color: var(--danger);
+}
+
+.name:hover {
+  color: var(--ember-dark);
+}
+
+.swatch:hover {
+  background: var(--swatch);
+  background-clip: content-box;
+}
+
+/* The name reads as text; tapping it opens the rename. */
+.name {
+  min-height: 2.75rem;
+  margin: 0;
+  padding: 0 0.25rem;
+  overflow: hidden;
+  border: 0;
+  background: transparent;
+  color: var(--ledger-ink);
+  font: 600 1rem var(--font-sans);
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: text;
+}
+
+.renameForm {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.4rem;
+}
+
+.renameForm input,
+.addLine input {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-control);
+  background: white;
+  color: var(--ledger-ink);
+  font: 400 1rem/1.35 var(--font-sans);
+}
+
+.save,
+.confirm,
+.danger,
+.quiet {
+  min-height: 2.75rem;
+  margin: 0;
+  padding: 0 1rem;
+  border: 0;
+  border-radius: var(--radius-control);
+  font: 700 0.92rem var(--font-sans);
+  cursor: pointer;
+}
+
+.save,
+.confirm {
+  background: var(--ember);
+  color: var(--paper);
+}
+
+.save:hover,
+.confirm:hover {
+  background: var(--ember-dark);
+}
+
+.danger {
+  background: var(--danger);
+  color: var(--paper);
+}
+
+.danger:hover {
+  background: var(--danger-dark);
+}
+
+.quiet {
+  background: transparent;
+  color: var(--ledger-ink);
+  text-decoration: underline;
+  text-underline-offset: 0.2rem;
+}
+
+/* Twelve swatches in two rows of six at 390px. */
+.swatches {
+  display: grid;
+  grid-template-columns: repeat(6, 2.75rem);
+  justify-content: space-between;
+  gap: 0.35rem 0;
+  padding: 0 0 0.35rem;
+}
+
+.swatch {
+  width: 2.75rem;
+  height: 2.75rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--swatch);
+  background-clip: content-box;
+  box-shadow: inset 0 0 0 0.4rem var(--ledger-paper);
+  cursor: pointer;
+}
+
+.swatch[aria-pressed="true"] {
+  box-shadow:
+    inset 0 0 0 0.25rem var(--ledger-paper),
+    0 0 0 2px var(--swatch);
+}
+
+.ask {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: var(--radius-control);
+  background: var(--sage);
+}
+
+.ask p {
+  margin: 0;
+  color: var(--ledger-ink);
+  line-height: 1.45;
+}
+
+.askActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.4rem;
+}
+
+.add {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.add label {
+  color: var(--ledger-muted);
+  font: var(--font-field-label);
+}
+
+.addLine {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.5rem;
+}
+
+.dot:focus-visible,
+.remove:focus-visible,
+.name:focus-visible,
+.swatch:focus-visible,
+.save:focus-visible,
+.confirm:focus-visible,
+.danger:focus-visible,
+.quiet:focus-visible,
+.renameForm input:focus,
+.addLine input:focus {
+  outline: 3px solid var(--ledger-ink);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .dot span,
+  .swatch {
+    transition: box-shadow 150ms var(--ease-out);
+  }
+}

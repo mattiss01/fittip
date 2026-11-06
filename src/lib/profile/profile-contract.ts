@@ -1,4 +1,5 @@
 import type { UnitsSystem } from "@/lib/profile/body-measures";
+import type { OwnedSport } from "@/lib/sports/sport-colours";
 import type { SetupStateView } from "@/lib/setup/setup-steps";
 import type { TrainingSetupView } from "@/lib/training/training-setup";
 
@@ -23,7 +24,10 @@ export type ProfileDetailsView = {
   unitsSystem: UnitsSystem | null;
   heightCm: number | null;
   timezoneName: string | null;
+  /** The names of `ownedSports`, for the fields that offer them. */
   sports: string[];
+  /** The owner's sports in their order, each with its colour (6 Nov 2026). */
+  ownedSports: OwnedSport[];
   latestWeightKg: number | null;
   /** How often, when not, where and with what (owner, 6 Oct 2026). */
   training: TrainingSetupView;

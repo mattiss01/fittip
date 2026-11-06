@@ -411,8 +411,12 @@ function profileIs(profile: {
     getCurrentProfile: vi
       .fn()
       .mockResolvedValue({ userId: "owner", ...profile }),
+    getSports: vi.fn().mockResolvedValue(OWNED_SPORTS),
   });
 }
+
+/** The owner's list: Running in the first swatch; Swimming is not on it. */
+const OWNED_SPORTS = [{ id: "running", name: "Running", colour: "sport-1" }];
 
 function swim() {
   return {

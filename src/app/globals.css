@@ -19,6 +19,22 @@
   /* Delete, wherever it is offered (owner, 8 Oct 2026): a plain red. */
   --danger: #991b1b;
   --danger-dark: #7f1d1d;
+  /* A sport's colour, wherever the sport is drawn (owner, 6 Nov 2026). The
+     owner picks one of these twelve for each sport in Settings, and a row
+     stores the swatch's name (`sport-colours.ts`), so retuning one here
+     retunes every sport that wears it. The first eight were Progress's. */
+  --sport-1: var(--pine-soft);
+  --sport-2: var(--ember);
+  --sport-3: #b7892d;
+  --sport-4: #4f6a9e;
+  --sport-5: #8a5a9e;
+  --sport-6: #3d8a8c;
+  --sport-7: #a3485f;
+  --sport-8: #6b7d2e;
+  --sport-9: #8c5a3c;
+  --sport-10: #5b8fc2;
+  --sport-11: #c4688c;
+  --sport-12: #454b86;
 
   --background: var(--sage);
   --foreground: var(--pine);

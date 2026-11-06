@@ -9,6 +9,7 @@ import {
   useLayoutEffect,
   useRef,
   useState,
+  type CSSProperties,
   type ReactNode,
 } from "react";
 
@@ -52,8 +53,6 @@ import {
   phaseOfWeek,
   planWeeks,
   shortDateLabel,
-  sportKey,
-  sportTones,
   weekdayLabel,
   weekIndexOf,
   type PlanPhase,
@@ -68,6 +67,7 @@ import {
   type PlanUnplannedLog,
 } from "./session-view";
 import { byStartTime } from "@/lib/training/start-time";
+import { useSportColour } from "@/components/sports/owned-sports";
 
 import type { SavedSessionOption } from "@/components/training/saved-session-picker";
 import {
@@ -327,9 +327,6 @@ export function PlanManager({
       : null;
   const labelled = new Set(recoveryDates);
   const logCards = unplannedLogs.map(unplannedLogCard);
-  const tones = sportTones(
-    [...sessions, ...logCards].map((session) => session.sport),
-  );
   const onDate = (date: string) =>
     sessions.filter((session) => session.localDate === date);
   const logsOn = (date: string) =>
@@ -430,7 +427,6 @@ export function PlanManager({
                 isRecoveryDay={labelled.has(day.date)}
                 sessions={onDate(day.date)}
                 logs={logsOn(day.date)}
-                tones={tones}
                 dropTarget={drag.overDate === day.date}
                 swipe={swipe}
                 dragHandle={pending || seriesPending ? null : drag.handle}
@@ -678,7 +674,6 @@ function PlanDay({
   isRecoveryDay,
   sessions,
   logs,
-  tones,
   dropTarget,
   dragHandle,
   swipe,
@@ -696,7 +691,6 @@ function PlanDay({
   sessions: PlanCardView[];
   /** Unplanned logs on this day, as cards. */
   logs: PlanCardView[];
-  tones: Map<string, number>;
   onAdd: () => void;
 }) {
   // Unplanned logs take their place among the sessions by when they
@@ -749,7 +743,6 @@ function PlanDay({
                   key={session.id}
                   session={session}
                   past={day.past}
-                  tone={tones.get(sportKey(session.sport)) ?? 0}
                   unplanned
                 />
               ) : (
@@ -757,7 +750,6 @@ function PlanDay({
                   key={session.id}
                   session={session}
                   past={day.past}
-                  tone={tones.get(sportKey(session.sport)) ?? 0}
                   // A logged session stays where its log is, and the past is
                   // not replanned.
                   drag={
@@ -778,7 +770,6 @@ function PlanDay({
                 key={session.id}
                 session={session}
                 past={day.past}
-                tone={tones.get(sportKey(session.sport)) ?? 0}
                 swipe={day.past ? null : swipe}
               />
             ))}
@@ -803,13 +794,13 @@ function PlanDay({
  * A card reads the session and opens it (owner, 29 Sep 2026): every verb —
  * Edit, Cancel, Delete, Duplicate, Save to library — lives on the
  * session's own page. R3a made it compact: title, a ↻ for a series, the
- * planned minutes, and a stripe in the sport's tone. The title is the link,
+ * planned minutes, and a stripe in the sport's colour, the one the owner
+ * gave it in Settings (owner, 6 Nov 2026). The title is the link,
  * stretched over the whole card.
  */
 function PlanSessionCard({
   session,
   past,
-  tone,
   drag = null,
   swipe = null,
   unplanned = false,
@@ -823,8 +814,8 @@ function PlanSessionCard({
   session: PlanCardView;
   /** Before today: the session's page finds it by its day, not the window. */
   past: boolean;
-  tone: number;
 }) {
+  const colourOf = useSportColour();
   const loggedElsewhere = readsAsLogged(session);
   const cancelled = session.status === "cancelled" && !session.log;
   const side = swipe?.open?.id === session.id ? swipe.open.side : null;
@@ -841,7 +832,6 @@ function PlanSessionCard({
   return (
     <li
       className={w.card}
-      data-tone={tone}
       data-cancelled={cancelled || undefined}
       data-logged={loggedElsewhere || undefined}
       data-session-card={
@@ -851,7 +841,10 @@ function PlanSessionCard({
       data-swiped={open || undefined}
       data-swiping={moving || undefined}
       style={
-        offset === 0 ? undefined : { transform: `translateX(${offset}px)` }
+        {
+          "--tone": colourOf(session.sport),
+          ...(offset === 0 ? {} : { transform: `translateX(${offset}px)` }),
+        } as CSSProperties
       }
       {...drag}
       {...handlers}

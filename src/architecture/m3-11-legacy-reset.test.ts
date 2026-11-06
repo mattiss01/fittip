@@ -321,6 +321,10 @@ const allowedPlanProposalModules = [
   "@/server/goals/goal-records",
   "@/server/plan-proposal/plan-generation",
   "@/server/plan-proposal/plan-proposal-records",
+  // Owner, 6 Nov 2026: accepting the coach's sessions adds their sports to
+  // the owner's list, as typing one does. It reaches `keep_sports` and no
+  // plan, proposal or log write.
+  "@/server/profile/keep-sports",
   // ADR-024, 9 Oct 2026, read-only. A session with training logged against
   // it can be neither offered for replacement nor replaced, so the page and
   // the ask-again action read which planned sessions have a log. They take

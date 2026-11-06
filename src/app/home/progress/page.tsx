@@ -128,21 +128,29 @@ async function renderMonth({
 
   let completions;
   let sportUse;
+  let owned;
   try {
-    const log = await createCompletionLog();
-    // The month, bounded by the month it is showing; and which sports the
-    // owner has logged over their whole record, which orders and colours the
-    // chips the same way in every month.
-    [completions, sportUse] = await Promise.all([
+    const [log, profiles] = await Promise.all([
+      createCompletionLog(),
+      createProfileRepository(),
+    ]);
+    // The month, bounded by the month it is showing; which sports the owner
+    // has logged over their whole record, which orders the chips the same way
+    // in every month; and the colour the owner gave each sport.
+    [completions, sportUse, owned] = await Promise.all([
       log.list(window.startDate, window.endDate),
       log.sportUse(),
+      profiles.getSports(),
     ]);
   } catch (error) {
     redirectOnAuthError(error);
     throw error;
   }
 
-  const sports = sportColours(sportUse.map(({ sport }) => sport));
+  const sports = sportColours(
+    sportUse.map(({ sport }) => sport),
+    owned,
+  );
   const sport = readRequestedSport(
     requestedSport,
     sports.map((entry) => entry.sport),
