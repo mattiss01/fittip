@@ -11,14 +11,15 @@
 -- sport as text; this table is the owner's list and each sport's colour, and a
 -- sport a record names that is not on it is drawn grey.
 --
---   * `sports`: one row per sport. The owner reads it, adds to it, recolours,
---     reorders and deletes directly, under RLS, as with `weight_entries`. A new
+--   * `sports`: one row per sport. The owner reads it, adds to it, recolours
+--     and deletes directly, under RLS, as with `weight_entries`. A new
 --     row takes the least-used swatch, and a place at the end, from a trigger
 --     that also holds the hundred-sport limit `profiles.sports` had.
 --   * A name is never updated directly. `rename_sport` renames a sport and,
 --     in the same transaction, every record of the owner's that names it
 --     (owner, 6 Nov 2026: history included). Renaming onto a sport they
---     already have merges the two, keeping the other's colour.
+--     already have merges the two, keeping the other's colour, but only when
+--     the call says so: otherwise it is refused, so the ask is binding.
 --   * Deleting a sport removes its row and nothing else (ADR-031): its sessions
 --     and logs keep their sport, which is then drawn grey.
 --   * `keep_sports` keeps its signature and rule for the ten callers that add a
@@ -67,7 +68,8 @@ revoke all privileges on table public.sports
 grant select, delete on table public.sports to authenticated;
 grant insert (user_id, name, colour) on table public.sports to authenticated;
 -- Not `name`: a rename goes through `rename_sport`, so the records follow.
-grant update (colour, position) on table public.sports to authenticated;
+-- Not `position` either until something reorders the list.
+grant update (colour) on table public.sports to authenticated;
 
 alter table public.sports enable row level security;
 
@@ -281,9 +283,23 @@ grant execute on function public.set_sports(text[]) to authenticated;
 -- inside JSON. A log written before logs had a sport of their own reads its
 -- plan's, so one whose plan named the old sport is given the new one.
 --
+-- A record whose surface sends back the revision it read (a log, a saved
+-- session, a workout in progress) has it moved on, so a form opened before
+-- the rename is refused rather than writing the old name back. The plan's
+-- revision is not moved: each plan revision is a change set's, and this is
+-- not one (ADR-041).
+--
+-- Onto a name the owner already has, it merges only with `p_merge`: the
+-- application asks first, and a list read before that sport was added in
+-- another tab is refused (23505) rather than merged unasked.
+--
 -- Returns the sport the name now belongs to: this one, or on a merge the one
 -- the owner already had, whose colour and place it keeps.
-create function public.rename_sport(p_sport_id uuid, p_name text)
+create function public.rename_sport(
+  p_sport_id uuid,
+  p_name text,
+  p_merge boolean default false
+)
 returns uuid
 language plpgsql
 security definer
@@ -323,6 +339,10 @@ begin
   where user_id = v_user_id and id <> p_sport_id
     and pg_catalog.lower(name) = pg_catalog.lower(v_new);
   if found then
+    if not coalesce(p_merge, false) then
+      raise exception using errcode = '23505',
+        message = 'You already have that sport.';
+    end if;
     delete from public.sports where id = p_sport_id;
     v_new := v_existing;
   else
@@ -342,7 +362,7 @@ begin
   update public.rolling_plan_series_activities set sport = v_new
   where user_id = v_user_id
     and pg_catalog.lower(pg_catalog.btrim(sport)) = pg_catalog.lower(v_old);
-  update public.saved_sessions set sport = v_new
+  update public.saved_sessions set sport = v_new, revision = revision + 1
   where user_id = v_user_id
     and pg_catalog.lower(pg_catalog.btrim(sport)) = pg_catalog.lower(v_old);
   update public.saved_session_activities set sport = v_new
@@ -351,13 +371,13 @@ begin
   update public.personal_activities set sport = v_new
   where user_id = v_user_id
     and pg_catalog.lower(pg_catalog.btrim(sport)) = pg_catalog.lower(v_old);
-  update public.live_workouts set sport = v_new
+  update public.live_workouts set sport = v_new, revision = revision + 1
   where user_id = v_user_id
     and pg_catalog.lower(pg_catalog.btrim(sport)) = pg_catalog.lower(v_old);
   update public.completion_activities set sport = v_new
   where user_id = v_user_id
     and pg_catalog.lower(pg_catalog.btrim(sport)) = pg_catalog.lower(v_old);
-  update public.completions set sport = v_new
+  update public.completions set sport = v_new, revision = revision + 1
   where user_id = v_user_id
     and (
       pg_catalog.lower(pg_catalog.btrim(sport)) = pg_catalog.lower(v_old)
@@ -398,9 +418,10 @@ begin
 end;
 $$;
 
-revoke all privileges on function public.rename_sport(uuid, text)
+revoke all privileges on function public.rename_sport(uuid, text, boolean)
   from public, anon, authenticated, service_role;
-grant execute on function public.rename_sport(uuid, text) to authenticated;
+grant execute on function public.rename_sport(uuid, text, boolean)
+  to authenticated;
 
-comment on function public.rename_sport(uuid, text) is
+comment on function public.rename_sport(uuid, text, boolean) is
   'Renames the caller''s sport and every record of theirs that names it (owner, 6 Nov 2026). Owner from auth.uid() only.';

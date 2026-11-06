@@ -2949,7 +2949,7 @@ export type Database = {
         };
       };
       rename_sport: {
-        Args: { p_name: string; p_sport_id: string };
+        Args: { p_merge?: boolean; p_name: string; p_sport_id: string };
         Returns: string;
       };
       reserve_ai_spend: {

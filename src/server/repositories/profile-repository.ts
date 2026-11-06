@@ -85,6 +85,14 @@ export class SportNameTakenError extends Error {
   }
 }
 
+/** A sport name or swatch the list does not keep, or a list at its limit. */
+export class SportNameInvalidError extends Error {
+  constructor() {
+    super("A sport is a name of up to 60 characters, without a comma.");
+    this.name = "SportNameInvalidError";
+  }
+}
+
 /** The sport is not on the owner's list, or no longer is. */
 export class SportMissingError extends Error {
   constructor() {
@@ -437,13 +445,14 @@ export class ProfileRepository {
   /**
    * Renames a sport and every record of the owner's that names it, in one
    * transaction (`rename_sport`, owner, 6 Nov 2026). Onto a name the owner
-   * already has, the two become that one.
+   * already has, the two become that one, but only with `merge`.
    */
-  async renameSport(id: string, name: string): Promise<void> {
+  async renameSport(id: string, name: string, merge = false): Promise<void> {
     await this.getVerifiedUserId();
     const { error } = await this.client.rpc("rename_sport", {
       p_sport_id: id,
       p_name: name,
+      p_merge: merge,
     });
     if (error) throw mapSportError(error.code);
   }
@@ -462,7 +471,8 @@ export class ProfileRepository {
 
   /**
    * Takes a sport off the list and nothing else (ADR-031): its sessions and
-   * logs keep their sport, drawn grey from then on.
+   * logs keep their sport, drawn grey from then on. A sport already gone is
+   * not an error: a second tap on Remove asks for what is already true.
    */
   async deleteSport(id: string): Promise<void> {
     const userId = await this.getVerifiedUserId();
@@ -590,7 +600,7 @@ function mapDetailsError(code: string | undefined): Error {
 function mapSportError(code: string | undefined): Error {
   if (code === "23505") return new SportNameTakenError();
   if (code === "P0002") return new SportMissingError();
-  if (code === "23514" || code === "22023") return new ProfileValidationError();
+  if (code === "23514" || code === "22023") return new SportNameInvalidError();
   return new ProfilePersistenceError();
 }
 

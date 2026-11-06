@@ -7,7 +7,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(50);
+select plan(58);
 
 -- The objects --------------------------------------------------------------------
 
@@ -40,6 +40,7 @@ select ok(
 select ok(
   not has_table_privilege('anon', 'public.sports', 'SELECT')
   and not has_table_privilege('anon', 'public.sports', 'INSERT')
+  and not has_table_privilege('anon', 'public.sports', 'UPDATE')
   and not has_table_privilege('anon', 'public.sports', 'DELETE'),
   'anon has nothing on sports'
 );
@@ -48,8 +49,8 @@ select is(
    from information_schema.column_privileges
    where table_schema = 'public' and table_name = 'sports'
      and grantee = 'authenticated' and privilege_type = 'UPDATE'),
-  array['colour', 'position'],
-  'the owner may update a colour and a place, never a name directly'
+  array['colour'],
+  'the owner may update a colour, never a name directly'
 );
 select is(
   (select array_agg(column_name::text order by column_name::text)
@@ -76,15 +77,15 @@ select ok(
   'rename_sport is the one definer; the others run as the caller'
 );
 select ok(
-  has_function_privilege('authenticated', 'public.rename_sport(uuid,text)', 'EXECUTE')
+  has_function_privilege('authenticated', 'public.rename_sport(uuid,text,boolean)', 'EXECUTE')
   and has_function_privilege('authenticated', 'public.keep_sports(text[])', 'EXECUTE')
   and has_function_privilege('authenticated', 'public.set_sports(text[])', 'EXECUTE')
   and has_function_privilege('authenticated', 'public.add_sport(text)', 'EXECUTE')
   and not has_function_privilege('anon', 'public.add_sport(text)', 'EXECUTE')
-  and not has_function_privilege('anon', 'public.rename_sport(uuid,text)', 'EXECUTE')
+  and not has_function_privilege('anon', 'public.rename_sport(uuid,text,boolean)', 'EXECUTE')
   and not has_function_privilege('anon', 'public.keep_sports(text[])', 'EXECUTE')
   and not has_function_privilege('anon', 'public.set_sports(text[])', 'EXECUTE')
-  and not has_function_privilege('service_role', 'public.rename_sport(uuid,text)', 'EXECUTE'),
+  and not has_function_privilege('service_role', 'public.rename_sport(uuid,text,boolean)', 'EXECUTE'),
   'only authenticated may call the sport functions'
 );
 
@@ -215,6 +216,15 @@ select throws_ok(
   'P0002', 'That sport is no longer on your list.',
   'nor renames them'
 );
+select throws_ok(
+  $$select public.rename_sport((select id from ids where name = 'Running'), 'Running', true)$$,
+  'P0002', 'That sport is no longer on your list.',
+  'nor merges them'
+);
+select lives_ok(
+  $$select public.set_sports(array['Running'])$$,
+  'another owner''s setup save'
+);
 
 -- Renaming everywhere ------------------------------------------------------------
 
@@ -224,6 +234,12 @@ select throws_ok(
   $$select public.rename_sport((select id from ids where name = 'Running'), 'Trail, running')$$,
   '22023', null, 'a name with a comma is refused'
 );
+reset role;
+create temporary table before_rename as
+  select revision from public.completions
+  where user_id = '72000000-0000-4000-8000-000000000001';
+grant select on before_rename to public;
+set local role authenticated;
 select is(
   public.rename_sport((select id from ids where name = 'Running'), ' Trail running '),
   (select id from ids where name = 'Running'),
@@ -251,6 +267,11 @@ select is(
   'and so does its activity'
 );
 select is(
+  (select revision from public.completions),
+  (select revision + 1 from before_rename),
+  'and the log''s revision moves on, so a form opened before is refused'
+);
+select is(
   (select sports from public.goals),
   array['Trail running', 'Cycling'],
   'and the goal'
@@ -264,6 +285,12 @@ select is(
   'another owner''s records are untouched'
 );
 select is(
+  (select pg_catalog.count(*)::int from public.sports
+   where user_id = '72000000-0000-4000-8000-000000000001'),
+  4,
+  'and their setup save left the owner''s list alone'
+);
+select is(
   (select sports from public.goals
    where user_id = '72000000-0000-4000-8000-000000000002'),
   array['Running'],
@@ -273,10 +300,15 @@ set local role authenticated;
 
 -- Renaming onto another sport merges ----------------------------------------------
 
+select throws_ok(
+  $$select public.rename_sport((select id from ids where name = 'Running'), 'cycling')$$,
+  '23505', 'You already have that sport.',
+  'renaming onto a sport the owner has is refused unless the call merges'
+);
 select is(
-  public.rename_sport((select id from ids where name = 'Running'), 'cycling'),
+  public.rename_sport((select id from ids where name = 'Running'), 'cycling', true),
   (select id from ids where name = 'Cycling'),
-  'renaming onto a sport the owner has answers with that sport'
+  'and with it, answers with that sport'
 );
 select is(
   (select array_agg(name || ':' || colour order by position) from public.sports),
@@ -341,6 +373,21 @@ select throws_ok(
   $$select count(*) from public.sports$$,
   '42501', null,
   'nor read any'
+);
+select throws_ok(
+  $$select public.add_sport('Running')$$,
+  '42501', null,
+  'nor add one'
+);
+select throws_ok(
+  $$select public.set_sports(array['Running'])$$,
+  '42501', null,
+  'nor save setup''s list'
+);
+select throws_ok(
+  $$select public.rename_sport('72000000-0000-4000-8000-0000000000ff', 'Running', true)$$,
+  '42501', null,
+  'nor rename one'
 );
 
 select * from finish();

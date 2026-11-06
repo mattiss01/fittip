@@ -3,12 +3,13 @@
 import { revalidatePath } from "next/cache";
 
 import { isSportSwatch } from "@/lib/sports/sport-colours";
-import { keepsAsSport } from "@/lib/sports/sport-presets";
+import { keepsAsSport, tidySportName } from "@/lib/sports/sport-presets";
 import {
   createProfileRepository,
   ProfileAuthenticationError,
   ProfileValidationError,
   SportMissingError,
+  SportNameInvalidError,
   SportNameTakenError,
   type ProfileRepository,
 } from "@/server/repositories/profile-repository";
@@ -32,13 +33,17 @@ export async function addSportAction(
   return run(async (profiles) => profiles.addSport(sportName(name)));
 }
 
-/** Renames the sport on every session, log and goal that names it, too. */
+/**
+ * Renames the sport on every session, log and goal that names it, too. Onto
+ * a sport the owner already has, only with `merge`, once they have said so.
+ */
 export async function renameSportAction(
   id: unknown,
   name: unknown,
+  merge: unknown = false,
 ): Promise<SportActionResult> {
   return run(async (profiles) =>
-    profiles.renameSport(sportId(id), sportName(name)),
+    profiles.renameSport(sportId(id), sportName(name), merge === true),
   );
 }
 
@@ -47,7 +52,7 @@ export async function setSportColourAction(
   colour: unknown,
 ): Promise<SportActionResult> {
   return run(async (profiles) => {
-    if (!isSportSwatch(colour)) throw new ProfileValidationError();
+    if (!isSportSwatch(colour)) throw new SportNameInvalidError();
     await profiles.setSportColour(sportId(id), colour);
   });
 }
@@ -66,11 +71,10 @@ function sportId(value: unknown): string {
   return value;
 }
 
-/** Spaces as a person reads them, as guided setup keeps a typed sport. */
 function sportName(value: unknown): string {
-  if (typeof value !== "string") throw new ProfileValidationError();
-  const name = value.trim().replace(/\s+/g, " ");
-  if (!keepsAsSport(name)) throw new ProfileValidationError();
+  if (typeof value !== "string") throw new SportNameInvalidError();
+  const name = tidySportName(value);
+  if (!keepsAsSport(name)) throw new SportNameInvalidError();
   return name;
 }
 
@@ -90,7 +94,10 @@ async function run(
           "That sport is no longer on your list. Reload to see it as it is.",
       };
     }
-    if (error instanceof ProfileValidationError) {
+    if (
+      error instanceof SportNameInvalidError ||
+      error instanceof ProfileValidationError
+    ) {
       return {
         status: "refused",
         message:

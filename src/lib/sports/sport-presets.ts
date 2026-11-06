@@ -121,6 +121,11 @@ export const SPORTS_MAX_COUNT = 100;
  * commas between its names, so a name with one stays where it was typed, as
  * does one longer than a sport on the list may be.
  */
+/** A typed name with its spaces as a person reads them, as it is kept. */
+export function tidySportName(name: string): string {
+  return name.trim().replace(/\s+/g, " ");
+}
+
 export function keepsAsSport(name: string): boolean {
   const trimmed = name.trim();
   return (

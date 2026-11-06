@@ -199,7 +199,7 @@
   cursor: pointer;
 }
 
-.swatch[aria-checked="true"] {
+.swatch[aria-pressed="true"] {
   box-shadow:
     inset 0 0 0 0.25rem var(--ledger-paper),
     0 0 0 2px var(--swatch);

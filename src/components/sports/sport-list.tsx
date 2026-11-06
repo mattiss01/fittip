@@ -27,6 +27,7 @@ import {
 import {
   keepsAsSport,
   SPORT_NAME_MAX_LENGTH,
+  tidySportName,
 } from "@/lib/sports/sport-presets";
 import styles from "./sport-list.module.css";
 
@@ -49,6 +50,8 @@ type Change =
  *
  * A change shows at once and is sent straight away; the page then reads the
  * list again. One the server refuses falls back to what is saved, with why.
+ * Closing a panel puts focus back on the row's dot, or on the field when the
+ * row is gone, so a keyboard is never left on nothing.
  */
 export function SportList({ sports }: { sports: OwnedSport[] }) {
   const [shown, apply] = useOptimistic(sports, applyChange);
@@ -57,9 +60,19 @@ export function SportList({ sports }: { sports: OwnedSport[] }) {
   const [typed, setTyped] = useState("");
   const addId = useId();
 
+  const close = (id: string) => {
+    setOpen(null);
+    requestAnimationFrame(() =>
+      (
+        document.querySelector<HTMLElement>(`[data-sport-dot="${id}"]`) ??
+        document.getElementById(addId)
+      )?.focus(),
+    );
+  };
+
   const send = (change: Change, call: () => Promise<SportActionResult>) => {
     setNotice(null);
-    setOpen(null);
+    close(change.id);
     startTransition(async () => {
       apply(change);
       const result = await call();
@@ -74,7 +87,7 @@ export function SportList({ sports }: { sports: OwnedSport[] }) {
 
   const add = (event: FormEvent) => {
     event.preventDefault();
-    const name = tidy(typed);
+    const name = tidySportName(typed);
     if (name === "") return;
     if (!keepsAsSport(name)) {
       setNotice(NAME_RULE);
@@ -97,9 +110,9 @@ export function SportList({ sports }: { sports: OwnedSport[] }) {
   };
 
   const rename = (sport: OwnedSport, draft: string, merge: boolean) => {
-    const name = tidy(draft);
+    const name = tidySportName(draft);
     if (name === sport.name || name === "") {
-      setOpen(null);
+      close(sport.id);
       return;
     }
     if (!keepsAsSport(name)) {
@@ -115,7 +128,9 @@ export function SportList({ sports }: { sports: OwnedSport[] }) {
       taken
         ? { kind: "remove", id: sport.id }
         : { kind: "rename", id: sport.id, name },
-      () => renameSportAction(sport.id, name),
+      // The server merges only when told to, so a sport added elsewhere
+      // since this list was read is refused rather than merged unasked.
+      () => renameSportAction(sport.id, name, taken !== null),
     );
   };
 
@@ -149,6 +164,7 @@ export function SportList({ sports }: { sports: OwnedSport[] }) {
                     aria-expanded={here?.kind === "colour"}
                     aria-label={`Colour of ${sport.name}: ${SWATCH_NAMES[sport.colour]}`}
                     className={styles.dot}
+                    data-sport-dot={sport.id}
                     onClick={() =>
                       setOpen(
                         here?.kind === "colour"
@@ -180,7 +196,7 @@ export function SportList({ sports }: { sports: OwnedSport[] }) {
                           })
                         }
                         onKeyDown={(event) => {
-                          if (event.key === "Escape") setOpen(null);
+                          if (event.key === "Escape") close(sport.id);
                         }}
                         value={here.draft}
                       />
@@ -208,7 +224,7 @@ export function SportList({ sports }: { sports: OwnedSport[] }) {
                   {here?.kind === "rename" ? (
                     <button
                       className={styles.quiet}
-                      onClick={() => setOpen(null)}
+                      onClick={() => close(sport.id)}
                       type="button"
                     >
                       Cancel
@@ -229,17 +245,17 @@ export function SportList({ sports }: { sports: OwnedSport[] }) {
                   <div
                     aria-label={`Colour of ${sport.name}`}
                     className={styles.swatches}
-                    role="radiogroup"
+                    role="group"
                   >
                     {SPORT_SWATCHES.map((swatch) => (
                       <button
-                        aria-checked={swatch === sport.colour}
+                        aria-pressed={swatch === sport.colour}
                         aria-label={SWATCH_NAMES[swatch]}
                         className={styles.swatch}
                         key={swatch}
                         onClick={() =>
                           swatch === sport.colour
-                            ? setOpen(null)
+                            ? close(sport.id)
                             : send(
                                 {
                                   kind: "colour",
@@ -249,7 +265,6 @@ export function SportList({ sports }: { sports: OwnedSport[] }) {
                                 () => setSportColourAction(sport.id, swatch),
                               )
                         }
-                        role="radio"
                         title={SWATCH_NAMES[swatch]}
                         style={
                           { "--swatch": swatchColour(swatch) } as CSSProperties
@@ -270,7 +285,7 @@ export function SportList({ sports }: { sports: OwnedSport[] }) {
                     <div className={styles.askActions}>
                       <button
                         className={styles.quiet}
-                        onClick={() => setOpen(null)}
+                        onClick={() => close(sport.id)}
                         type="button"
                       >
                         Keep both
@@ -295,7 +310,7 @@ export function SportList({ sports }: { sports: OwnedSport[] }) {
                     <div className={styles.askActions}>
                       <button
                         className={styles.quiet}
-                        onClick={() => setOpen(null)}
+                        onClick={() => close(sport.id)}
                         type="button"
                       >
                         Keep
@@ -339,11 +354,6 @@ export function SportList({ sports }: { sports: OwnedSport[] }) {
 }
 
 const NAME_RULE = "A sport is a name of up to 60 characters, without a comma.";
-
-/** Spaces as a person reads them, as the server keeps the name. */
-function tidy(name: string): string {
-  return name.trim().replace(/\s+/g, " ");
-}
 
 function applyChange(sports: OwnedSport[], change: Change): OwnedSport[] {
   if (change.kind === "remove") {
