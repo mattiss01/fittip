@@ -25,7 +25,7 @@ import {
  * "About you", from guided setup and from Settings (owner, 5 Oct 2026). It
  * does not ask for the time zone or the units: the form sends what the
  * browser says, the zone only while the profile has none, and both are
- * changed under App settings. The zone is read first, because it decides
+ * changed under Units and time zone. The zone is read first, because it decides
  * which day is today: the latest birthday accepted and the day a weight is
  * recorded for. Nothing is written until everything sent has been checked.
  */
@@ -86,10 +86,10 @@ export async function adoptBrowserTimezoneAction(
     return;
   }
   revalidatePath("/home/you/onboarding");
-  revalidatePath("/home/you/settings");
+  revalidatePath("/home/you/settings", "layout");
 }
 
-/** App settings on Settings: the units and the time zone, changed on purpose. */
+/** Units and time zone on Settings, changed on purpose. */
 export async function saveAppSettingsAction(
   previous: ProfileActionState,
   formData: FormData,
@@ -196,6 +196,6 @@ async function run(
   }
 
   revalidatePath("/home/you/onboarding");
-  revalidatePath("/home/you/settings");
+  revalidatePath("/home/you/settings", "layout");
   return result("saved", saved);
 }

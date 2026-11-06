@@ -63,7 +63,7 @@ describe("POST /auth/delete-account (ADR-039)", () => {
     for (const typed of ["delete", "DELETE ", "", null]) {
       const response = await post(typed);
       expect(location(response)).toBe(
-        "/home/you/settings?delete=confirmation#delete-account",
+        "/home/you/settings/delete?delete=confirmation",
       );
     }
     expect(client.rpc).not.toHaveBeenCalled();
@@ -73,18 +73,14 @@ describe("POST /auth/delete-account (ADR-039)", () => {
   it("sends a signed-out caller back without signing anyone out", async () => {
     client.rpc.mockResolvedValue({ error: { code: "42501" } });
     const response = await post("DELETE");
-    expect(location(response)).toBe(
-      "/home/you/settings?delete=session#delete-account",
-    );
+    expect(location(response)).toBe("/home/you/settings/delete?delete=session");
     expect(client.auth.signOut).not.toHaveBeenCalled();
   });
 
   it("reports a failed delete and keeps the session", async () => {
     client.rpc.mockResolvedValue({ error: { code: "XX000" } });
     const response = await post("DELETE");
-    expect(location(response)).toBe(
-      "/home/you/settings?delete=error#delete-account",
-    );
+    expect(location(response)).toBe("/home/you/settings/delete?delete=error");
     expect(client.auth.signOut).not.toHaveBeenCalled();
   });
 

@@ -1,101 +1,61 @@
-import { redirect } from "next/navigation";
+import Link from "next/link";
 
-import {
-  AboutYouForm,
-  AppSettingsForm,
-  WeightHistory,
-} from "@/components/profile/profile-forms";
-import { DeleteAccount } from "@/components/profile/delete-account";
-import { TrainingSetupForm } from "@/components/profile/training-forms";
-import { SportList } from "@/components/sports/sport-list";
-import {
-  createProfileRepository,
-  ProfileAuthenticationError,
-} from "@/server/repositories/profile-repository";
 import homeStyles from "../../home.module.css";
 import { BackLink } from "../back-link";
-import setupStyles from "../onboarding/onboarding.module.css";
+import { Chevron } from "../chevron";
 import styles from "../you.module.css";
+import { readOwnProfile } from "./settings-page";
 
 export const dynamic = "force-dynamic";
 
 /**
- * Settings, reached from the gear on You. It holds what guided setup asks
- * and saves to the profile: the owner's details, their weight history, their
- * sports and their training setup (owner, 6 Oct 2026), and then the app's
- * own settings, the units and the time zone, which setup takes from the
- * browser without asking (owner, 5 Oct 2026). Subscription, language
- * and appearance are meant to land here too, and none is listed until it
- * exists. Sign out stays on You (owner, 2 Oct 2026). Deleting the account is
- * the last section (owner, 23 Oct 2026; ADR-039). The sports are the owner's
- * own list with their colours, not setup's catalogue (owner, 6 Nov 2026).
+ * Settings, reached from the gear on You: a list of the settings, each on a
+ * page of its own (owner, 6 Nov 2026), in place of one long page that held
+ * them all. Each row is the setting's name and nothing else (owner's
+ * choice). What setup asks is first, then the units and the time zone, and
+ * deleting the account is a row of its own at the end, in red (owner,
+ * 23 Oct 2026; ADR-039). Sign out stays on You (owner, 2 Oct 2026).
  */
-export default async function SettingsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ delete?: string }>;
-}) {
-  const { delete: refusal } = await searchParams;
-  let details;
-  let weights;
-  try {
-    const profiles = await createProfileRepository();
-    [details, weights] = await Promise.all([
-      profiles.getDetails(),
-      profiles.listWeightEntries(),
-    ]);
-  } catch (error) {
-    if (
-      error instanceof ProfileAuthenticationError &&
-      error.accessError?.reason === "not-owner"
-    ) {
-      redirect("/auth/denied");
-    }
-    if (error instanceof ProfileAuthenticationError) redirect("/");
-    throw error;
-  }
-  if (!details) redirect("/");
+const SETTINGS = [
+  { href: "/home/you/settings/about", name: "About you" },
+  { href: "/home/you/settings/weight", name: "Weight history" },
+  { href: "/home/you/settings/sports", name: "Your sports" },
+  { href: "/home/you/settings/training", name: "Training setup" },
+  { href: "/home/you/settings/units", name: "Units and time zone" },
+] as const;
+
+export default async function SettingsPage() {
+  // Signed out or without a profile, there is nothing to set.
+  await readOwnProfile((profiles) => profiles.getCurrentProfile());
 
   return (
-    <main
-      className={`${homeStyles.shell} ${setupStyles.page}`}
-      id="main-content"
-    >
+    <main className={homeStyles.shell} id="main-content">
       <BackLink href="/home/you" label="You" />
       <header className={styles.header}>
         <h1>Settings</h1>
       </header>
-      <section className={setupStyles.settingsCard} aria-labelledby="about">
-        <h2 id="about">About you</h2>
-        <AboutYouForm profile={details} submitLabel="Save" />
-      </section>
-      <section className={setupStyles.settingsCard} aria-labelledby="weights">
-        <h2 id="weights">Weight history</h2>
-        <WeightHistory
-          entries={weights}
-          unitsSystem={details.unitsSystem ?? "metric"}
-        />
-      </section>
-      <section className={setupStyles.settingsCard} aria-labelledby="sports">
-        <h2 id="sports">Your sports</h2>
-        <SportList sports={details.ownedSports} />
-      </section>
-      <section className={setupStyles.settingsCard} aria-labelledby="training">
-        <h2 id="training">Training setup</h2>
-        <TrainingSetupForm training={details.training} />
-      </section>
-      <section className={setupStyles.settingsCard} aria-labelledby="app">
-        <h2 id="app">App settings</h2>
-        <AppSettingsForm profile={details} />
-      </section>
-      <section
-        className={setupStyles.settingsCard}
-        id="delete-account"
-        aria-labelledby="delete-account-heading"
-      >
-        <h2 id="delete-account-heading">Delete account</h2>
-        <DeleteAccount refusal={typeof refusal === "string" ? refusal : null} />
-      </section>
+      <ul className={styles.places} aria-label="Settings">
+        {SETTINGS.map(({ href, name }) => (
+          <li key={href}>
+            <Link className={styles.place} href={href}>
+              <strong>{name}</strong>
+              <Chevron />
+            </Link>
+          </li>
+        ))}
+      </ul>
+      <ul className={styles.places} aria-label="Account">
+        <li>
+          <Link
+            className={styles.place}
+            data-danger
+            href="/home/you/settings/delete"
+          >
+            <strong>Delete account</strong>
+            <Chevron />
+          </Link>
+        </li>
+      </ul>
     </main>
   );
 }
