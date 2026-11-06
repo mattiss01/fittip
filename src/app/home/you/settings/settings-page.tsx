@@ -32,9 +32,7 @@ export function SettingPage({
       <header className={styles.header}>
         <h1>{title}</h1>
       </header>
-      <section className={setupStyles.settingsCard}>
-        {children}
-      </section>
+      <section className={setupStyles.settingsCard}>{children}</section>
     </main>
   );
 }
