@@ -156,7 +156,8 @@ select hasnt_table('public', 'invites', 'no invite table exists');
 -- Nine since 5 Oct 2026: `profile_details_and_sports` added the owner's name,
 -- birthday, height, gender, units and sports, which that migration's own test
 -- names one by one. The count stays pinned so a tenth is a decision too.
-select is((select count(*)::bigint from information_schema.columns where table_schema = 'public' and table_name = 'profiles'), 17::bigint, 'profiles has exactly the seventeen approved columns');
+-- Sixteen since 6 Nov 2026, when the sports moved to a table of their own.
+select is((select count(*)::bigint from information_schema.columns where table_schema = 'public' and table_name = 'profiles'), 16::bigint, 'profiles has exactly the sixteen approved columns');
 
 select * from finish();
 

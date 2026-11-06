@@ -1,7 +1,7 @@
 -- The database half of "Fix in passing" (15 Oct 2026), against the real
--- functions: one saved session per title, a typed sport kept in one write,
--- asking again tied to the roadmap its predecessor was made under, and a
--- malformed completion number answered as an invalid change.
+-- functions: one saved session per title, asking again tied to the roadmap its predecessor was made under, and a
+-- malformed completion number answered as an invalid change. A typed sport
+-- kept in one write moved to `sports_with_colours.test.sql` with the list.
 
 begin;
 
@@ -74,7 +74,7 @@ $$;
 create temporary table made (label text primary key, proposal_id uuid);
 grant all on made to public;
 
-select plan(17);
+select plan(10);
 
 -- The objects --------------------------------------------------------------------
 
@@ -86,23 +86,6 @@ select ok(
       and indexdef like 'CREATE UNIQUE INDEX%'
   ),
   'saved session titles are unique per owner'
-);
-select ok(
-  has_function_privilege('authenticated', 'public.keep_sports(text[])', 'EXECUTE')
-  and not has_function_privilege('anon', 'public.keep_sports(text[])', 'EXECUTE')
-  and not has_function_privilege('service_role', 'public.keep_sports(text[])', 'EXECUTE'),
-  'only authenticated may keep sports'
-);
-select ok(
-  exists (
-    select 1
-    from pg_catalog.pg_proc as p
-    join pg_catalog.pg_namespace as n on n.oid = p.pronamespace
-    where n.nspname = 'public' and p.proname = 'keep_sports'
-      and not p.prosecdef
-      and pg_catalog.array_to_string(p.proconfig, ',') = 'search_path=""'
-  ),
-  'keep_sports runs as the caller, with an empty search path'
 );
 select ok(
   has_function_privilege('authenticated',
@@ -120,10 +103,10 @@ insert into auth.users (id, email, raw_app_meta_data, raw_user_meta_data)
 values
   ('71000000-0000-4000-8000-000000000001', 'careful-owner@example.test', '{}', '{}'),
   ('71000000-0000-4000-8000-000000000002', 'careful-other@example.test', '{}', '{}');
-insert into public.profiles (user_id, timezone_name, sports)
+insert into public.profiles (user_id, timezone_name)
 values
-  ('71000000-0000-4000-8000-000000000001', 'UTC', array['Running']),
-  ('71000000-0000-4000-8000-000000000002', 'UTC', array['Rowing']);
+  ('71000000-0000-4000-8000-000000000001', 'UTC'),
+  ('71000000-0000-4000-8000-000000000002', 'UTC');
 
 set local role authenticated;
 select set_config('request.jwt.claims',
@@ -143,50 +126,6 @@ select set_config('request.jwt.claims',
   '{"sub":"71000000-0000-4000-8000-000000000002","role":"authenticated"}', true);
 select is(pg_temp.save('Intervals'), 'created',
   'another owner may use the same title');
-
--- 2. Sports in one write --------------------------------------------------------
-
-select keep_sports(array['Running', 'Cycling']);
-select is(
-  (select sports from public.profiles
-   where user_id = '71000000-0000-4000-8000-000000000002'),
-  array['Rowing', 'Running', 'Cycling'],
-  'new sports are appended to the caller''s own list'
-);
--- Read past RLS, which would hide the other row from the caller anyway.
-reset role;
-select is(
-  (select sports from public.profiles
-   where user_id = '71000000-0000-4000-8000-000000000001'),
-  array['Running'],
-  'and nobody else''s'
-);
-set local role authenticated;
-
-select set_config('request.jwt.claims',
-  '{"sub":"71000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
-select keep_sports(array[
-  ' running ', 'Swim', 'swim', 'Running, cycling', '', repeat('x', 61), null
-]);
-select is(
-  (select sports from public.profiles
-   where user_id = '71000000-0000-4000-8000-000000000001'),
-  array['Running', 'Swim'],
-  'a known sport, a repeat, a comma, an empty name and an overlong one are passed over'
-);
-
-reset role;
-update public.profiles
-set sports = array(select 'Sport ' || n from generate_series(1, 99) as n)
-where user_id = '71000000-0000-4000-8000-000000000001';
-set local role authenticated;
-select keep_sports(array['Climbing', 'Diving']);
-select is(
-  (select cardinality(sports) from public.profiles
-   where user_id = '71000000-0000-4000-8000-000000000001'),
-  100,
-  'the list stops at its limit'
-);
 
 -- 3. Asking again is tied to its roadmap -----------------------------------------
 
@@ -234,16 +173,6 @@ select throws_ok(
   ),
   '22023', 'Invalid completion change.',
   'a position of 1.0 is an invalid change, not a raw 22P02'
-);
-
--- Anonymous callers --------------------------------------------------------------
-
-reset role;
-set local role anon;
-select throws_ok(
-  $$select public.keep_sports(array['Running'])$$,
-  '42501', null,
-  'anonymous callers cannot keep sports'
 );
 
 select * from finish();

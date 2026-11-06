@@ -361,8 +361,9 @@ span.arrow {
 
 /* ---- Session cards ---- */
 
+/* `--tone` is the sport's colour, set on the card (`useSportColour`). */
 .card {
-  --tone: var(--ember);
+  --tone: var(--moss);
   position: relative;
   min-width: 0;
   display: flex;
@@ -378,26 +379,6 @@ span.arrow {
   background: var(--sage);
   box-shadow: inset 4px 0 0 var(--tone);
   color: var(--pine);
-}
-
-.card[data-tone="1"] {
-  --tone: var(--pine-soft);
-}
-
-.card[data-tone="2"] {
-  --tone: var(--recovery);
-}
-
-.card[data-tone="3"] {
-  --tone: #c2923a;
-}
-
-.card[data-tone="4"] {
-  --tone: #5a6fa0;
-}
-
-.card[data-tone="5"] {
-  --tone: #9a5b8a;
 }
 
 .card[data-cancelled="true"] {

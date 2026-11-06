@@ -1,33 +1,28 @@
+import {
+  colourOfSport,
+  UNLISTED_SPORT_COLOUR,
+  type OwnedSport,
+} from "@/lib/sports/sport-colours";
+
 /**
- * A colour for each of the owner's sports, given out in the order they are
- * used: the most-logged sport takes the first (owner, 5 Nov 2026). Sports are
- * free text, so nothing fixes a colour to a name; a sport that overtakes
- * another in use takes its colour, which the owner accepted for a palette that
- * always starts with the sport they do most.
+ * The sports the owner has logged, each in the colour they gave it in
+ * Settings (owner, 6 Nov 2026), so a sport is the same colour here as on the
+ * Plan. Until then the colours were handed out by use, most-logged first, and
+ * moved whenever one sport overtook another.
  *
- * Past the palette's end a sport is drawn in the muted ink rather than a
- * repeated colour, so two sports never look like one.
+ * A logged sport that is not on the owner's list, one they deleted, is drawn
+ * in the muted ink.
  */
-export const SPORT_PALETTE = [
-  "var(--sport-1)",
-  "var(--sport-2)",
-  "var(--sport-3)",
-  "var(--sport-4)",
-  "var(--sport-5)",
-  "var(--sport-6)",
-  "var(--sport-7)",
-  "var(--sport-8)",
-] as const;
-
-export const SPORT_BEYOND_PALETTE = "var(--moss)";
-
 export type SportColour = { sport: string; colour: string };
 
 /** `sports` most-logged first, as `CompletionLog.sportUse` returns them. */
-export function sportColours(sports: string[]): SportColour[] {
-  return sports.map((sport, index) => ({
+export function sportColours(
+  sports: string[],
+  owned: readonly OwnedSport[],
+): SportColour[] {
+  return sports.map((sport) => ({
     sport,
-    colour: SPORT_PALETTE[index] ?? SPORT_BEYOND_PALETTE,
+    colour: colourOfSport(owned, sport),
   }));
 }
 
@@ -46,6 +41,6 @@ export function readRequestedSport(
 export function colourOf(colours: SportColour[], sport: string | null) {
   return (
     colours.find((entry) => entry.sport === sport)?.colour ??
-    SPORT_BEYOND_PALETTE
+    UNLISTED_SPORT_COLOUR
   );
 }

@@ -760,6 +760,7 @@ function namedProfile(): ProfileDetailsView {
     heightCm: 180,
     timezoneName: "Europe/Berlin",
     sports: ["Running"],
+    ownedSports: [],
     latestWeightKg: 80,
     training: {
       sessionsPerWeek: null,

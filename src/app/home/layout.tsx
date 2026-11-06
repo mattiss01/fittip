@@ -4,6 +4,7 @@ import { ConnectionNotice } from "@/components/home/connection-notice";
 import { LiveWorkoutPill } from "@/components/home/live-workout-clock";
 import { MobileNavigation } from "@/components/home/mobile-navigation";
 import { OwnedSportsProvider } from "@/components/sports/owned-sports";
+import type { OwnedSport } from "@/lib/sports/sport-colours";
 import { isoDateInTimezone } from "@/lib/date/local-date";
 import { readUnloggedSessions } from "@/server/completions/unlogged-sessions";
 import { readOpenDecisions } from "@/server/profile/open-decisions";
@@ -76,7 +77,7 @@ async function readShell(): Promise<{
   noGoal: boolean;
   roadmapAttention: RoadmapAttention;
   unloggedOpen: boolean;
-  sports: string[];
+  sports: OwnedSport[];
   liveWorkout: {
     title: string;
     startedAt: string;

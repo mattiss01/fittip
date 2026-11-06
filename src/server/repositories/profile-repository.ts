@@ -9,6 +9,11 @@ import {
   type WeightEntryView,
 } from "@/lib/profile/profile-contract";
 import type { SetupStateView } from "@/lib/setup/setup-steps";
+import {
+  isSportSwatch,
+  type OwnedSport,
+  type SportSwatch,
+} from "@/lib/sports/sport-colours";
 import type { Database } from "@/lib/supabase/database.types";
 import {
   WEEKDAYS,
@@ -25,10 +30,11 @@ import {
 
 const PROFILE_COLUMNS = "user_id, created_at, timezone_name" as const;
 const PROFILE_DETAIL_COLUMNS =
-  "timezone_name, display_name, birth_date, height_cm, gender, units_system, sports, sessions_per_week, unavailable_days, availability_note, training_places, home_equipment, setup_step, setup_finished_at, setup_skipped_at" as const;
+  "timezone_name, display_name, birth_date, height_cm, gender, units_system, sessions_per_week, unavailable_days, availability_note, training_places, home_equipment, setup_step, setup_finished_at, setup_skipped_at" as const;
 const SETUP_STATE_COLUMNS =
   "setup_step, setup_finished_at, setup_skipped_at" as const;
 const WEIGHT_ENTRY_COLUMNS = "measured_on, weight_kg" as const;
+const SPORT_COLUMNS = "id, name, colour" as const;
 
 /** What `saveDetails` writes; the weight goes to the history, not here. */
 export type ProfileDetailsChange = {
@@ -68,6 +74,22 @@ export class ProfilePersistenceError extends Error {
   constructor() {
     super("The profile operation could not be completed.");
     this.name = "ProfilePersistenceError";
+  }
+}
+
+/** Another of the owner's sports already has that name, in any case. */
+export class SportNameTakenError extends Error {
+  constructor() {
+    super("You already have a sport with that name.");
+    this.name = "SportNameTakenError";
+  }
+}
+
+/** The sport is not on the owner's list, or no longer is. */
+export class SportMissingError extends Error {
+  constructor() {
+    super("That sport is no longer on your list.");
+    this.name = "SportMissingError";
   }
 }
 
@@ -166,7 +188,7 @@ export class ProfileRepository {
    */
   async getDetails(): Promise<ProfileDetailsView | null> {
     const userId = await this.getVerifiedUserId();
-    const [profile, weight] = await Promise.all([
+    const [profile, weight, sports] = await Promise.all([
       this.client
         .from("profiles")
         .select(PROFILE_DETAIL_COLUMNS)
@@ -179,6 +201,7 @@ export class ProfileRepository {
         .order("measured_on", { ascending: false })
         .limit(1)
         .maybeSingle(),
+      this.listSports(userId),
     ]);
     if (profile.error || weight.error) throw new ProfilePersistenceError();
     if (!profile.data) return null;
@@ -192,7 +215,8 @@ export class ProfileRepository {
         UNITS_SYSTEMS.find((units) => units === row.units_system) ?? null,
       heightCm: row.height_cm,
       timezoneName: row.timezone_name,
-      sports: row.sports,
+      sports: sports.map((sport) => sport.name),
+      ownedSports: sports,
       latestWeightKg: weight.data?.weight_kg ?? null,
       training: {
         sessionsPerWeek: row.sessions_per_week,
@@ -226,25 +250,50 @@ export class ProfileRepository {
 
   /**
    * What the layout over Home needs, in one read: whether setup is still to
-   * be done, and the owner's sports for the fields that offer them.
+   * be done, and the owner's sports for the fields that offer them and the
+   * colours they are drawn in.
    */
   async getHomeShell(): Promise<{
     setupOpen: boolean;
-    sports: string[];
+    sports: OwnedSport[];
     timezoneName: string | null;
   }> {
     const userId = await this.getVerifiedUserId();
-    const { data, error } = await this.client
-      .from("profiles")
-      .select("setup_finished_at, sports, timezone_name")
-      .eq("user_id", userId)
-      .maybeSingle();
+    const [{ data, error }, sports] = await Promise.all([
+      this.client
+        .from("profiles")
+        .select("setup_finished_at, timezone_name")
+        .eq("user_id", userId)
+        .maybeSingle(),
+      this.listSports(userId),
+    ]);
     if (error) throw new ProfilePersistenceError();
     return {
       setupOpen: !data || data.setup_finished_at === null,
-      sports: data?.sports ?? [],
+      sports,
       timezoneName: data?.timezone_name ?? null,
     };
+  }
+
+  /** The owner's sports in their order, each with its swatch. */
+  async getSports(): Promise<OwnedSport[]> {
+    return await this.listSports(await this.getVerifiedUserId());
+  }
+
+  private async listSports(userId: string): Promise<OwnedSport[]> {
+    const { data, error } = await this.client
+      .from("sports")
+      .select(SPORT_COLUMNS)
+      .eq("user_id", userId)
+      .order("position")
+      .order("created_at");
+    if (error) throw new ProfilePersistenceError();
+    // A swatch the app does not know is drawn as the first rather than lost.
+    return data.map((row) => ({
+      id: row.id,
+      name: row.name,
+      colour: isSportSwatch(row.colour) ? row.colour : "sport-1",
+    }));
   }
 
   /** Begins setup at its first screen, unless it was begun or finished. */
@@ -366,23 +415,69 @@ export class ProfileRepository {
     if (!data) throw new ProfilePersistenceError();
   }
 
+  /**
+   * Guided setup's chips become the list (`set_sports`): a sport kept keeps
+   * its colour, a new one joins, and one left out leaves the list only.
+   */
   async saveSports(sports: string[]): Promise<void> {
     await this.ensureCurrentProfile();
-    const userId = await this.getVerifiedUserId();
-    const { data, error } = await this.client
-      .from("profiles")
-      .update({ sports })
-      .eq("user_id", userId)
-      .select("user_id")
-      .maybeSingle();
+    await this.getVerifiedUserId();
+    const { error } = await this.client.rpc("set_sports", { p_names: sports });
     if (error) throw mapDetailsError(error.code);
-    if (!data) throw new ProfilePersistenceError();
+  }
+
+  /** Settings: a sport typed by name joins the end of the list. */
+  async addSport(name: string): Promise<void> {
+    await this.ensureCurrentProfile();
+    await this.getVerifiedUserId();
+    const { error } = await this.client.rpc("add_sport", { p_name: name });
+    if (error) throw mapSportError(error.code);
   }
 
   /**
-   * Appends sports the owner typed to their list, in one statement under the
-   * row's lock (`keep_sports`), so a sport removed in Settings meanwhile is not
-   * written back. The database passes over names it would not keep.
+   * Renames a sport and every record of the owner's that names it, in one
+   * transaction (`rename_sport`, owner, 6 Nov 2026). Onto a name the owner
+   * already has, the two become that one.
+   */
+  async renameSport(id: string, name: string): Promise<void> {
+    await this.getVerifiedUserId();
+    const { error } = await this.client.rpc("rename_sport", {
+      p_sport_id: id,
+      p_name: name,
+    });
+    if (error) throw mapSportError(error.code);
+  }
+
+  async setSportColour(id: string, colour: SportSwatch): Promise<void> {
+    const userId = await this.getVerifiedUserId();
+    const { data, error } = await this.client
+      .from("sports")
+      .update({ colour })
+      .eq("user_id", userId)
+      .eq("id", id)
+      .select("id");
+    if (error) throw mapSportError(error.code);
+    if (data.length === 0) throw new SportMissingError();
+  }
+
+  /**
+   * Takes a sport off the list and nothing else (ADR-031): its sessions and
+   * logs keep their sport, drawn grey from then on.
+   */
+  async deleteSport(id: string): Promise<void> {
+    const userId = await this.getVerifiedUserId();
+    const { error } = await this.client
+      .from("sports")
+      .delete()
+      .eq("user_id", userId)
+      .eq("id", id);
+    if (error) throw new ProfilePersistenceError();
+  }
+
+  /**
+   * Adds sports the owner typed to their list, in one call under the profile
+   * row's lock (`keep_sports`), each with the least-worn swatch. The database
+   * passes over names it would not keep.
    */
   async keepSports(names: string[]): Promise<void> {
     await this.ensureCurrentProfile();
@@ -490,6 +585,13 @@ function mapDetailsError(code: string | undefined): Error {
   return code === "23514"
     ? new ProfileValidationError()
     : new ProfilePersistenceError();
+}
+
+function mapSportError(code: string | undefined): Error {
+  if (code === "23505") return new SportNameTakenError();
+  if (code === "P0002") return new SportMissingError();
+  if (code === "23514" || code === "22023") return new ProfileValidationError();
+  return new ProfilePersistenceError();
 }
 
 function mapPersistenceError(code: string | undefined): Error {

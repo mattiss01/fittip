@@ -4,7 +4,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { OwnedSportsProvider } from "./owned-sports";
 import { SportInput, SportsInput } from "./sport-input";
 
-const SPORTS = ["Running", "Trail running", "Cycling"];
+const SPORTS = ["Running", "Trail running", "Cycling"].map((name, index) => ({
+  id: `sport-${index}`,
+  name,
+  colour: "sport-1" as const,
+}));
 
 function renderWithSports(field: React.ReactNode) {
   return render(

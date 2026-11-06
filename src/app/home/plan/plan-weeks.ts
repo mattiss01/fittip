@@ -104,25 +104,6 @@ export function dayLoad(durations: (number | null)[]): 0 | 1 | 2 | 3 {
   return Math.min(3, Math.max(1, Math.ceil(minutes / 30))) as 1 | 2 | 3;
 }
 
-/**
- * A sport is the owner's own word, so its colour cannot come from a fixed
- * list, and a hash puts two of a handful of sports on one colour as often as
- * not. Instead the sports on the loaded plan are put in alphabetical order,
- * ignoring case and surrounding space, and take the six tones in turn: up to
- * six sports never share one, and a sport keeps its colour until a new sport
- * sorts in ahead of it.
- */
-export const SPORT_TONES = 6;
-
-export function sportKey(sport: string): string {
-  return sport.trim().toLocaleLowerCase("en");
-}
-
-export function sportTones(sports: readonly string[]): Map<string, number> {
-  const keys = [...new Set(sports.map(sportKey))].sort();
-  return new Map(keys.map((key, index) => [key, index % SPORT_TONES]));
-}
-
 /** A roadmap phase as far as the Plan shows it. */
 export type PlanPhase = {
   title: string;

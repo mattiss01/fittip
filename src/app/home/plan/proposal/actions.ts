@@ -14,6 +14,7 @@ import type {
 import { isoDateInTimezone, shiftIsoDate } from "@/lib/date/local-date";
 import { REGENERATION_FEEDBACK_MAX_LENGTH } from "@/server/ai/owner-text";
 import { PLAN_PROPOSAL_COPY } from "@/lib/plan/plan-proposal-copy";
+import { isStagedDecision } from "@/lib/plan/plan-proposal-view";
 import { createServerUserClient } from "@/lib/supabase/server-user-client";
 import {
   CoachAIContextBelowMinimumError,
@@ -38,6 +39,7 @@ import {
   parsePlanProposalItemDecision,
   parsePlanProposalItemOrdinal,
   PlanProposalValidationError,
+  type PlanProposalView,
 } from "@/server/plan-proposal/plan-proposal-records";
 import {
   createPlanProposalRepository,
@@ -52,6 +54,7 @@ import {
 } from "@/server/repositories/profile-repository";
 import { createCompletionLog } from "@/server/repositories/completion-log-repository";
 import { createRollingPlan } from "@/server/repositories/rolling-plan-repository";
+import { keepSports } from "@/server/profile/keep-sports";
 
 /**
  * The plan-proposal Server Actions.
@@ -203,13 +206,19 @@ export async function finishPlanReviewAction(
       return invalid(OUTCOMES.validation, submission);
     }
 
-    await proposals.finishReview({
-      proposalId: parsePlanProposalId(formData.get("proposalId")),
+    const proposalId = parsePlanProposalId(formData.get("proposalId"));
+    const receipt = await proposals.finishReview({
+      proposalId,
       expectedPlanRevision: parseExpectedPlanRevision(
         formData.get("expectedPlanRevision"),
       ),
       idempotencyKey,
     });
+    if (receipt.decision === "applied") {
+      await keepAcceptedSports(
+        await proposals.getProposal(proposalId).catch(() => null),
+      );
+    }
 
     revalidatePath("/home/plan/proposal");
     revalidatePath("/home/plan");
@@ -362,6 +371,8 @@ export async function regeneratePlanProposalAction(
       revalidatePath("/home/plan");
 
       if (result.status === "proposal") {
+        // Recording the new proposal applied what the owner accepted here.
+        await keepAcceptedSports(source);
         return {
           status: "proposal",
           message: OUTCOMES.regenerated,
@@ -391,6 +402,23 @@ export async function regeneratePlanProposalAction(
       ? { ...mapped, message: OUTCOMES.regenerationLost }
       : mapped;
   }
+}
+
+/**
+ * Accepting the coach's sessions counts as typing their sports (owner,
+ * 6 Nov 2026): one the owner did not have joins their list, with a colour,
+ * rather than staying grey on the Plan. Once the plan is written; like every
+ * other caller of `keepSports`, a failure here leaves the list as it was.
+ */
+async function keepAcceptedSports(
+  proposal: PlanProposalView | null,
+): Promise<void> {
+  if (proposal === null) return;
+  await keepSports(
+    proposal.items
+      .filter((item) => isStagedDecision(item.decision))
+      .map((item) => item.sport),
+  );
 }
 
 /** Inclusive, and the same span the rejected proposal covered. */

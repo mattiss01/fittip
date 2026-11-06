@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(63);
+select plan(58);
 
 -- 1. Profile columns ---------------------------------------------------------
 
@@ -11,14 +11,11 @@ select col_type_is('public', 'profiles', 'birth_date', 'date', 'birth_date is a 
 select col_type_is('public', 'profiles', 'height_cm', 'numeric(4,1)', 'height_cm is numeric(4,1)');
 select col_type_is('public', 'profiles', 'gender', 'text', 'gender is text');
 select col_type_is('public', 'profiles', 'units_system', 'text', 'units_system is text');
-select col_type_is('public', 'profiles', 'sports', 'text[]', 'sports is a text array');
 select col_is_null('public', 'profiles', 'display_name', 'display_name may be unset');
 select col_is_null('public', 'profiles', 'birth_date', 'birth_date may be unset');
 select col_is_null('public', 'profiles', 'height_cm', 'height_cm may be unset');
 select col_is_null('public', 'profiles', 'gender', 'gender may be unset');
 select col_is_null('public', 'profiles', 'units_system', 'units_system may be unset');
-select col_not_null('public', 'profiles', 'sports', 'sports is never null');
-select col_default_is('public', 'profiles', 'sports', '{}', 'sports starts empty');
 
 -- The grant is column-scoped: the settings (these six, the time zone, and the
 -- training setup and setup's own state added on 6 Oct 2026), and nothing that
@@ -47,7 +44,6 @@ select is(
     'setup_finished_at',
     'setup_skipped_at',
     'setup_step',
-    'sports',
     'timezone_name',
     'training_places',
     'unavailable_days',
@@ -149,15 +145,14 @@ select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-0000000
 select lives_ok(
   $$ update public.profiles
      set display_name = 'Alex', birth_date = '1990-05-17', height_cm = 181.5,
-         gender = 'other', units_system = 'metric',
-         sports = array['Running', 'Latzug']
+         gender = 'other', units_system = 'metric'
      where user_id = '00000000-0000-4000-8000-0000000000a1' $$,
-  'the owner can save their details and sports'
+  'the owner can save their details'
 );
 select is(
-  (select display_name || '|' || height_cm::text || '|' || array_to_string(sports, ',')
+  (select display_name || '|' || height_cm::text
    from public.profiles where user_id = '00000000-0000-4000-8000-0000000000a1'),
-  'Alex|181.5|Running,Latzug',
+  'Alex|181.5',
   'the owner reads back what they saved'
 );
 select lives_ok(
@@ -189,16 +184,6 @@ select throws_ok(
 select throws_ok(
   $$ update public.profiles set units_system = 'stone' where user_id = '00000000-0000-4000-8000-0000000000a1' $$,
   '23514', null, 'a units system outside the two values is refused'
-);
-select throws_ok(
-  $$ update public.profiles
-     set sports = (select array_agg('sport ' || n) from generate_series(1, 101) as n)
-     where user_id = '00000000-0000-4000-8000-0000000000a1' $$,
-  '23514', null, 'more than 100 sports are refused'
-);
-select throws_ok(
-  $$ update public.profiles set sports = array['Running', ''] where user_id = '00000000-0000-4000-8000-0000000000a1' $$,
-  '23514', null, 'an empty sport name is refused'
 );
 select throws_ok(
   $$ update public.profiles set created_at = now() where user_id = '00000000-0000-4000-8000-0000000000a1' $$,

@@ -1,40 +1,32 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  colourOf,
-  readRequestedSport,
-  SPORT_BEYOND_PALETTE,
-  SPORT_PALETTE,
-  sportColours,
-} from "./sport-colours";
+import { colourOf, readRequestedSport, sportColours } from "./sport-colours";
+import { UNLISTED_SPORT_COLOUR } from "@/lib/sports/sport-colours";
+
+const OWNED = [
+  { id: "a", name: "Running", colour: "sport-4" as const },
+  { id: "b", name: "Strength", colour: "sport-1" as const },
+];
 
 describe("sport colours", () => {
-  it("gives the palette out most-logged first", () => {
-    const colours = sportColours(["Running", "Strength", "Climbing"]);
-    expect(colours.map(({ colour }) => colour)).toEqual(
-      SPORT_PALETTE.slice(0, 3),
-    );
-    expect(colourOf(colours, "Strength")).toBe(SPORT_PALETTE[1]);
+  it("draws each logged sport in the colour the owner gave it", () => {
+    const colours = sportColours(["Strength", "running "], OWNED);
+    expect(colours.map(({ colour }) => colour)).toEqual([
+      "var(--sport-1)",
+      "var(--sport-4)",
+    ]);
+    expect(colourOf(colours, "running ")).toBe("var(--sport-4)");
   });
 
-  it("never repeats a colour: past the palette a sport is drawn muted", () => {
-    const sports = Array.from(
-      { length: SPORT_PALETTE.length + 2 },
-      (_, index) => `Sport ${index}`,
-    );
-    const colours = sportColours(sports).map(({ colour }) => colour);
-    expect(colours.slice(-2)).toEqual([
-      SPORT_BEYOND_PALETTE,
-      SPORT_BEYOND_PALETTE,
-    ]);
-    expect(new Set(colours.slice(0, SPORT_PALETTE.length)).size).toBe(
-      SPORT_PALETTE.length,
+  it("draws a sport that is not on the owner's list muted", () => {
+    expect(sportColours(["Climbing"], OWNED)[0].colour).toBe(
+      UNLISTED_SPORT_COLOUR,
     );
   });
 
   it("draws a log without a known sport muted", () => {
-    expect(colourOf(sportColours(["Running"]), null)).toBe(
-      SPORT_BEYOND_PALETTE,
+    expect(colourOf(sportColours(["Running"], OWNED), null)).toBe(
+      UNLISTED_SPORT_COLOUR,
     );
   });
 });

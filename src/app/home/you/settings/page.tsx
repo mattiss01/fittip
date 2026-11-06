@@ -3,11 +3,11 @@ import { redirect } from "next/navigation";
 import {
   AboutYouForm,
   AppSettingsForm,
-  SportsForm,
   WeightHistory,
 } from "@/components/profile/profile-forms";
 import { DeleteAccount } from "@/components/profile/delete-account";
 import { TrainingSetupForm } from "@/components/profile/training-forms";
+import { SportList } from "@/components/sports/sport-list";
 import {
   createProfileRepository,
   ProfileAuthenticationError,
@@ -27,7 +27,8 @@ export const dynamic = "force-dynamic";
  * browser without asking (owner, 5 Oct 2026). Subscription, language
  * and appearance are meant to land here too, and none is listed until it
  * exists. Sign out stays on You (owner, 2 Oct 2026). Deleting the account is
- * the last section (owner, 23 Oct 2026; ADR-039).
+ * the last section (owner, 23 Oct 2026; ADR-039). The sports are the owner's
+ * own list with their colours, not setup's catalogue (owner, 6 Nov 2026).
  */
 export default async function SettingsPage({
   searchParams,
@@ -77,7 +78,7 @@ export default async function SettingsPage({
       </section>
       <section className={setupStyles.settingsCard} aria-labelledby="sports">
         <h2 id="sports">Your sports</h2>
-        <SportsForm sports={details.sports} submitLabel="Save sports" />
+        <SportList sports={details.ownedSports} />
       </section>
       <section className={setupStyles.settingsCard} aria-labelledby="training">
         <h2 id="training">Training setup</h2>

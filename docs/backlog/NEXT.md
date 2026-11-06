@@ -13,6 +13,17 @@ before any code is written.
 
 ## Now
 
+- [~] **Sport colours — one colour per sport, everywhere.** Careful lane: a new `sports`
+      table replaces `profiles.sports`, with RLS, owner-only RPCs and pgTAP.
+      - Outcome: each sport has a fixed colour on Plan and Progress, picked in Settings from
+        12 swatches; Settings lists only the owner's sports, which they add, rename, recolour
+        and delete there. A new sport takes the least-used swatch.
+      - Owner, 6 Nov 2026: rename changes the name everywhere, history included, and onto an
+        existing sport merges (the target's colour stays); delete removes the list entry only,
+        and its sessions and logs stay, drawn grey; accepting a coach plan adds its new sports.
+      - Owner, 6 Nov 2026: own table; copy the lists across, then drop `profiles.sports` and
+        the old `keep_sports`. `planned_snapshot` is never rewritten.
+
 **Recurring sessions.** Owner, 5 Nov 2026: a one-off can become a series. Planned only;
 the owner says when to build. It reuses the repeat row and sheet (`repeat-sheet.tsx`).
 

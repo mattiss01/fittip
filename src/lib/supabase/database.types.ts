@@ -1195,7 +1195,6 @@ export type Database = {
           setup_finished_at: string | null;
           setup_skipped_at: string | null;
           setup_step: number | null;
-          sports: string[];
           timezone_name: string | null;
           training_places: string[];
           unavailable_days: string[];
@@ -1214,7 +1213,6 @@ export type Database = {
           setup_finished_at?: string | null;
           setup_skipped_at?: string | null;
           setup_step?: number | null;
-          sports?: string[];
           timezone_name?: string | null;
           training_places?: string[];
           unavailable_days?: string[];
@@ -1233,7 +1231,6 @@ export type Database = {
           setup_finished_at?: string | null;
           setup_skipped_at?: string | null;
           setup_step?: number | null;
-          sports?: string[];
           timezone_name?: string | null;
           training_places?: string[];
           unavailable_days?: string[];
@@ -2491,6 +2488,41 @@ export type Database = {
           },
         ];
       };
+      sports: {
+        Row: {
+          colour: string;
+          created_at: string;
+          id: string;
+          name: string;
+          position: number;
+          user_id: string;
+        };
+        Insert: {
+          colour: string;
+          created_at?: string;
+          id?: string;
+          name: string;
+          position: number;
+          user_id?: string;
+        };
+        Update: {
+          colour?: string;
+          created_at?: string;
+          id?: string;
+          name?: string;
+          position?: number;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "sports_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+        ];
+      };
       weight_entries: {
         Row: {
           created_at: string;
@@ -2535,6 +2567,7 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      add_sport: { Args: { p_name: string }; Returns: string };
       apply_completion_change: {
         Args: {
           p_completion?: Json;
@@ -2915,6 +2948,10 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      rename_sport: {
+        Args: { p_name: string; p_sport_id: string };
+        Returns: string;
+      };
       reserve_ai_spend: {
         Args: {
           p_currency: string;
@@ -3044,6 +3081,7 @@ export type Database = {
         Args: { p_reason: string; p_session_id: string };
         Returns: undefined;
       };
+      set_sports: { Args: { p_names: string[] }; Returns: undefined };
       settle_ai_spend: {
         Args: { p_charged_micro_usd: number; p_settlement_token: string };
         Returns: Database["public"]["CompositeTypes"]["ai_spend_settlement_receipt"];
