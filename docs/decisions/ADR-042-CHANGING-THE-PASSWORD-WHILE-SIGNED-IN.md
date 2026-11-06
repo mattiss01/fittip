@@ -48,5 +48,9 @@ ours yet (ADR-022, Consequences).
   (`validateSignUpCredentials`); Auth's own minimum is the backstop.
 - The check sign-in creates a session that lives for one request. It is signed out
   immediately, and the sign-out of the other sessions in step 3 ends it again if that failed.
+- "Signed out" means their sessions are revoked, so none of them can refresh. A device keeps
+  the access token it already holds until it expires (`jwt_expiry`, an hour), because the
+  application verifies the token's claims rather than asking Auth about each request. A
+  reset by link (ADR-022) has always behaved the same way.
 - Nothing is stored by FitTip: no password, no attempt count, no record of the change beyond
   Auth's own.
