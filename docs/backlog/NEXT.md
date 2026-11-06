@@ -13,16 +13,13 @@ before any code is written.
 
 ## Now
 
-- [~] **Sport colours — one colour per sport, everywhere.** Careful lane: a new `sports`
-      table replaces `profiles.sports`, with RLS, owner-only RPCs and pgTAP.
-      - Outcome: each sport has a fixed colour on Plan and Progress, picked in Settings from
-        12 swatches; Settings lists only the owner's sports, which they add, rename, recolour
-        and delete there. A new sport takes the least-used swatch.
-      - Owner, 6 Nov 2026: rename changes the name everywhere, history included, and onto an
-        existing sport merges (the target's colour stays); delete removes the list entry only,
-        and its sessions and logs stay, drawn grey; accepting a coach plan adds its new sports.
-      - Owner, 6 Nov 2026: own table; copy the lists across, then drop `profiles.sports` and
-        the old `keep_sports`. `planned_snapshot` is never rewritten.
+- [ ] **Change password in Settings.** Careful lane (auth). A Settings row and page.
+      - Owner, 6 Nov 2026: the current password is asked and checked server-side first,
+        then the new one twice (8 characters, as sign-up); on success the account's other
+        sessions end and this one stays, back on Settings with "Password changed".
+      - Same origin check as `/auth/delete-account`; nothing typed comes back in an address.
+- [ ] **Progress: choose several sports at once.** Owner, 6 Nov 2026: the chips switch
+      between All and one sport; any set of the owner's sports should be selectable.
 
 **Recurring sessions.** Owner, 5 Nov 2026: a one-off can become a series. Planned only;
 the owner says when to build. It reuses the repeat row and sheet (`repeat-sheet.tsx`).
@@ -123,6 +120,10 @@ Not worth their own slot; do them when work lands nearby.
   `scroll-initial-target`, which Chrome honours and Safari does not, so there the strip
   shows its oldest week until the page is interactive.
 
+- **A refused account delete for an ended session never says so.** The route sends it to
+  `/home/you/settings/delete?delete=session`, which redirects a signed-out visitor to the
+  start before the message can show (as on the single page before 6 Nov 2026).
+
 ## Later
 
 - **Goals with a number — idea.** Owner, 5 Nov 2026, after prototypes B and G: a goal card
@@ -194,6 +195,11 @@ Not worth their own slot; do them when work lands nearby.
   that were already marked "rewrite before dispatch". They stay as ideas, not commitments.
 
 ## Known limitations
+
+- **A form opened before a sport is renamed can bring the old name back.** A rename moves
+  the revision of each log, saved session and workout it touches, but not the plan's
+  (ADR-041), so a plan edit or coach proposal opened before it can still save the old name,
+  which then joins the list as a sport of its own, grey until recoloured or merged.
 
 - **The roadmap prompt has about eighty-five characters left** of the 7,800 its token
   arithmetic is derived against (`openai-prompt.test.ts`), since the core-goal sentence
