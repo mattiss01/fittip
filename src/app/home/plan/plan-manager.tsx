@@ -655,14 +655,19 @@ function WeekArrow({
 }
 
 /**
- * The roadmap phase the week sits in, by its title alone (owner, 6 Nov 2026):
- * its focus is on the Roadmap, one tap away.
+ * The roadmap phase the week sits in, as one slim row: "Phase", its title and
+ * a › to the Roadmap (owner, 6 Nov 2026). Its focus is on the Roadmap, one
+ * tap away.
  */
 function PhaseBand({ phase }: { phase: PlanPhase | null }) {
   if (phase === null) return null;
   return (
     <Link className={w.phase} href="/home/plan/roadmap" data-plan-phase>
+      <span className={w.phaseLabel}>Phase</span>
       <span className={w.phaseTitle}>{phase.title}</span>
+      <span className={w.phaseGo} aria-hidden="true">
+        ›
+      </span>
     </Link>
   );
 }
