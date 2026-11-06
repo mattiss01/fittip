@@ -1,4 +1,5 @@
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -115,6 +116,7 @@ function renderReview(
     memory?: MemorySuggestion[];
     goals?: GoalSuggestion[];
     nothingAdded?: boolean;
+    unresolved?: number;
     safetyConsiderations?: string[];
     assumptions?: string[];
     uncertainties?: {
@@ -137,7 +139,7 @@ function renderReview(
       finishKey="9c000000-0000-4000-8000-0000000000ff"
       days={overrides.days ?? [day()]}
       planChangedSinceComposed={overrides.planChangedSinceComposed ?? false}
-      unresolved={0}
+      unresolved={overrides.unresolved ?? 0}
       staged={0}
       isExample={false}
       memory={{ revision: 0, suggestions: overrides.memory ?? [] }}
@@ -145,6 +147,151 @@ function renderReview(
     />,
   );
 }
+
+describe("a choice shows before it is saved (owner, 6 Nov 2026)", () => {
+  // React's own action state here: what is under test is the transition.
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    const actual = await vi.importActual<typeof import("react")>("react");
+    useActionStateMock.mockImplementation(actual.useActionState);
+  });
+
+  afterEach(cleanup);
+
+  const swim = {
+    ordinal: 0,
+    kind: "session" as const,
+    localDate: "2026-09-21",
+    decision: "proposed" as const,
+    title: "Easy swim",
+    sport: "Swimming",
+    intent: null,
+    expectedDurationMinutes: 40,
+    rationale: null,
+    contentIndex: 0,
+    replacesSessionId: null,
+    replaces: null,
+  };
+
+  function pendingSave() {
+    let reply: (state: unknown) => void = () => {};
+    decideItemActionMock.mockReturnValueOnce(
+      new Promise((resolve) => {
+        reply = resolve;
+      }),
+    );
+    return (state: unknown) => act(async () => reply(state));
+  }
+
+  it("marks the card and moves the count at once, and holds the finish until it lands", async () => {
+    const reply = pendingSave();
+    renderReview({
+      days: [day({ planned: [], items: [swim] })],
+      unresolved: 1,
+    });
+
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole("button", { name: COPY.stageActionFor("Easy swim") }),
+      );
+    });
+
+    const card = screen
+      .getByRole("heading", { name: "Easy swim" })
+      .closest("article") as HTMLElement;
+    expect(within(card).getByText(COPY.stagedBadge)).toBeTruthy();
+    expect(screen.getByText(COPY.finishSupport(1))).toBeTruthy();
+    expect(
+      (
+        screen.getByRole("button", {
+          name: COPY.finishAction,
+        }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(true);
+    expect(decideItemActionMock).toHaveBeenCalledOnce();
+
+    await reply({ status: "decided", message: "Choice saved.", submission: 1 });
+
+    expect(within(card).getByText("Choice saved.")).toBeTruthy();
+  });
+
+  it("strikes the owner's session through at once when Replace is pressed", async () => {
+    const reply = pendingSave();
+    renderReview({
+      days: [
+        day({
+          items: [
+            {
+              ...swim,
+              title: "Tempo run",
+              replacesSessionId: SESSION_ID,
+              replaces: {
+                title: "Easy run",
+                expectedDurationMinutes: 45,
+                available: true,
+              },
+            },
+          ],
+          replacements: {
+            [SESSION_ID]: {
+              kind: "replace",
+              title: "Tempo run",
+              isChosen: false,
+            },
+          },
+        }),
+      ],
+      unresolved: 1,
+    });
+
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole("button", {
+          name: COPY.replaceActionFor("Tempo run", "Easy run"),
+        }),
+      );
+    });
+
+    const plannedCard = screen
+      .getByRole("heading", { name: "Easy run" })
+      .closest("article") as HTMLElement;
+    expect(plannedCard.dataset.replaced).toBe("chosen");
+    expect(
+      within(plannedCard).getByText(COPY.willBeReplacedBadge),
+    ).toBeTruthy();
+
+    // Answered, because React settles every pending save together.
+    await reply({ status: "decided", message: "Choice saved.", submission: 1 });
+  });
+
+  it("shows the saved choice again when the save is refused, and says why", async () => {
+    const reply = pendingSave();
+    renderReview({
+      days: [day({ planned: [], items: [swim] })],
+      unresolved: 1,
+    });
+
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole("button", { name: COPY.rejectActionFor("Easy swim") }),
+      );
+    });
+    const card = screen
+      .getByRole("heading", { name: "Easy swim" })
+      .closest("article") as HTMLElement;
+    expect(within(card).getByText(COPY.rejectedBadge)).toBeTruthy();
+
+    await reply({
+      status: "conflict",
+      message: COPY.outcomes.alreadyFinished,
+      submission: 1,
+    });
+
+    expect(within(card).getByText(COPY.proposedBadge)).toBeTruthy();
+    expect(within(card).getByText(COPY.outcomes.alreadyFinished)).toBeTruthy();
+    expect(screen.getByText(COPY.unresolvedSupport(1))).toBeTruthy();
+  });
+});
 
 describe("an item that would replace a planned session (ADR-024)", () => {
   beforeEach(() => {

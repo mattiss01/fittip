@@ -4,6 +4,7 @@ import {
   buildProposalTimeline,
   datesBetween,
   groupPlannedByDate,
+  withChoice,
   type PlannedSessionSummary,
 } from "./proposal-timeline";
 
@@ -261,6 +262,73 @@ describe("an item that would replace a planned session (ADR-024)", () => {
     });
 
     expect(day.items[0].replaces).toBeNull();
+  });
+});
+
+describe("withChoice: a choice shown before it is saved (owner, 6 Nov 2026)", () => {
+  const longRun = planned({ id: "a", localDate: START, title: "Long run" });
+  const tempo = item({
+    ordinal: 0,
+    localDate: "2026-09-22",
+    title: "Tempo run",
+    replacesSessionId: "a",
+  });
+  const swim = item({ ordinal: 1, localDate: START, title: "Swim" });
+
+  it.each([
+    ["proposed", "staged"],
+    ["staged", "staged_beside"],
+    ["proposed", "rejected"],
+    ["rejected", "staged"],
+    ["staged", "proposed"],
+  ] as const)(
+    "reads as the saved timeline would, from %s to %s",
+    (from, to) => {
+      const saved = build({
+        items: [{ ...tempo, decision: from }, swim],
+        planned: [longRun],
+      });
+      const expected = build({
+        items: [{ ...tempo, decision: to }, swim],
+        planned: [longRun],
+      });
+
+      expect(withChoice(saved, 0, to)).toEqual(expected);
+    },
+  );
+
+  it("follows a suggested cancel onto the session's card", () => {
+    const cancel = { ...tempo, kind: "cancel" as const, localDate: START };
+    const saved = build({ items: [cancel], planned: [longRun] });
+
+    expect(withChoice(saved, 0, "staged")).toEqual(
+      build({
+        items: [{ ...cancel, decision: "staged" }],
+        planned: [longRun],
+      }),
+    );
+  });
+
+  it("leaves a session that can no longer be replaced alone", () => {
+    const saved = build({
+      items: [tempo],
+      planned: [longRun],
+      loggedSessionIds: new Set(["a"]),
+    });
+
+    expect(withChoice(saved, 0, "staged")).toEqual(
+      build({
+        items: [{ ...tempo, decision: "staged" }],
+        planned: [longRun],
+        loggedSessionIds: new Set(["a"]),
+      }),
+    );
+  });
+
+  it("changes nothing for an item that is not there", () => {
+    const saved = build({ items: [swim], planned: [] });
+
+    expect(withChoice(saved, 7, "staged")).toEqual(saved);
   });
 });
 
