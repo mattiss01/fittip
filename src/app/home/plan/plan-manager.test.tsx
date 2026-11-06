@@ -535,6 +535,8 @@ describe("PlanManager", () => {
       ],
     });
     expect(screen.getByText("Base")).toBeVisible();
+    // The title alone; the focus is on the Roadmap (owner, 6 Nov 2026).
+    expect(screen.queryByText("Easy volume")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Next week" }));
     expect(screen.getByText("Sharpen")).toBeVisible();
     expect(screen.queryByText("Base")).toBeNull();

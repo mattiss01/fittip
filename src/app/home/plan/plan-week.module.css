@@ -120,7 +120,6 @@
 
 .phase {
   display: grid;
-  gap: 0.1rem;
   padding: 0.85rem 1.1rem;
   border-radius: 1.2rem 1.2rem 1.2rem 0.35rem;
   background: var(--pine);
@@ -128,14 +127,7 @@
   text-decoration: none;
 }
 
-.phaseName {
-  color: #ff9b77;
-  font: 500 0.66rem var(--font-mono);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.phaseFocus {
+.phaseTitle {
   display: -webkit-box;
   overflow: hidden;
   font-size: 1rem;
