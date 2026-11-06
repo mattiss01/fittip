@@ -1,6 +1,13 @@
 "use client";
 
-import { useActionState, useEffect, useId, useRef, useState } from "react";
+import {
+  useActionState,
+  useEffect,
+  useId,
+  useOptimistic,
+  useRef,
+  useState,
+} from "react";
 
 import {
   INITIAL_PLAN_PROPOSAL_ACTION_STATE,
@@ -13,11 +20,12 @@ import {
   regeneratePlanProposalAction,
 } from "./actions";
 import styles from "./proposal.module.css";
-import type {
-  PlannedSessionSummary,
-  ProposalReplacement,
-  ProposalTimelineDay,
-  ProposalTimelineItem,
+import {
+  withChoice,
+  type PlannedSessionSummary,
+  type ProposalReplacement,
+  type ProposalTimelineDay,
+  type ProposalTimelineItem,
 } from "./proposal-timeline";
 
 import { INITIAL_PLAN_ACTION_STATE } from "../action-state";
@@ -32,7 +40,12 @@ import {
   PLAN_PROPOSAL_COPY,
   PLAN_PROPOSAL_FEEDBACK_MAX_LENGTH,
 } from "@/lib/plan/plan-proposal-copy";
-import type { PlanProposalItemDecision } from "@/lib/plan/plan-proposal-view";
+import {
+  PLAN_PROPOSAL_ITEM_DECISIONS,
+  stagedItemCount,
+  unresolvedItemCount,
+  type PlanProposalItemDecision,
+} from "@/lib/plan/plan-proposal-view";
 import {
   GoalSuggestions,
   type GoalSuggestion,
@@ -156,6 +169,26 @@ export function ProposalReview({
   useEffect(() => {
     if (confirmingDiscard) discardTitle.current?.focus();
   }, [confirmingDiscard]);
+  // A choice shows the moment it is pressed (owner, 6 Nov 2026). Saving it
+  // re-reads the whole page, which took a second or more, and the card sat
+  // unchanged until then. This is the timeline as it will read once the
+  // pending choices are saved; the re-read replaces it, and a refused save
+  // shows the saved timeline again, with the card saying why.
+  const [shownDays, showChoice] = useOptimistic(
+    days,
+    (
+      current,
+      choice: { ordinal: number; decision: PlanProposalItemDecision },
+    ) => withChoice(current, choice.ordinal, choice.decision),
+  );
+  // A choice still on its way to the server. The finish waits for it: what it
+  // applies is what the database holds, and its key is derived from that.
+  const choosing = shownDays !== days;
+  // The counts are the server's, moved by the choices still being saved.
+  const moved = (count: number, counter: typeof stagedItemCount) =>
+    count - counter(itemsOf(days)) + counter(itemsOf(shownDays));
+  const shownUnresolved = moved(unresolved, unresolvedItemCount);
+  const shownStaged = moved(staged, stagedItemCount);
   const dock = useDockReserve();
   const notice = latest(state, discardState, regenerateState);
   const busy = pending || discarding || regenerating;
@@ -257,7 +290,7 @@ export function ProposalReview({
       ) : null}
 
       <ol className={styles.days}>
-        {days.map((day) => (
+        {shownDays.map((day) => (
           <li
             className={styles.day}
             key={day.localDate}
@@ -291,6 +324,9 @@ export function ProposalReview({
                   key={`${proposalId}-${item.ordinal}`}
                   proposalId={proposalId}
                   item={item}
+                  onChoose={(decision) =>
+                    showChoice({ ordinal: item.ordinal, decision })
+                  }
                 />
               ))}
 
@@ -306,9 +342,9 @@ export function ProposalReview({
         {/* About finishing, so not while asking again (owner, 19 Oct 2026). */}
         {askingAgain ? null : (
           <p className={styles.dockSupport}>
-            {unresolved > 0
-              ? COPY.unresolvedSupport(unresolved)
-              : COPY.finishSupport(staged)}
+            {shownUnresolved > 0
+              ? COPY.unresolvedSupport(shownUnresolved)
+              : COPY.finishSupport(shownStaged)}
           </p>
         )}
         {askingAgain ? null : (
@@ -335,7 +371,7 @@ export function ProposalReview({
               <button
                 className={styles.primary}
                 type="submit"
-                disabled={busy || unresolved > 0}
+                disabled={busy || choosing || shownUnresolved > 0}
               >
                 {COPY.finishAction}
               </button>
@@ -418,7 +454,7 @@ export function ProposalReview({
               <h2 id={`${dialogId}-discard`} ref={discardTitle} tabIndex={-1}>
                 {COPY.discardConfirmTitle}
               </h2>
-              <p>{COPY.discardConfirm(staged)}</p>
+              <p>{COPY.discardConfirm(shownStaged)}</p>
               {openMemory ? (
                 <>
                   <p>{COPY.memoryBeforeEndSupport}</p>
@@ -746,17 +782,19 @@ function PlannedSession({
 function ProposedItem({
   proposalId,
   item,
+  onChoose,
 }: {
   proposalId: string;
+  /** Already showing any choice still being saved. */
   item: ProposalTimelineItem;
+  onChoose: (decision: PlanProposalItemDecision) => void;
 }) {
-  const [state, action, pending] = useActionState(
-    decidePlanProposalItemAction,
-    INITIAL_PLAN_PROPOSAL_ACTION_STATE,
-  );
+  const [state, action, pending] = useChoice(onChoose);
 
   if (item.kind === "cancel") {
-    return <CancelItem proposalId={proposalId} item={item} />;
+    return (
+      <CancelItem proposalId={proposalId} item={item} onChoose={onChoose} />
+    );
   }
 
   // Every other item is a proposed session since 17 Oct 2026; free days are
@@ -901,14 +939,13 @@ function ProposedItem({
 function CancelItem({
   proposalId,
   item,
+  onChoose,
 }: {
   proposalId: string;
   item: ProposalTimelineItem;
+  onChoose: (decision: PlanProposalItemDecision) => void;
 }) {
-  const [state, action, pending] = useActionState(
-    decidePlanProposalItemAction,
-    INITIAL_PLAN_PROPOSAL_ACTION_STATE,
-  );
+  const [state, action, pending] = useChoice(onChoose);
   const title = item.replaces?.title ?? item.title ?? "";
   const available = item.replaces?.available === true;
 
@@ -987,6 +1024,25 @@ function CancelItem({
   );
 }
 
+/**
+ * One item's save, which shows the choice before the server has it. The
+ * buttons stay disabled until it lands, so one card's choices are saved in
+ * the order they were pressed.
+ */
+function useChoice(onChoose: (decision: PlanProposalItemDecision) => void) {
+  return useActionState(
+    (previous: PlanProposalActionState, formData: FormData) => {
+      const pressed = formData.get("decision");
+      const decision = PLAN_PROPOSAL_ITEM_DECISIONS.find(
+        (candidate) => candidate === pressed,
+      );
+      if (decision !== undefined) onChoose(decision);
+      return decidePlanProposalItemAction(previous, formData);
+    },
+    INITIAL_PLAN_PROPOSAL_ACTION_STATE,
+  );
+}
+
 function ChoiceButton({
   decision,
   current,
@@ -1015,6 +1071,10 @@ function ChoiceButton({
       {label}
     </button>
   );
+}
+
+function itemsOf(days: readonly ProposalTimelineDay[]) {
+  return days.flatMap((day) => day.items);
 }
 
 /** Whichever of the two dock actions replied most recently. */

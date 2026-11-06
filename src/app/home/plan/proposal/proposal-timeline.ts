@@ -1,5 +1,8 @@
 import type { ActivityValue } from "@/components/training/activity-editor";
-import type { PlanProposalItemView } from "@/lib/plan/plan-proposal-view";
+import type {
+  PlanProposalItemDecision,
+  PlanProposalItemView,
+} from "@/lib/plan/plan-proposal-view";
 
 /**
  * The merged review timeline: one row per day, holding what is already planned
@@ -145,19 +148,12 @@ export function buildProposalTimeline(input: {
               target.localDate >= input.today &&
               !logged.has(target.id),
           };
-    if (
-      target !== undefined &&
-      replaces?.available &&
-      (item.decision === "proposed" || item.decision === "staged")
-    ) {
+    const replacement = replaces?.available ? replacementFor(item) : null;
+    if (target !== undefined && replacement !== null) {
       // Filed under the day the old session is on, which need not be the
       // day of the session proposed in its place.
       const ofDay = replacementsByDate.get(target.localDate) ?? {};
-      ofDay[target.id] = {
-        kind: item.kind === "cancel" ? "cancel" : "replace",
-        title: item.kind === "cancel" ? "" : (item.title ?? ""),
-        isChosen: item.decision === "staged",
-      };
+      ofDay[target.id] = replacement;
       replacementsByDate.set(target.localDate, ofDay);
     }
     const day = itemsByDate.get(item.localDate) ?? [];
@@ -174,6 +170,57 @@ export function buildProposalTimeline(input: {
     items: itemsByDate.get(localDate) ?? [],
     replacements: replacementsByDate.get(localDate) ?? {},
   }));
+}
+
+/**
+ * What the planned session's card says about this item, while it can still
+ * replace or cancel that session and the owner has not chosen otherwise.
+ */
+function replacementFor(
+  item: Pick<PlanProposalItemView, "kind" | "title" | "decision">,
+): ProposalReplacement | null {
+  if (item.decision !== "proposed" && item.decision !== "staged") return null;
+  return {
+    kind: item.kind === "cancel" ? "cancel" : "replace",
+    title: item.kind === "cancel" ? "" : (item.title ?? ""),
+    isChosen: item.decision === "staged",
+  };
+}
+
+/**
+ * The timeline as it will read once one choice is saved, so the review can
+ * show it the moment the owner presses (owner, 6 Nov 2026). The save then
+ * re-reads the real one, which replaces this; a refused save shows the old one
+ * again. Only the item and the card of the session it would stand in for
+ * change, by the same rule `buildProposalTimeline` applies.
+ */
+export function withChoice(
+  days: readonly ProposalTimelineDay[],
+  ordinal: number,
+  decision: PlanProposalItemDecision,
+): ProposalTimelineDay[] {
+  const chosen = days
+    .flatMap((day) => day.items)
+    .find((item) => item.ordinal === ordinal);
+  if (chosen === undefined) return [...days];
+  const targetId = chosen.replaces?.available ? chosen.replacesSessionId : null;
+
+  return days.map((day) => {
+    const items = day.items.map((item) =>
+      item.ordinal === ordinal ? { ...item, decision } : item,
+    );
+    if (
+      targetId === null ||
+      !day.planned.some((session) => session.id === targetId)
+    ) {
+      return { ...day, items };
+    }
+    const replacements = { ...day.replacements };
+    const replacement = replacementFor({ ...chosen, decision });
+    if (replacement === null) delete replacements[targetId];
+    else replacements[targetId] = replacement;
+    return { ...day, items, replacements };
+  });
 }
 
 /**
