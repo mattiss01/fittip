@@ -412,18 +412,39 @@ async function completeGuidedSetup(
   await expect(memory).toHaveCount(2);
 
   // What setup saved to the profile is on Settings, where it is changed,
-  // with the units and the time zone setup took from the browser.
+  // with the units and the time zone setup took from the browser. Settings
+  // is a list, each setting a page of its own (owner, 6 Nov 2026).
   await page.goto("/home/you/settings");
+  const settings = page.getByRole("list", { name: "Settings" });
+  for (const name of [
+    "About you",
+    "Weight history",
+    "Your sports",
+    "Training setup",
+    "Units and time zone",
+  ]) {
+    await expect(settings.getByRole("link", { name })).toBeVisible();
+  }
+  await expect(
+    page.getByRole("link", { name: "Delete account" }),
+  ).toBeVisible();
+
+  await settings.getByRole("link", { name: "About you" }).click();
   await expect(page.getByRole("textbox", { name: "Name" })).toHaveValue("Alex");
-  await expect(page.getByLabel("Units")).toHaveValue("metric");
-  await expect(page.getByLabel("Time zone")).toHaveValue("Europe/Berlin");
+  await page.goto("/home/you/settings/weight");
   await expect(page.getByText("80.5 kg")).toBeVisible();
   // Changing the units changes how a measure is shown, not what is stored.
+  await page.goto("/home/you/settings/units");
+  await expect(page.getByLabel("Units")).toHaveValue("metric");
+  await expect(page.getByLabel("Time zone")).toHaveValue("Europe/Berlin");
   await page.getByLabel("Units").selectOption("imperial");
   await page.getByRole("button", { name: "Save settings" }).click();
+  await expect(page.getByText("Your settings are saved.")).toBeVisible();
+  await page.goto("/home/you/settings/weight");
   await expect(page.getByText("177.5 lb")).toBeVisible();
   // The sports setup chose are the owner's own list, each with a colour
   // (owner, 6 Nov 2026), not setup's catalogue.
+  await page.goto("/home/you/settings/sports");
   const sports = page.getByRole("list", { name: "Your sports" });
   await expect(
     sports.getByRole("button", { name: "Rename Running", exact: true }),
@@ -431,6 +452,7 @@ async function completeGuidedSetup(
   await expect(
     sports.getByRole("button", { name: "Rename Latzug" }),
   ).toBeVisible();
+  await page.goto("/home/you/settings/training");
   await expect(page.getByLabel("Sessions a week", { exact: true })).toHaveValue(
     "3",
   );

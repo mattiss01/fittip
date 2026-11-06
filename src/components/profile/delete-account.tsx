@@ -14,7 +14,7 @@ const REFUSALS: Record<string, string> = {
 };
 
 /**
- * The last section of Settings (owner, 23 Oct 2026; ADR-039). Typing DELETE
+ * Settings' last page (owner, 23 Oct and 6 Nov 2026; ADR-039). Typing DELETE
  * enables the button; the form posts to the route that deletes the account
  * and signs out.
  */

@@ -27,10 +27,7 @@ export async function POST(request: Request) {
   const result = await deleteOwnAccount(client, form.get("confirmation"));
   if (result !== "deleted") {
     return privateRedirect(
-      new URL(
-        `/home/you/settings?delete=${result}#delete-account`,
-        request.url,
-      ),
+      new URL(`/home/you/settings/delete?delete=${result}`, request.url),
     );
   }
 

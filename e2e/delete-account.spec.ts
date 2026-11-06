@@ -36,11 +36,13 @@ test.describe("deleting an account", () => {
       await arrange(request, account);
       await signIn(page, account.email, account.password);
 
+      // The last row of Settings, a page of its own (owner, 6 Nov 2026).
       await page.goto("/home/you/settings");
-      const section = page.locator("#delete-account");
-      await section.scrollIntoViewIfNeeded();
+      await page.getByRole("link", { name: "Delete account" }).click();
+      await expect(page).toHaveURL(/\/home\/you\/settings\/delete$/);
+      const section = page.locator("main");
       await expect(
-        section.getByRole("heading", { name: "Delete account" }),
+        page.getByRole("heading", { level: 1, name: "Delete account" }),
       ).toBeVisible();
       await expectNoHorizontalOverflow(page);
 

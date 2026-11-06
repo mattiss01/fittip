@@ -304,7 +304,7 @@ export function AboutYouForm({
 
   // The units and the time zone are not asked (owner, 5 Oct 2026). Until the
   // profile has them they are the browser's: its language says the units,
-  // and its own zone is sent once. Both are changed under App settings. The
+  // and its own zone is sent once. Both are changed under Units and time zone. The
   // server renders metric and no zone; the browser corrects that on its first
   // render, before anything is typed.
   const units = useUnits(profile);
