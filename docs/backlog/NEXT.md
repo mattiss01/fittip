@@ -13,11 +13,6 @@ before any code is written.
 
 ## Now
 
-- [ ] **Change password in Settings.** Careful lane (auth). A Settings row and page.
-      - Owner, 6 Nov 2026: the current password is asked and checked server-side first,
-        then the new one twice (8 characters, as sign-up); on success the account's other
-        sessions end and this one stays, back on Settings with "Password changed".
-      - Same origin check as `/auth/delete-account`; nothing typed comes back in an address.
 - [ ] **Progress: choose several sports at once.** Owner, 6 Nov 2026: the chips switch
       between All and one sport; any set of the owner's sports should be selectable.
 
