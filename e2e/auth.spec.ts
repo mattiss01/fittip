@@ -540,18 +540,26 @@ async function completeGuidedSetup(
   await expect(
     sports.getByRole("button", { name: "Rename Latzug" }),
   ).toBeVisible();
+  // Training setup shows what setup saved as the owner's own lists, each
+  // part saved the moment it changes (owner, 6 Nov 2026).
   await page.goto("/home/you/settings/training");
-  await expect(page.getByLabel("Sessions a week", { exact: true })).toHaveValue(
-    "3",
-  );
-  await expect(page.getByRole("checkbox", { name: "Sunday" })).toBeChecked();
+  await expect(page.getByText("3 a week", { exact: true })).toBeVisible();
+  const day = (name: string) => page.getByRole("button", { name, exact: true });
+  await expect(day("Sunday")).toHaveAttribute("aria-pressed", "true");
+  await expect(day("Monday")).toHaveAttribute("aria-pressed", "false");
+  await expect(page.getByRole("button", { name: "Remove Home" })).toBeVisible();
   await expect(
-    page.getByRole("checkbox", { name: "Monday" }),
-  ).not.toBeChecked();
+    page.getByRole("button", { name: "Remove Dumbbells" }),
+  ).toBeVisible();
+  await day("Monday").click();
   await expect(
-    page.getByRole("checkbox", { name: "Home", exact: true }),
-  ).toBeChecked();
-  await expect(page.getByRole("checkbox", { name: "Dumbbells" })).toBeChecked();
+    page
+      .locator("section")
+      .filter({ hasText: "Days you can" })
+      .getByRole("status"),
+  ).toHaveText("Saved");
+  await page.reload();
+  await expect(day("Monday")).toHaveAttribute("aria-pressed", "true");
 
   // Done once, setup is not offered again.
   await page.goto("/home/you/onboarding");

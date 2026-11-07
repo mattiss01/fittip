@@ -90,52 +90,6 @@ export function TrainingQuestionForm({
   );
 }
 
-/** All four at once, on Settings. */
-export function TrainingSetupForm({
-  training,
-}: {
-  training: TrainingSetupView;
-}) {
-  const [state, action, pending] = useActionState(
-    saveTrainingSetupAction,
-    INITIAL_PROFILE_ACTION_STATE,
-  );
-  // Equipment is asked of those who train at home, here as in setup, and the
-  // place is chosen in this same form, so the form follows it.
-  const [atHome, setAtHome] = useState(() =>
-    trainsAtHome(training.trainingPlaces),
-  );
-
-  return (
-    <form action={action} className={styles.stepForm} data-training="all">
-      <ProfileNotice state={state} />
-      {(["frequency", "days", "places"] as const).map((question) => (
-        <fieldset className={styles.sportGroup} key={question}>
-          <legend>{TRAINING_QUESTIONS[question].heading}</legend>
-          <input name="part" type="hidden" value={question} />
-          <TrainingFields
-            onPlaces={question === "places" ? setAtHome : undefined}
-            question={question}
-            training={training}
-          />
-        </fieldset>
-      ))}
-      {/* Not named as a part while Home is not a place, so what was saved
-          for it is kept rather than cleared. */}
-      {atHome ? (
-        <fieldset className={styles.sportGroup}>
-          <legend>{TRAINING_QUESTIONS.equipment.heading}</legend>
-          <input name="part" type="hidden" value="equipment" />
-          <TrainingFields question="equipment" training={training} />
-        </fieldset>
-      ) : null}
-      <div className={styles.stepActions}>
-        <button disabled={pending}>Save training setup</button>
-      </div>
-    </form>
-  );
-}
-
 function TrainingFields({
   question,
   training,

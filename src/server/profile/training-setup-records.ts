@@ -27,8 +27,9 @@ export type TrainingSetupPart = (typeof TRAINING_SETUP_PARTS)[number];
 
 /**
  * The parts of the training setup a form sends, named by its `part` fields:
- * one in guided setup, all four on Settings. A part that is not named is not
- * touched, so one screen never clears another's answer.
+ * one in guided setup, and one at a time on Settings, as each changes (6 Nov
+ * 2026). A part that is not named is not touched, so one screen never clears
+ * another's answer.
  */
 export function parseTrainingSetup(
   formData: FormData,
