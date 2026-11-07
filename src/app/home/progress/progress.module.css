@@ -120,7 +120,8 @@
   white-space: nowrap;
 }
 
-.sportChip[aria-current="page"] {
+.sportChip[aria-current="page"],
+.sportChip[data-chosen] {
   background: var(--ledger-ink);
   color: var(--ledger-paper);
 }

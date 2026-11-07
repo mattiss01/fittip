@@ -37,8 +37,11 @@ type Props = {
   accountMonth: string | null;
   /** The owner's sports, most-logged first, each with its colour. */
   sports: SportColour[];
-  /** The sport being shown, or `null` for all of them. */
-  sport: string | null;
+  /**
+   * The sports being shown, in the chips' order; none for all of them
+   * (owner, 7 Nov 2026).
+   */
+  chosen: string[];
   /** Every completion in the month, most recent first. */
   entries: ProgressCompletionView[];
 };
@@ -64,8 +67,10 @@ const ACTIVITIES_ON_A_CARD = 2;
 
 /**
  * One calendar month of the owner's training record, split by sport (owner,
- * 5 Nov 2026, P1): a row of the owner's sports, what the month holds of the
- * one chosen, and its logs a week at a time, most recent first. It counts the
+ * 5 Nov 2026, P1): a row of the owner's sports, each chip adding itself to
+ * what is shown or taking itself out, so any set of them can be (7 Nov
+ * 2026); what the month holds of those, and their logs a week at a time,
+ * most recent first. It counts the
  * owner's own logs and nothing else - no target, score, streak or trend.
  */
 export function ProgressMonth({
@@ -74,13 +79,23 @@ export function ProgressMonth({
   today,
   accountMonth,
   sports,
-  sport,
+  chosen,
   entries,
 }: Props) {
   const previousMonth = shiftMonth(month, -1);
   const nextMonth = shiftMonth(month, 1);
   const shown =
-    sport === null ? entries : entries.filter((entry) => entry.sport === sport);
+    chosen.length === 0
+      ? entries
+      : entries.filter(
+          (entry) => entry.sport !== null && chosen.includes(entry.sport),
+        );
+  // A chip adds its sport to what is shown, or takes it out again, keeping
+  // the chips' own order in the address.
+  const toggled = (sport: string) =>
+    sports
+      .map((entry) => entry.sport)
+      .filter((each) => (each === sport) !== chosen.includes(each));
   const weeks = groupByWeek(shown);
   const thisWeek = mondayOf(today);
   const { startDate, endDate } = monthWindow(month);
@@ -90,7 +105,7 @@ export function ProgressMonth({
     <section
       className={styles.month}
       data-progress-month={month}
-      data-progress-sport={sport ?? "all"}
+      data-progress-sport={chosen.length === 0 ? "all" : chosen.join(",")}
       aria-labelledby="progress-month-heading"
     >
       {sports.length === 0 ? null : (
@@ -99,14 +114,28 @@ export function ProgressMonth({
             <Link
               key={chip ?? "all"}
               className={styles.sportChip}
-              href={progressHref(month, currentMonth, chip)}
-              aria-current={chip === sport ? "page" : undefined}
+              href={progressHref(
+                month,
+                currentMonth,
+                chip === null ? [] : toggled(chip),
+              )}
+              // All is the page when nothing is chosen. A chosen sport says
+              // so in words: several are shown at once, so none is "current".
+              aria-current={
+                chip === null && chosen.length === 0 ? "page" : undefined
+              }
+              data-chosen={
+                chip !== null && chosen.includes(chip) ? true : undefined
+              }
               style={chip === null ? undefined : style(chip)}
             >
               {chip === null ? null : (
                 <span className={styles.sportDot} aria-hidden="true" />
               )}
               {chip ?? "All"}
+              {chip !== null && chosen.includes(chip) ? (
+                <span className="sr-only">, shown</span>
+              ) : null}
             </Link>
           ))}
         </nav>
@@ -117,7 +146,7 @@ export function ProgressMonth({
       <header className={styles.monthHead}>
         <Link
           className={styles.step}
-          href={monthHref(previousMonth, sport)}
+          href={monthHref(previousMonth, chosen)}
           rel="prev"
           aria-label={`Previous month, ${formatMonth(previousMonth)}`}
         >
@@ -126,7 +155,7 @@ export function ProgressMonth({
         <h2 id="progress-month-heading">{formatMonth(month)}</h2>
         <Link
           className={styles.step}
-          href={monthHref(nextMonth, sport)}
+          href={monthHref(nextMonth, chosen)}
           rel="next"
           aria-label={`Next month, ${formatMonth(nextMonth)}`}
         >
@@ -136,7 +165,7 @@ export function ProgressMonth({
       {month === currentMonth ? null : (
         <Link
           className={styles.returnLink}
-          href={progressHref(currentMonth, currentMonth, sport)}
+          href={progressHref(currentMonth, currentMonth, chosen)}
         >
           Back to this month
         </Link>
@@ -148,7 +177,7 @@ export function ProgressMonth({
             month={month}
             currentMonth={currentMonth}
             sports={sports}
-            sport={sport}
+            chosen={chosen}
             entries={shown}
           />
           <ol className={styles.weeks}>
@@ -190,7 +219,7 @@ export function ProgressMonth({
           month={month}
           currentMonth={currentMonth}
           accountMonth={accountMonth}
-          sport={sport}
+          chosen={chosen}
         />
       )}
     </section>
@@ -198,31 +227,33 @@ export function ProgressMonth({
 }
 
 /**
- * What the month holds of the sport shown: the sessions that record training
- * and their time, then each outcome by count. On all sports, a bar of the
- * month's sessions by sport, and under it each sport as a link that opens it:
- * the bar's parts are a picture, too thin to tap, so the legend is the target.
+ * What the month holds of the sports shown: the sessions that record training
+ * and their time, then each outcome by count. Unless one sport is shown alone,
+ * a bar of the month's sessions by sport, and under it each sport as a link
+ * that opens it alone: the bar's parts are a picture, too thin to tap, so the
+ * legend is the target.
  */
 function MonthSummary({
   month,
   currentMonth,
   sports,
-  sport,
+  chosen,
   entries,
 }: {
   month: string;
   currentMonth: string;
   sports: SportColour[];
-  sport: string | null;
+  chosen: string[];
   entries: ProgressCompletionView[];
 }) {
   const count = countRecord(entries);
   const style = (of: string | null) => sportStyleOf(sports, of);
+  const alone = chosen.length === 1 ? chosen[0] : null;
   const bySport =
-    sport === null
+    alone === null
       ? sessionsBySport(
           entries,
-          sports.map((entry) => entry.sport),
+          chosen.length === 0 ? sports.map((entry) => entry.sport) : chosen,
         )
       : [];
 
@@ -230,9 +261,9 @@ function MonthSummary({
     <section
       className={styles.summary}
       data-progress-summary
-      aria-label={`${sport ?? "All sports"} in ${formatMonth(month)}`}
-      style={sport === null ? undefined : style(sport)}
-      data-sport={sport === null ? undefined : true}
+      aria-label={`${chosen.length === 0 ? "All sports" : AND.format(chosen)} in ${formatMonth(month)}`}
+      style={alone === null ? undefined : style(alone)}
+      data-sport={alone === null ? undefined : true}
     >
       <p className={styles.summaryLine}>
         <strong>{sessionCount(count.sessions)}</strong>
@@ -262,7 +293,7 @@ function MonthSummary({
             {bySport.map((part) => (
               <li key={part.sport}>
                 <Link
-                  href={progressHref(month, currentMonth, part.sport)}
+                  href={progressHref(month, currentMonth, [part.sport])}
                   style={style(part.sport)}
                   aria-label={`${part.sport}: ${sessionCount(part.sessions)}`}
                 >
@@ -424,22 +455,22 @@ function Entry({
  * earlier month in which they could have had one, so that month is the start
  * of the record rather than a gap in it. Any other empty month is a month in
  * which nothing was logged, which is a statement about that month alone. A
- * read that failed is neither, and is answered by `error.tsx` instead. A
- * sport shown alone says it is that sport the month has none of.
+ * read that failed is neither, and is answered by `error.tsx` instead. The
+ * sports shown say it is those the month has none of.
  */
 function EmptyMonth({
   month,
   currentMonth,
   accountMonth,
-  sport,
+  chosen,
 }: {
   month: string;
   currentMonth: string;
   accountMonth: string | null;
-  sport: string | null;
+  chosen: string[];
 }) {
   if (
-    sport === null &&
+    chosen.length === 0 &&
     accountMonth !== null &&
     month === currentMonth &&
     currentMonth <= accountMonth
@@ -454,7 +485,7 @@ function EmptyMonth({
     );
   }
 
-  const what = sport === null ? "Nothing" : `No ${sport}`;
+  const what = chosen.length === 0 ? "Nothing" : `No ${OR.format(chosen)}`;
   return (
     <div className={styles.empty} data-progress-empty="month">
       <h3 className={styles.emptyHeading}>
@@ -487,31 +518,32 @@ function ChevronIcon({ direction }: { direction: "left" | "right" }) {
 }
 
 /**
- * The month and the sport in the URL. The current month is left out, as it
- * always was, so "Back to this month" and the chips of this month read
- * `/home/progress`.
+ * The month and the sports in the URL, one `sport` each. The current month is
+ * left out, as it always was, so "Back to this month" and the chips of this
+ * month read `/home/progress`.
  */
-function progressHref(
-  month: string,
-  currentMonth: string,
-  sport: string | null,
-) {
+function progressHref(month: string, currentMonth: string, sports: string[]) {
   return month === currentMonth
-    ? withSport({}, sport)
-    : monthHref(month, sport);
+    ? withSports({}, sports)
+    : monthHref(month, sports);
 }
 
 /** The arrows always name the month they open. */
-function monthHref(month: string, sport: string | null) {
-  return withSport({ month }, sport);
+function monthHref(month: string, sports: string[]) {
+  return withSports({ month }, sports);
 }
 
-function withSport(query: Record<string, string>, sport: string | null) {
-  const search = new URLSearchParams(
-    sport === null ? query : { ...query, sport },
-  ).toString();
-  return search === "" ? "/home/progress" : `/home/progress?${search}`;
+function withSports(query: Record<string, string>, sports: string[]) {
+  const search = new URLSearchParams(query);
+  for (const sport of sports) search.append("sport", sport);
+  const text = search.toString();
+  return text === "" ? "/home/progress" : `/home/progress?${text}`;
 }
+
+/** "Running and Cycling", for what a summary is of. */
+const AND = new Intl.ListFormat("en", { type: "conjunction" });
+/** "No Running or Cycling", for a month that has none of them. */
+const OR = new Intl.ListFormat("en", { type: "disjunction" });
 
 /** A week's line: its sessions, their time, and any it could not time. */
 function weekCountText(count: RecordCount) {
