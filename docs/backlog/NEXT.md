@@ -13,9 +13,6 @@ before any code is written.
 
 ## Now
 
-- [ ] **Progress: choose several sports at once.** Owner, 6 Nov 2026: the chips switch
-      between All and one sport; any set of the owner's sports should be selectable.
-
 **Recurring sessions.** Owner, 5 Nov 2026: a one-off can become a series. Planned only;
 the owner says when to build. It reuses the repeat row and sheet (`repeat-sheet.tsx`).
 
