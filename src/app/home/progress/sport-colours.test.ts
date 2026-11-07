@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { colourOf, readRequestedSport, sportColours } from "./sport-colours";
+import { colourOf, readRequestedSports, sportColours } from "./sport-colours";
 import { UNLISTED_SPORT_COLOUR } from "@/lib/sports/sport-colours";
 
 const OWNED = [
@@ -31,11 +31,18 @@ describe("sport colours", () => {
   });
 });
 
-describe("the sport asked for", () => {
-  it("is a sport the owner has logged, or none", () => {
-    expect(readRequestedSport("Running", ["Running"])).toBe("Running");
-    expect(readRequestedSport("Curling", ["Running"])).toBeNull();
-    expect(readRequestedSport(["Running"], ["Running"])).toBeNull();
-    expect(readRequestedSport(undefined, ["Running"])).toBeNull();
+describe("the sports asked for", () => {
+  it("are sports the owner has logged, in the chips' order, or none", () => {
+    const logged = ["Running", "Cycling", "Swimming"];
+    expect(readRequestedSports("Running", logged)).toEqual(["Running"]);
+    expect(readRequestedSports(["Swimming", "Running"], logged)).toEqual([
+      "Running",
+      "Swimming",
+    ]);
+    expect(readRequestedSports(["Curling", "Cycling"], logged)).toEqual([
+      "Cycling",
+    ]);
+    expect(readRequestedSports("Curling", logged)).toEqual([]);
+    expect(readRequestedSports(undefined, logged)).toEqual([]);
   });
 });

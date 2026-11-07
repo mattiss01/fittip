@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { monthOf, monthWindow, readRequestedMonth } from "./month";
 import { ProgressMonth } from "./progress-month";
 import type { ProgressCompletionView } from "./progress-record";
-import { readRequestedSport, sportColours } from "./sport-colours";
+import { readRequestedSports, sportColours } from "./sport-colours";
 import { startTimeOf } from "./start-time-of";
 import styles from "./progress.module.css";
 
@@ -151,7 +151,7 @@ async function renderMonth({
     sportUse.map(({ sport }) => sport),
     owned,
   );
-  const sport = readRequestedSport(
+  const chosen = readRequestedSports(
     requestedSport,
     sports.map((entry) => entry.sport),
   );
@@ -163,7 +163,7 @@ async function renderMonth({
       today={today}
       accountMonth={accountMonth(createdAt, timezoneName)}
       sports={sports}
-      sport={sport}
+      chosen={chosen}
       entries={completions.map(toCompletionView)}
     />
   );

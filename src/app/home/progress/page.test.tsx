@@ -287,11 +287,65 @@ describe("Progress", () => {
     expect(
       screen.getByRole("link", { name: /Previous month/ }).getAttribute("href"),
     ).toMatch(/^\/home\/progress\?month=\d{4}-\d{2}&sport=Swimming$/);
+    // A chosen chip says so in words; none is "current" but All's page.
+    const swimmingChip = screen.getByRole("link", { name: "Swimming, shown" });
+    expect(swimmingChip.getAttribute("aria-current")).toBeNull();
+    // Tapped again, it takes itself out: every sport again.
+    expect(swimmingChip.getAttribute("href")).toBe("/home/progress");
+  });
+
+  it("shows any set of sports, each chip adding or taking itself out", async () => {
+    sportUse.mockResolvedValue([
+      { sport: "Running", logs: 9 },
+      { sport: "Cycling", logs: 4 },
+      { sport: "Swimming", logs: 2 },
+    ]);
+    listCompletions.mockResolvedValue([
+      completion(),
+      swim(),
+      {
+        ...completion(),
+        id: "7e150000-0000-4000-8000-000000000021",
+        sport: "Cycling",
+      },
+    ]);
+
+    render(
+      await ProgressPage({
+        searchParams: Promise.resolve({ sport: ["Swimming", "Running"] }),
+      }),
+    );
+
     expect(
-      screen
-        .getByRole("link", { name: "Swimming" })
-        .getAttribute("aria-current"),
-    ).toBe("page");
+      document
+        .querySelector("[data-progress-month]")
+        ?.getAttribute("data-progress-sport"),
+    ).toBe("Running,Swimming");
+    expect(document.querySelectorAll("[data-progress-entry]")).toHaveLength(2);
+    const href = (name: string) =>
+      within(screen.getByRole("navigation", { name: "Sports" }))
+        .getByRole("link", { name })
+        .getAttribute("href");
+    expect(href("Cycling")).toBe(
+      "/home/progress?sport=Running&sport=Cycling&sport=Swimming",
+    );
+    expect(href("Running, shown")).toBe("/home/progress?sport=Swimming");
+    expect(href("All")).toBe("/home/progress");
+    const summary = document.querySelector(
+      "[data-progress-summary]",
+    ) as HTMLElement;
+    expect(summary.getAttribute("aria-label")).toMatch(
+      /^Running and Swimming in /,
+    );
+    // The bar covers the sports shown, each opening alone.
+    expect(
+      within(summary)
+        .getByRole("link", { name: "Swimming: 1 session" })
+        .getAttribute("href"),
+    ).toBe("/home/progress?sport=Swimming");
+    expect(
+      within(summary).queryByRole("link", { name: /^Cycling/ }),
+    ).toBeNull();
   });
 
   it("shows every sport for a sport the owner has never logged", async () => {

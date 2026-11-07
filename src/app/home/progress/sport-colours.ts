@@ -27,15 +27,17 @@ export function sportColours(
 }
 
 /**
- * A sport the owner asked for, or all of them. Only a sport the owner has
- * logged is one: anything else in the URL is a stale or mistyped link, and
- * falls back to the whole month rather than to an empty one.
+ * The sports the owner asked for, in the order the chips show them; none for
+ * all of them (owner, 7 Nov 2026: any set, not one or all). Only a sport the
+ * owner has logged is one: anything else in the URL is a stale or mistyped
+ * link, and is passed over rather than emptying the month.
  */
-export function readRequestedSport(
+export function readRequestedSports(
   value: string | string[] | undefined,
   sports: string[],
-): string | null {
-  return typeof value === "string" && sports.includes(value) ? value : null;
+): string[] {
+  const asked = typeof value === "string" ? [value] : (value ?? []);
+  return sports.filter((sport) => asked.includes(sport));
 }
 
 export function colourOf(colours: SportColour[], sport: string | null) {
