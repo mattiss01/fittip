@@ -212,6 +212,83 @@ test.describe("public account authentication", () => {
       await elsewhere.close();
     }
   });
+
+  test("changes the password from Settings, asking for the current one first", async ({
+    page,
+    request,
+  }) => {
+    const email = `fittip-change-${Date.now()}@example.test`;
+    createdEmails.push(email);
+    const password = `Local-${crypto.randomUUID()}-9`;
+    const newPassword = `Changed-${crypto.randomUUID()}-5`;
+    await page.setViewportSize({ width: 390, height: 844 });
+
+    await page.goto("/signup");
+    await page.getByLabel("Email").fill(email);
+    await page.getByLabel("Password", { exact: true }).fill(password);
+    await page.getByLabel("Confirm password", { exact: true }).fill(password);
+    await page.getByRole("button", { name: "Create account" }).click();
+    await expect(page.getByRole("status")).toContainText("Check your email");
+    await page.goto(await pollForMailUrl(request, email, CONFIRMATION_LINK));
+    await expect(page).toHaveURL(/\/\?auth=confirmed$/);
+    const signIn = async (secret: string) => {
+      await page.getByLabel("Email").fill(email);
+      await page.getByLabel("Password", { exact: true }).fill(secret);
+      await page.getByRole("button", { name: "Sign in" }).click();
+    };
+    await signIn(password);
+    await expect(page).toHaveURL(/\/home\//);
+
+    // A row of Settings' own, above Delete account (owner, 6 Nov 2026).
+    await page.goto("/home/you/settings");
+    await page.getByRole("link", { name: "Change password" }).click();
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Change password" }),
+    ).toBeVisible();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth > window.innerWidth,
+      ),
+    ).toBe(false);
+
+    const change = async (current: string) => {
+      await page.getByLabel("Current password", { exact: true }).fill(current);
+      await page.getByLabel("New password", { exact: true }).fill(newPassword);
+      await page
+        .getByLabel("Confirm new password", { exact: true })
+        .fill(newPassword);
+      await page.getByRole("button", { name: "Change password" }).click();
+    };
+
+    // The wrong current password changes nothing, and nothing typed comes
+    // back in the address.
+    await change(`${password}-wrong`);
+    await expect(page).toHaveURL(
+      /\/home\/you\/settings\/password\?error=current$/,
+    );
+    // Within the page: Next.js keeps its own empty role="alert" announcer.
+    await expect(page.locator("main").getByRole("alert")).toContainText(
+      "That is not your current password",
+    );
+
+    // The right one changes it; this device stays signed in, on Settings.
+    await change(password);
+    await expect(page).toHaveURL(/\/home\/you\/settings\?password=changed$/);
+    await expect(page.locator("main").getByRole("status")).toContainText(
+      "Password changed",
+    );
+
+    // The old password no longer signs in and the new one does.
+    await page.getByRole("link", { name: "Back to You" }).click();
+    await page.getByRole("button", { name: "Sign out" }).click();
+    await expect(page).toHaveURL(/\/(\?.*)?$/);
+    await signIn(password);
+    await expect(page.locator(".form-message.error")).toContainText(
+      "We could not sign you in",
+    );
+    await signIn(newPassword);
+    await expect(page).toHaveURL(/\/home\//);
+  });
 });
 
 async function completeGuidedSetup(
