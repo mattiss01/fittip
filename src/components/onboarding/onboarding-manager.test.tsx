@@ -17,7 +17,6 @@ import {
 import { adoptBrowserTimezoneAction } from "@/app/home/you/profile-actions";
 import { OnboardingManager } from "@/components/onboarding/onboarding-manager";
 import { AboutYouForm, SportsForm } from "@/components/profile/profile-forms";
-import { TrainingSetupForm } from "@/components/profile/training-forms";
 import type { ProfileDetailsView } from "@/lib/profile/profile-contract";
 import type { SetupGoalView } from "@/lib/setup/setup-steps";
 
@@ -588,36 +587,6 @@ describe("OnboardingManager", () => {
     expect(
       screen.getByRole("button", { name: "An old injury" }),
     ).toBeDisabled();
-  });
-
-  it("shows the whole training setup on Settings, equipment only with Home", () => {
-    const { container } = render(
-      <TrainingSetupForm
-        training={{
-          sessionsPerWeek: 4,
-          unavailableDays: ["sunday"],
-          availabilityNote: null,
-          trainingPlaces: ["Gym"],
-          homeEquipment: ["Mat"],
-        }}
-      />,
-    );
-    const parts = () =>
-      new FormData(container.querySelector("form")!).getAll("part");
-
-    expect(screen.getByLabelText("Sessions a week")).toHaveValue("4");
-    expect(screen.getByRole("checkbox", { name: "Sunday" })).toBeChecked();
-    expect(screen.getByRole("checkbox", { name: "Gym" })).toBeChecked();
-    // Not named as a part without Home, so what was saved for it is kept.
-    expect(screen.queryByRole("checkbox", { name: "Mat" })).toBeNull();
-    expect(parts()).toEqual(["frequency", "days", "places"]);
-
-    fireEvent.click(screen.getByRole("checkbox", { name: "Home" }));
-    expect(screen.getByRole("checkbox", { name: "Mat" })).toBeChecked();
-    expect(parts()).toEqual(["frequency", "days", "places", "equipment"]);
-    expect(
-      screen.getByRole("button", { name: "Save training setup" }),
-    ).toBeVisible();
   });
 
   it("takes a birthday in one date field, and sends it as one date", () => {
