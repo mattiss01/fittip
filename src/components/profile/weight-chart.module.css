@@ -1,0 +1,67 @@
+/* One series: a 2px line in the app's green, its days as dots ringed by the
+   card's paper, a faint top and bottom rule, and the readout above in ink. */
+
+.figure {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+}
+
+.readout {
+  min-height: 1.4rem;
+  margin: 0;
+  color: var(--ledger-ink);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.chart {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  touch-action: pan-y;
+}
+
+.grid {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.axis,
+.axisStart,
+.axisEnd {
+  fill: var(--ledger-muted);
+  font: 500 10px var(--font-mono);
+}
+
+.axis {
+  text-anchor: end;
+}
+
+.axisEnd {
+  text-anchor: end;
+}
+
+.line {
+  fill: none;
+  stroke: var(--pine-soft);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.dot {
+  fill: var(--pine-soft);
+  stroke: var(--ledger-paper);
+  stroke-width: 2;
+}
+
+.dot[data-active] {
+  fill: var(--ember);
+}
+
+.cross {
+  stroke: var(--ledger-muted);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}

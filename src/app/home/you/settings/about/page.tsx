@@ -8,7 +8,11 @@ export default async function AboutYouPage() {
   const details = await readOwnProfile((profiles) => profiles.getDetails());
   return (
     <SettingPage title="About you">
-      <AboutYouForm profile={details} submitLabel="Save" />
+      <AboutYouForm
+        profile={details}
+        submitLabel="Save"
+        weightHistoryHref="/home/you/settings/about/weight"
+      />
     </SettingPage>
   );
 }

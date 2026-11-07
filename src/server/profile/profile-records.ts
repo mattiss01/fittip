@@ -160,6 +160,30 @@ function height(formData: FormData, units: UnitsSystem): number | null {
   return feetAndInchesToCm(feet ?? 0, inches ?? 0);
 }
 
+/**
+ * A weight added on its history page (owner, 6 Nov 2026): its day, from the
+ * first of 1900 to the owner's today, and the weight in the units they read,
+ * stored in kilograms. A day that already has one is corrected by it.
+ */
+export function parseWeightEntry(
+  formData: FormData,
+  units: UnitsSystem,
+  today: string,
+): { measuredOn: string; weightKg: number } {
+  const measuredOn = formData.get("measuredOn");
+  if (
+    typeof measuredOn !== "string" ||
+    !isIsoDate(measuredOn) ||
+    measuredOn < EARLIEST_BIRTH_DATE ||
+    measuredOn > today
+  ) {
+    throw new ProfileDetailsValidationError();
+  }
+  const weightKg = within(weight(formData, units), WEIGHT_KG_RANGE);
+  if (weightKg === null) throw new ProfileDetailsValidationError();
+  return { measuredOn, weightKg };
+}
+
 function weight(formData: FormData, units: UnitsSystem): number | null {
   if (units === "metric") {
     const kg = number(formData, "weightKg");

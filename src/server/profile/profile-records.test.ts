@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   parseProfileDetails,
   parseProfileSports,
+  parseWeightEntry,
   ProfileDetailsValidationError,
 } from "./profile-records";
 
@@ -170,5 +171,42 @@ describe("profile sports", () => {
         sports(...Array.from({ length: 101 }, (_, index) => `Sport ${index}`)),
       ),
     ).toThrow(ProfileDetailsValidationError);
+  });
+});
+
+describe("a weight added on its history page", () => {
+  const entry = (values: Record<string, string>) => {
+    const form = new FormData();
+    for (const [key, value] of Object.entries(values)) form.set(key, value);
+    return form;
+  };
+
+  it("keeps the day and the weight in kilograms, a comma read as a point", () => {
+    expect(
+      parseWeightEntry(
+        entry({ measuredOn: "2026-10-01", weightKg: "80,5" }),
+        "metric",
+        TODAY,
+      ),
+    ).toEqual({ measuredOn: "2026-10-01", weightKg: 80.5 });
+    expect(
+      parseWeightEntry(
+        entry({ measuredOn: TODAY, weightLb: "176" }),
+        "imperial",
+        TODAY,
+      ),
+    ).toEqual({ measuredOn: TODAY, weightKg: 79.83 });
+  });
+
+  it.each([
+    ["a day after today", { measuredOn: "2026-10-06", weightKg: "80" }],
+    ["a day that is not one", { measuredOn: "2026-02-30", weightKg: "80" }],
+    ["a day before 1900", { measuredOn: "1899-12-31", weightKg: "80" }],
+    ["no weight", { measuredOn: TODAY, weightKg: "" }],
+    ["a weight out of range", { measuredOn: TODAY, weightKg: "19" }],
+  ])("refuses %s", (_, values) => {
+    expect(() => parseWeightEntry(entry(values), "metric", TODAY)).toThrow(
+      ProfileDetailsValidationError,
+    );
   });
 });

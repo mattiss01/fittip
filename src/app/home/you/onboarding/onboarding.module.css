@@ -501,6 +501,36 @@ main.setupPage > header h1 {
   letter-spacing: -0.03em;
 }
 
+/* About you's weight in Settings: the latest one, opening its history. */
+.weightRow {
+  min-height: 3rem;
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-control);
+  background: white;
+  color: var(--ledger-ink);
+  text-decoration: none;
+}
+
+.weightRow span:first-child {
+  color: var(--ledger-muted);
+  font: var(--font-field-label);
+}
+
+.weightRow span:last-child {
+  color: var(--ember-dark);
+  font-weight: 700;
+}
+
+.weightRow:focus-visible {
+  outline: 3px solid var(--ledger-ink);
+  outline-offset: 2px;
+}
+
 .weightList {
   display: grid;
   margin: 0;

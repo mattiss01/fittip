@@ -3,6 +3,7 @@
 import {
   useActionState,
   useEffect,
+  useId,
   useRef,
   useState,
   useSyncExternalStore,
@@ -11,12 +12,15 @@ import {
   type ReactNode,
 } from "react";
 
+import Link from "next/link";
+
 import styles from "@/app/home/you/onboarding/onboarding.module.css";
 import {
   INITIAL_PROFILE_ACTION_STATE,
   type ProfileActionState,
 } from "@/app/home/you/profile-action-state";
 import {
+  addWeightEntryAction,
   deleteWeightEntryAction,
   saveAppSettingsAction,
   saveProfileDetailsAction,
@@ -32,6 +36,7 @@ import {
   kgToPounds,
   unitsForLocale,
   type UnitsSystem,
+  formatWeight,
 } from "@/lib/profile/body-measures";
 import {
   GENDER_LABELS,
@@ -248,9 +253,16 @@ export function AboutYouForm({
   onQuestion,
   onSaved,
   onLater,
+  weightHistoryHref,
 }: {
   profile: ProfileDetailsView;
   submitLabel: string;
+  /**
+   * Settings only: the weight is a row showing the latest one, opening its
+   * history, where weights are added and corrected (owner, 6 Nov 2026).
+   * Setup still asks for it as a field.
+   */
+  weightHistoryHref?: string;
   /**
    * Setup shows one question, by its place in `ABOUT_YOU_QUESTIONS`, and
    * says which one it is on; each Next saves the form as it stands, so
@@ -513,7 +525,19 @@ export function AboutYouForm({
             {fields[2]}
           </div>
           {fields[3]}
-          {fields[4]}
+          {weightHistoryHref === undefined ? (
+            fields[4]
+          ) : (
+            <Link className={styles.weightRow} href={weightHistoryHref}>
+              <span>Weight</span>
+              <strong>
+                {profile.latestWeightKg === null
+                  ? "Not recorded"
+                  : formatWeight(profile.latestWeightKg, units)}
+              </strong>
+              <span aria-hidden="true">History ›</span>
+            </Link>
+          )}
         </>
       )}
       <div className={styles.stepActions}>
@@ -782,6 +806,73 @@ export function SportsForm({
   );
 }
 
+/**
+ * Adding a weight on its history page (owner, 6 Nov 2026): today's by
+ * default, or a day before it, in the units the owner reads. A day that has
+ * one already is corrected by it, so this is also how a weight is updated.
+ */
+export function AddWeightForm({
+  today,
+  unitsSystem,
+}: {
+  today: string;
+  unitsSystem: UnitsSystem;
+}) {
+  const [state, action, pending] = useActionState(
+    addWeightEntryAction,
+    INITIAL_PROFILE_ACTION_STATE,
+  );
+  // Sent by hand, as About you is: a form's own action empties its fields
+  // once it has run, which would take a refused weight with it. Only a saved
+  // one clears the weight; the day stays for the next.
+  const [sending, startSending] = useTransition();
+  const [weight, setWeight] = useState("");
+  const [cleared, setCleared] = useState(state.submission);
+  if (state.status === "saved" && state.submission !== cleared) {
+    setCleared(state.submission);
+    setWeight("");
+  }
+  const send = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const entry = new FormData(event.currentTarget);
+    startSending(() => action(entry));
+  };
+  const hintId = useId();
+  const metric = unitsSystem === "metric";
+  return (
+    <form className={styles.stepForm} data-add-weight onSubmit={send}>
+      <ProfileNotice state={state} />
+      <div className={styles.fieldGrid}>
+        <DateField
+          initial={today}
+          label="Day"
+          max={today}
+          min="1900-01-01"
+          name="measuredOn"
+          required
+        />
+        <label>
+          {metric ? "Weight in kg" : "Weight in lb"}
+          <input
+            aria-describedby={hintId}
+            inputMode="decimal"
+            name={metric ? "weightKg" : "weightLb"}
+            onChange={(event) => setWeight(event.target.value)}
+            required
+            value={weight}
+          />
+        </label>
+      </div>
+      <small id={hintId}>
+        A day that has a weight already is corrected by this one.
+      </small>
+      <div className={styles.stepActions}>
+        <button disabled={pending || sending}>Save weight</button>
+      </div>
+    </form>
+  );
+}
+
 export function WeightHistory({
   entries,
   unitsSystem,
@@ -800,7 +891,7 @@ export function WeightHistory({
         {/* Removing the last one lands here, and still says it was removed. */}
         <ProfileNotice state={state} />
         <p className={styles.explainer}>
-          No weight recorded yet. A weight saved above is kept here with its
+          No weight recorded yet. A weight added above is kept here with its
           day.
         </p>
       </>
@@ -814,11 +905,7 @@ export function WeightHistory({
         {entries.map((entry) => (
           <li key={entry.measuredOn}>
             <span>{formatRoadmapDate(entry.measuredOn)}</span>
-            <strong>
-              {unitsSystem === "metric"
-                ? `${entry.weightKg} kg`
-                : `${kgToPounds(entry.weightKg)} lb`}
-            </strong>
+            <strong>{formatWeight(entry.weightKg, unitsSystem)}</strong>
             <form action={action}>
               <input name="measuredOn" type="hidden" value={entry.measuredOn} />
               <button
