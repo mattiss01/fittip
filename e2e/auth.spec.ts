@@ -553,10 +553,9 @@ async function completeGuidedSetup(
   ).toBeVisible();
   await day("Monday").click();
   await expect(
-    page
-      .locator("section")
-      .filter({ hasText: "Days you can" })
-      .getByRole("status"),
+    // The part itself, a region named by its heading: the card around all
+    // four parts is a section too.
+    page.getByRole("region", { name: /^Days you can/ }).getByRole("status"),
   ).toHaveText("Saved");
   await page.reload();
   await expect(day("Monday")).toHaveAttribute("aria-pressed", "true");
