@@ -44,7 +44,9 @@ export const COACH_AI_PROMPT_VERSIONS = {
   // reason are read, and the summary becomes that note.
   // 29 Oct 2026: a reason says why the activity, not why its numbers, so
   // it stays true when the owner changes them.
-  fill_session_activities: "session-activities-v1.4-2026-10-29",
+  // 9 Nov 2026: the list should match the session's length, not only fit
+  // inside it (owner: a 35-minute session got far less).
+  fill_session_activities: "session-activities-v1.5-2026-11-09",
 } as const satisfies Record<CoachAIOperation, string>;
 
 /** The two runtimes ADR-006 and M0-06A permit. Nothing else may ever call out. */
