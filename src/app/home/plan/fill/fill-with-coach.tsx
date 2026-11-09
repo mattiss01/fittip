@@ -352,7 +352,12 @@ export function FillWithCoach({
         <input key={id} type="hidden" name={PROPOSAL_FIELD} value={id} />
       ))}
 
-      {children}
+      {/* The list is shown once while a suggestion is open: under "Currently
+          planned" in the box, not also above it (owner, 9 Nov 2026). Hidden,
+          not removed, so a save past the suggestion still sends it. */}
+      <div hidden={open !== null} data-fill-list>
+        {children}
+      </div>
 
       {open === null ? (
         <section className={styles.ask} aria-label={COPY.askLabel}>
@@ -640,7 +645,8 @@ const COPY = {
     "No coaching provider is configured, so the built-in example coach wrote this. It is not real coaching.",
   safetyLabel: "Safety",
   draftLabel: "Suggested activities",
-  draftHint: "Your activity list above does not change until you press Accept.",
+  draftHint:
+    "Your activity list does not change until you press Accept. It is back once you accept or dismiss this.",
   remove: "Remove",
   undo: "Undo",
   removedDetail: "Removed",

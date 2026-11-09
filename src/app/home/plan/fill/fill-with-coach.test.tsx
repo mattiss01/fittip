@@ -151,6 +151,16 @@ describe("FillWithCoach", () => {
     );
   });
 
+  it("hides the activity list while a suggestion is open, and shows it again once answered", async () => {
+    setup(proposal("Goblet squat"));
+    expect(screen.getByText("editor")).not.toBeVisible();
+
+    await act(async () => {
+      fireEvent.click(within(box()).getByRole("button", { name: "Dismiss" }));
+    });
+    expect(screen.getByText("editor")).toBeVisible();
+  });
+
   it("hands what was asked and the summary over as the coach's note on Accept (ADR-040)", () => {
     const open = {
       ...proposal("Bench press"),
