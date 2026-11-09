@@ -50,9 +50,38 @@
   overflow-wrap: anywhere;
 }
 
-/* The coach's reason, under the target (ADR-040). */
+/* How to do it, under the target: what the card is read for while training. */
+.instructions {
+  margin: 0.2rem 0 0;
+  font: 0.86rem/1.45 var(--font-sans);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+/* The coach's reason (ADR-040), folded so it does not crowd the instructions. */
 .why {
   color: var(--pine-soft);
-  font: italic 0.8rem/1.4 var(--font-sans);
+  font: 0.8rem/1.4 var(--font-sans);
   overflow-wrap: anywhere;
+}
+
+/* Its own marker kept, so it reads as something that opens; padded to a
+   touch-sized target around a short word. */
+.why summary {
+  width: fit-content;
+  min-width: 2.75rem;
+  padding: 0.7rem 1rem 0.7rem 0;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.why summary:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.why p {
+  margin: 0;
+  font-style: italic;
+  white-space: pre-line;
 }

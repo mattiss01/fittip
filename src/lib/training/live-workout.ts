@@ -387,3 +387,29 @@ export function toLoggedActivities(state: LiveWorkoutState): {
       };
     });
 }
+
+/**
+ * The planned session's instructions for the live rows that answer it, by
+ * planned position (owner, 9 Nov 2026). Read from the plan as it is now, not
+ * stored in the workout, so a row whose position now holds another activity
+ * (the plan edited after the start) gets none rather than another's.
+ */
+export function plannedInstructions(
+  rows: readonly Pick<LiveActivity, "plannedPosition" | "name">[],
+  planned: readonly {
+    position: number;
+    name: string;
+    instructions?: string | null;
+  }[],
+): Record<number, string> {
+  const byPosition = new Map(planned.map((entry) => [entry.position, entry]));
+  const instructions: Record<number, string> = {};
+  for (const row of rows) {
+    if (row.plannedPosition === null) continue;
+    const entry = byPosition.get(row.plannedPosition);
+    if (entry?.instructions && entry.name === row.name) {
+      instructions[row.plannedPosition] = entry.instructions;
+    }
+  }
+  return instructions;
+}
