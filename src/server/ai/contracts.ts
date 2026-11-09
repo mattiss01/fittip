@@ -49,7 +49,10 @@ export const COACH_AI_PROMPT_VERSIONS = {
   // 9 Nov 2026, later: the athlete's note comes before the intent, the
   // coach's note, a saved session, the roadmap phase and the coach's own
   // caution; only safety comes before it (owner: too conservative).
-  fill_session_activities: "session-activities-v1.6-2026-11-09",
+  // 9 Nov 2026, last: the coach adds up the minutes before it answers, a
+  // warm-up takes at most five, and a hard note goes past small steps
+  // (one paid call: about 45 of 70 minutes, 8 of warm-up, +1 set each).
+  fill_session_activities: "session-activities-v1.7-2026-11-09",
 } as const satisfies Record<CoachAIOperation, string>;
 
 /** The two runtimes ADR-006 and M0-06A permit. Nothing else may ever call out. */
