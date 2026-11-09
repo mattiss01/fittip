@@ -131,13 +131,14 @@ describe("what every prompt says about the athlete's data (ADR-023)", () => {
     // 14,954 until the safety rule for a health condition (21 Oct 2026);
     // 14,991 until the coach's note and each activity's reason (ADR-040);
     // 16,091 until a reason was asked to hold whatever the numbers; 16,129
-    // until the athlete's note came first (9 Nov 2026).
+    // until the athlete's note came first (9 Nov 2026); 16,229 until the
+    // coach was asked to add up the minutes (same day).
     expect(
       tokens(
         "fill_session_activities",
         SESSION_ACTIVITIES_STATIC_PREFIX_BUDGET,
       ),
-    ).toBe(16_229);
+    ).toBe(16_329);
   });
 });
 
@@ -504,8 +505,12 @@ describe("the plan response grammar", () => {
  * and with the athlete's note coming first (9 Nov 2026):
  *
  *   9,400 + 64 + 55,450 = 64,914   ceil(64,914 / 4) = 16,229  vs  20,000
+ *
+ * and with the coach adding up the minutes before it answers (9 Nov 2026):
+ *
+ *   9,800 + 64 + 55,450 = 65,314   ceil(65,314 / 4) = 16,329  vs  20,000
  */
-const SESSION_ACTIVITIES_STATIC_PREFIX_BUDGET = 9_400;
+const SESSION_ACTIVITIES_STATIC_PREFIX_BUDGET = 9_800;
 
 describe("the session activities prompt", () => {
   it("says what ADR-023 gave a fill to read, and how to read it", () => {
@@ -526,6 +531,8 @@ describe("the session activities prompt", () => {
     expect(prefix).toContain(
       "A rationale says why this activity belongs in this session, not why its sets, reps, load or time",
     );
+    // Owner, 9 Nov 2026: a fill came back at about 45 of 70 minutes.
+    expect(prefix).toContain("Before you answer, add up the minutes");
     // Owner, 9 Nov 2026: the note wins over everything but safety.
     expect(prefix).toContain(
       'where it disagrees with the intent, "coachNote", a saved session, "roadmapPhase" or your own caution, follow the note',

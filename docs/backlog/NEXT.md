@@ -71,6 +71,16 @@ Ordered by dependency. A lane is named where it is not the build lane.
 
 **Coach and records.**
 
+- [~] **A fill adds up its minutes.** Careful lane: the fill prompt. One paid call on
+      Lena's 70 min Kraft B with "really fit, hard, pull focus" (9 Nov 2026, prompt v1.6) used
+      her results and kept her knee and shoulder rules, but came to about 45 minutes, an
+      8 minute warm-up, and one extra set per exercise at the same numbers.
+      - Owner: try wording before minutes per activity in the answer (a schema change).
+      - Outcome: the coach adds up sets, reps or time and rest before answering and adds work
+        if short; a warm-up takes at most five minutes; small steps are the default and a
+        note asking for more goes past them. Prompt v1.7, budget 9,800 (worst case 16,329
+        of 20,000 tokens). No migration. Judged on one paid call on the owner's approval.
+
 - [ ] **A fill's sources are recorded and never checked.** A suggestion names the
       logs, library entries and saved sessions it was built from, and since ADR-023
       the logs whose flags it was sent. Nothing compares them, so a flag corrected
