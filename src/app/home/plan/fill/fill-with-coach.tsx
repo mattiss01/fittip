@@ -121,7 +121,11 @@ export function FillWithCoach({
   // arrive after this form was built: a save remounts the form in the same
   // commit as its result, which may be before the refreshed Plan reaches it.
   // A suggestion asked for here is left alone — the refreshed read returns
-  // the same one. Adjusted during render, like the Plan's other reset keys.
+  // the same one — and so is one accepted here: the ask's refresh can land
+  // after Accept on a slow phone, and reopened the box until a reload. A
+  // remount after a refused save starts with nothing accepted, so it still
+  // gets the suggestion back. Adjusted during render, like the Plan's other
+  // reset keys.
   const incomingId = initiallyOpen?.proposalId ?? null;
   const [seenIncoming, setSeenIncoming] = useState(incomingId);
   if (incomingId !== seenIncoming) {
@@ -129,7 +133,8 @@ export function FillWithCoach({
     const next = fromPlan(initiallyOpen);
     if (
       next !== null &&
-      open?.proposal.proposalId !== next.proposal.proposalId
+      open?.proposal.proposalId !== next.proposal.proposalId &&
+      !accepted.includes(next.proposal.proposalId)
     ) {
       setOpen(next);
     } else if (next === null && open?.fromPlan) {

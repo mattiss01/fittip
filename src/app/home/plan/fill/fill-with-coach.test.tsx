@@ -316,6 +316,23 @@ describe("FillWithCoach", () => {
     expect(within(box()).getByText("Step-up")).toBeTruthy();
   });
 
+  it("keeps a suggestion accepted here closed when the Plan read delivers it late", async () => {
+    const asked = proposal("Goblet squat");
+    fillMock.mockResolvedValueOnce({ status: "proposal", proposal: asked });
+    const { rerender, container } = setup();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Fill with Coach" }));
+    });
+    fireEvent.click(within(box()).getByRole("button", { name: "Accept" }));
+
+    // The ask's own refresh of the page, arriving after Accept.
+    rerender(asked);
+    expect(screen.queryByRole("region", { name: "Coach's suggestion" })).toBe(
+      null,
+    );
+    expect(acceptedIds(container)).toEqual([asked.proposalId]);
+  });
+
   describe("asking again by itself", () => {
     beforeEach(() => {
       vi.useFakeTimers();
