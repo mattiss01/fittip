@@ -3,7 +3,9 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import {
+  currentActionUrl,
   latestActionResponseAt,
+  OWN_REQUEST_SLACK_MS,
   RECOVERY_NOTICE_MS,
   watchTransition,
   WATCH_INTERVAL_MS,
@@ -26,22 +28,18 @@ export function useSeriesMutationStall(
     key: string;
     verdict: MutationStall;
   } | null>(null);
-  const respondedAt = useRef<number | null>(null);
+  // Every reply to a write on this page, with when its request started, so
+  // a write can tell its own reply from an earlier write's.
+  const responses = useRef<PerformanceResourceTiming[]>([]);
   const consumedAt = useRef<number | null>(null);
   const key = submission + ":" + pending;
 
   useEffect(() => {
     if (typeof PerformanceObserver === "undefined") return;
-    const { origin, pathname, search } = window.location;
-    const actionUrl = origin + pathname + search;
+    const actionUrl = currentActionUrl();
     const observer = new PerformanceObserver((list) => {
-      const seen = latestActionResponseAt(
-        list.getEntries() as PerformanceResourceTiming[],
-        actionUrl,
-      );
-      if (seen === null) return;
-      if (respondedAt.current === null || seen > respondedAt.current) {
-        respondedAt.current = seen;
+      for (const entry of list.getEntries() as PerformanceResourceTiming[]) {
+        if (entry.name === actionUrl) responses.current.push(entry);
       }
     });
     observer.observe({ type: "resource", buffered: true });
@@ -52,11 +50,19 @@ export function useSeriesMutationStall(
     if (!pending) return;
     markRecovered(recoveryFlag, false);
     const submittedAt = performance.now();
+    const actionUrl = currentActionUrl();
+    // This write's own reply: one to a request started since its submit.
+    const ownReply = () =>
+      latestActionResponseAt(
+        responses.current,
+        actionUrl,
+        submittedAt - OWN_REQUEST_SLACK_MS,
+      );
     let reload = 0;
     const interval = window.setInterval(() => {
       const verdict = watchTransition({
         submittedAt,
-        respondedAt: respondedAt.current,
+        respondedAt: ownReply(),
         consumedAt: consumedAt.current,
         now: performance.now(),
       });
@@ -74,7 +80,7 @@ export function useSeriesMutationStall(
     return () => {
       window.clearInterval(interval);
       window.clearTimeout(reload);
-      consumedAt.current = respondedAt.current;
+      consumedAt.current = ownReply();
     };
   }, [key, pending, recoveryFlag]);
 
