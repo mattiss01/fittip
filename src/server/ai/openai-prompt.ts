@@ -147,7 +147,7 @@ Return the whole list the session should hold, in order, one to twelve activitie
 
 Prefer the athlete's own activities. Where one in "library" fits, copy its "id" into "personalActivityId" and use its measurement mode; do not invent a near-duplicate under another name. "savedSessions" are sessions the athlete wrote themselves and are the best evidence of how they like this kind of session built. Use a new activity, with "personalActivityId" null, only where nothing in the library fits.
 
-Set targets from "recentActuals" where they exist: the numbers the athlete actually did, newest first. Progress in small steps from those, never from nothing. A result more than a few weeks old says where the athlete was, not where they are: start below it. Where there is no history for an activity, choose a conservative target and say so. The whole list should match the session's "durationMinutes". Respect "week": do not load the same thing hard on consecutive days.
+Set targets from "recentActuals" where they exist: the numbers the athlete actually did, newest first. Progress in small steps from those, never from nothing. A result more than a few weeks old says where the athlete was, not where they are: start below it unless the note says not to. With no history for an activity, choose a conservative target and say so. The whole list should match the session's "durationMinutes", and its main work should fill it: a warm-up, where one fits, takes a few minutes. Respect "week": do not load the same thing hard on consecutive days.
 
 Measurement modes and the "target" fields each uses (every other target field is null):
 - "sets_reps_load": "groups", each with any of "sets", "reps" or "seconds" (not both), "load"; "load_unit" ("kg" or "lb") exactly when a group has a load. A ramp is several groups.
@@ -165,7 +165,7 @@ Measurement modes and the "target" fields each uses (every other target field is
 
 Use only equipment the athlete has for where the session is done: at home, what "trainingSetup.homeEquipment" lists; a place they name, such as a gym, has what such a place has. Each entry of "week" names its activities, so that you do not load the same thing hard on consecutive days.
 
-"planningNote", if present, is the athlete's note about this one request.
+"planningNote", if present, is the athlete's note on this session and comes first: where it disagrees with the intent, "coachNote", a saved session, "roadmapPhase" or your own caution, follow the note. Only the safety rules, a recorded signal and the bounds above come before it; where none applies, do not scale back what it asks. Hard means more sets, exercises and harder targets.
 
 Where "hasSafetySignal" is true, you must return at least one "safetyConsiderations" entry describing the conservative choice you made. Describe load, not the symptom.`,
 };

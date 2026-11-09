@@ -46,7 +46,10 @@ export const COACH_AI_PROMPT_VERSIONS = {
   // it stays true when the owner changes them.
   // 9 Nov 2026: the list should match the session's length, not only fit
   // inside it (owner: a 35-minute session got far less).
-  fill_session_activities: "session-activities-v1.5-2026-11-09",
+  // 9 Nov 2026, later: the athlete's note comes before the intent, the
+  // coach's note, a saved session, the roadmap phase and the coach's own
+  // caution; only safety comes before it (owner: too conservative).
+  fill_session_activities: "session-activities-v1.6-2026-11-09",
 } as const satisfies Record<CoachAIOperation, string>;
 
 /** The two runtimes ADR-006 and M0-06A permit. Nothing else may ever call out. */
