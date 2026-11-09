@@ -332,6 +332,13 @@ button:disabled {
   resize: vertical;
 }
 
+/* Every text box grows with its text, so all of it can be read while editing
+   (owner, 9 Nov 2026). Its own min-height stays the smallest it gets.
+   Browsers without this get the same from `GrowingTextFields`. */
+textarea {
+  field-sizing: content;
+}
+
 .plan-header {
   display: flex;
   align-items: end;

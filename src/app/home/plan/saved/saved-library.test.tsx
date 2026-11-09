@@ -95,7 +95,10 @@ describe("the saved session library surface", () => {
     expect(
       screen.getByText("Running · 60 min · 1 activity"),
     ).toBeInTheDocument();
-    expect(screen.getByText("Threshold work")).toBeInTheDocument();
+    // The edit form's intent box holds it too; this is the entry's own line.
+    expect(
+      screen.getByText("Threshold work", { selector: ":not(textarea)" }),
+    ).toBeInTheDocument();
     // The card words each activity's target as the Plan card does.
     expect(document.querySelector("[data-activity-list]")?.textContent).toMatch(
       /Tempo blocks.*20 min/,
