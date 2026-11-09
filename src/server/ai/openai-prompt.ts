@@ -147,7 +147,7 @@ Return the whole list the session should hold, in order, one to twelve activitie
 
 Prefer the athlete's own activities. Where one in "library" fits, copy its "id" into "personalActivityId" and use its measurement mode; do not invent a near-duplicate under another name. "savedSessions" are sessions the athlete wrote themselves and are the best evidence of how they like this kind of session built. Use a new activity, with "personalActivityId" null, only where nothing in the library fits.
 
-Set targets from "recentActuals" where they exist: the numbers the athlete actually did, newest first. Progress in small steps from those, never from nothing. A result more than a few weeks old says where the athlete was, not where they are: start below it. Where there is no history for an activity, choose a conservative target and say so. Fit the whole list inside the session's duration and respect the rest of "week": do not load the same thing hard on consecutive days.
+Set targets from "recentActuals" where they exist: the numbers the athlete actually did, newest first. Progress in small steps from those, never from nothing. A result more than a few weeks old says where the athlete was, not where they are: start below it. Where there is no history for an activity, choose a conservative target and say so. The whole list should match the session's "durationMinutes". Respect "week": do not load the same thing hard on consecutive days.
 
 Measurement modes and the "target" fields each uses (every other target field is null):
 - "sets_reps_load": "groups", each with any of "sets", "reps" or "seconds" (not both), "load"; "load_unit" ("kg" or "lb") exactly when a group has a load. A ramp is several groups.

@@ -399,6 +399,44 @@ describe("selectSessionDetailRecords", () => {
       "Back squat",
     ]);
   });
+
+  it("finds the result of a library entry behind a dozen never done (owner, 9 Nov 2026)", () => {
+    // Read alphabetically, so "Wall handstand" comes after every other
+    // entry of the sport: the twelve places went to entries never done.
+    const untried = Array.from({ length: 13 }, (_, index) =>
+      libraryEntry({
+        id: `5d000000-0000-4000-8000-0000000001${String(index).padStart(2, "0")}`,
+        name: `Drill ${String.fromCharCode(65 + index)}`,
+      }),
+    );
+    const handstandId = "5d000000-0000-4000-8000-0000000000c1";
+    const records = select({
+      library: [
+        ...untried,
+        libraryEntry({
+          id: handstandId,
+          name: "Wall handstand",
+          measurementMode: "sets_reps_load",
+        }),
+      ],
+      completions: [
+        completion("2026-10-04", [
+          {
+            personalActivityId: handstandId,
+            position: 0,
+            name: "Wall handstand",
+            sport: "Strength",
+            measurementMode: "sets_reps_load",
+            actualMeasurement: { groups: [{ sets: 4, seconds: 30 }] },
+          },
+        ]),
+      ],
+    }) as SessionDetailRecords;
+
+    expect(records.recentActuals.map((entry) => entry.name)).toEqual([
+      "Wall handstand",
+    ]);
+  });
 });
 
 describe("buildSessionDetailContext", () => {

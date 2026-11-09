@@ -297,17 +297,24 @@ export function selectSessionDetailRecords(input: {
     }));
 
   // The activities worth showing history for, in priority order and once each.
-  const relevant: { name: string; personalActivityId: string | null }[] = [];
+  // Not capped here: the cap is for activities with a result, and counting
+  // ones never done let a dozen untried library entries, read alphabetically,
+  // crowd out a "Wall handstand" done days before (owner, 9 Nov 2026).
+  const relevant: {
+    name: string;
+    personalActivityId: string | null;
+    fromLibrary: boolean;
+  }[] = [];
   const seen = new Set<string>();
-  const consider = (name: string, personalActivityId: string | null) => {
+  const consider = (
+    name: string,
+    personalActivityId: string | null,
+    fromLibrary = false,
+  ) => {
     const key = personalActivityId ?? `name:${activityNameKey(name)}`;
-    if (
-      seen.has(key) ||
-      relevant.length >= SESSION_DETAIL_MAX_ACTUAL_ACTIVITIES
-    )
-      return;
+    if (seen.has(key)) return;
     seen.add(key);
-    relevant.push({ name, personalActivityId });
+    relevant.push({ name, personalActivityId, fromLibrary });
   };
   for (const activity of sessionActivities) {
     consider(activity.name, activity.personalActivityId);
@@ -319,17 +326,32 @@ export function selectSessionDetailRecords(input: {
   }
   for (const entry of library) {
     if (activityNameKey(entry.sport) === sportKey) {
-      consider(entry.name, entry.id);
+      consider(entry.name, entry.id, true);
     }
   }
 
-  const recentActuals = relevant
+  const withResults = relevant
     .map((activity) => ({
-      name: activity.name,
-      personalActivityId: activity.personalActivityId,
+      activity,
       entries: actualsFor(activity, input.completions),
     }))
-    .filter((activity) => activity.entries.length > 0);
+    .filter(({ entries }) => entries.length > 0);
+  // The session's and saved sessions' own keep their order and come first;
+  // the library's follow, done most recently first, so the cap keeps what
+  // the athlete is actually training rather than what sorts early.
+  const named = withResults.filter(({ activity }) => !activity.fromLibrary);
+  const fromLibrary = withResults
+    .filter(({ activity }) => activity.fromLibrary)
+    .toSorted((a, b) =>
+      b.entries[0].localDate.localeCompare(a.entries[0].localDate),
+    );
+  const recentActuals = [...named, ...fromLibrary]
+    .slice(0, SESSION_DETAIL_MAX_ACTUAL_ACTIVITIES)
+    .map(({ activity, entries }) => ({
+      name: activity.name,
+      personalActivityId: activity.personalActivityId,
+      entries,
+    }));
 
   return {
     session: {

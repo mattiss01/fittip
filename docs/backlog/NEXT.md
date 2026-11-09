@@ -71,6 +71,16 @@ Ordered by dependency. A lane is named where it is not the build lane.
 
 **Coach and records.**
 
+- [~] **A fill matches the session's length and sees the last hold.** Careful lane: the
+      prompt and what history it is sent. Owner, 9 Nov 2026: a 35 min handstand session
+      got two activities and "no recent hold result" though one was logged days before.
+      - Outcome: the prompt says the list should match the session's minutes (owner: no
+        warm-up rule, which it would then always add); prompt v1.5.
+      - History: the twelve activities sent results are chosen from those with a result,
+        not before; library entries most recently done first. Same rule otherwise: the
+        session's, its saved sessions' and same-sport library entries, six months back.
+      - No migration. A paid call to judge it only on the owner's approval.
+
 - [ ] **A fill's sources are recorded and never checked.** A suggestion names the
       logs, library entries and saved sessions it was built from, and since ADR-023
       the logs whose flags it was sent. Nothing compares them, so a flag corrected
