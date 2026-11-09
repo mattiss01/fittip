@@ -71,6 +71,19 @@ Ordered by dependency. A lane is named where it is not the build lane.
 
 **Coach and records.**
 
+- [~] **A fill's note comes first.** Careful lane: the fill prompt. Owner, 9 Nov 2026:
+      the coach is often too conservative, and where the note disagrees with the intent or
+      anything filled in elsewhere it should listen to the note.
+      - Outcome: the prompt puts "planningNote" above the intent, the session's coach's
+        note, saved sessions, the roadmap phase and the coach's own caution. Only the
+        safety rules and a recorded signal come before it; without one it does not scale
+        back what the note asks. A hard session is more sets, exercises and harder targets,
+        and the main work fills the minutes, a warm-up taking a few (owner's pull workout:
+        8 min of warm-up, then 4 sets of pull-ups and 3 of rows). Prompt v1.6.
+      - The fill prompt's budget goes from 9,000 to 9,400 characters; the worst case is
+        16,229 of 20,000 input tokens. No migration. Judged on a paid call only on the
+        owner's approval.
+
 - [ ] **A fill's sources are recorded and never checked.** A suggestion names the
       logs, library entries and saved sessions it was built from, and since ADR-023
       the logs whose flags it was sent. Nothing compares them, so a flag corrected
