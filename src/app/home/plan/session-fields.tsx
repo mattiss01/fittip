@@ -8,6 +8,7 @@ import { FillWithCoach } from "./fill/fill-with-coach";
 import styles from "./plan.module.css";
 
 import { SportInput } from "@/components/sports/sport-input";
+import { LineText } from "@/components/text-fields/line-text";
 import {
   ActivityEditor,
   type ActivityEditorHandle,
@@ -99,7 +100,7 @@ export function SessionFields({
       </div>
       <div className={styles.field}>
         <label htmlFor={`${idPrefix}-intent`}>Intent</label>
-        <input
+        <LineText
           id={`${idPrefix}-intent`}
           name="intent"
           maxLength={500}

@@ -3,6 +3,8 @@ import type { ReactNode } from "react";
 import { Chivo_Mono, Schibsted_Grotesk } from "next/font/google";
 import "./globals.css";
 
+import { GrowingTextFields } from "@/components/text-fields/growing-text-fields";
+
 const sans = Schibsted_Grotesk({
   subsets: ["latin", "latin-ext"],
   variable: "--font-schibsted",
@@ -34,7 +36,10 @@ export default function RootLayout({
 }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="en" className={`${sans.variable} ${mono.variable}`}>
-      <body>{children}</body>
+      <body>
+        {children}
+        <GrowingTextFields />
+      </body>
     </html>
   );
 }
