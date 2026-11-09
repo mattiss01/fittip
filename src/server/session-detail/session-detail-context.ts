@@ -174,10 +174,10 @@ export type SessionDetailAssembly = {
  * - Saved sessions: those whose title matches the session's, then those whose
  *   sport does, at most three.
  * - Recent actuals: for the activities that matter here — the session's own,
- *   the chosen saved sessions', then same-sport library entries, at most
- *   twelve — the last three times each was logged with a recorded actual,
- *   newest first. An activity is matched by its library link when both sides
- *   have one, and by its name otherwise.
+ *   the chosen saved sessions', then same-sport library entries most recently
+ *   done first, at most twelve with a result — the last three times each was
+ *   logged with a recorded actual, newest first. An activity is matched by its
+ *   library link when both sides have one, and by its name otherwise.
  */
 export function selectSessionDetailRecords(input: {
   sessionId: string;
