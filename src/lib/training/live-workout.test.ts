@@ -6,6 +6,7 @@ import {
   changeMode,
   formatClock,
   liveActivityFrom,
+  plannedInstructions,
   toLoggedActivities,
   withRepeats,
   withSets,
@@ -271,6 +272,27 @@ describe("timed sets and intervals live (ADR-038)", () => {
         blocks: [{ repeats: 1, distance: 100 }],
         distance_unit: "m",
       },
+    });
+  });
+});
+
+describe("plannedInstructions", () => {
+  it("gives each planned row the plan's instructions, and none to a row whose position now holds another activity", () => {
+    const rows = [
+      { plannedPosition: 0, name: "Wall handstand" },
+      { plannedPosition: 1, name: "Pike push-up" },
+      { plannedPosition: 2, name: "Wrist prep" },
+      { plannedPosition: null, name: "Wall handstand" },
+    ];
+    const planned = [
+      { position: 0, name: "Wall handstand", instructions: "Chest to wall." },
+      // Reordered after the start: position 1 is now another activity.
+      { position: 1, name: "Wrist prep", instructions: "Circles, rocks." },
+      { position: 2, name: "Wrist prep", instructions: null },
+    ];
+
+    expect(plannedInstructions(rows, planned)).toEqual({
+      0: "Chest to wall.",
     });
   });
 });

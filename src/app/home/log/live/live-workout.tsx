@@ -500,9 +500,6 @@ function ActivityCard({
             <h2 className={styles.cardTitle}>{activity.name}</h2>
           )}
           {plan === null ? null : <p className={styles.plan}>Plan: {plan}</p>}
-          {instructions === null ? null : (
-            <p className={styles.instructions}>{instructions}</p>
-          )}
         </div>
         <span className={styles.progress}>{progress}</span>
         {named ? (
@@ -518,6 +515,12 @@ function ActivityCard({
           </button>
         ) : null}
       </div>
+
+      {/* Outside the head, whose press-and-hold drags the card: a long
+          text would otherwise be a large place to start a drag by mistake. */}
+      {instructions === null ? null : (
+        <p className={styles.instructions}>{instructions}</p>
+      )}
 
       {activity.mode === "sets_reps_load" ? (
         <SetRows

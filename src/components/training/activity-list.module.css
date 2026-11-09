@@ -65,11 +65,12 @@
   overflow-wrap: anywhere;
 }
 
+/* Its own marker kept, so it reads as something that opens; padded to a
+   touch-sized target around a short word. */
 .why summary {
   width: fit-content;
-  min-height: 2.75rem;
-  display: flex;
-  align-items: center;
+  min-width: 2.75rem;
+  padding: 0.7rem 1rem 0.7rem 0;
   cursor: pointer;
   font-weight: 600;
 }

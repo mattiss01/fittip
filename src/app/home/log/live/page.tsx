@@ -9,7 +9,10 @@ import homeStyles from "../../home.module.css";
 import { readLibraryOptions } from "../../plan/activities/library-options";
 import { readMeasurementHistory } from "../../plan/activities/measurement-history";
 import { SportInput } from "@/components/sports/sport-input";
-import type { LiveWorkoutView } from "@/lib/training/live-workout";
+import {
+  plannedInstructions,
+  type LiveWorkoutView,
+} from "@/lib/training/live-workout";
 import { PersonalActivityAuthenticationError } from "@/server/repositories/personal-activity-repository";
 import { createRollingPlan } from "@/server/repositories/rolling-plan-repository";
 import {
@@ -158,11 +161,8 @@ async function readPlannedInstructions(
   const session = slice.sessions.find(
     (candidate) => candidate.id === workout.planSessionId,
   );
-  const instructions: Record<number, string> = {};
-  for (const activity of session?.activities ?? []) {
-    if (activity.instructions) {
-      instructions[activity.position] = activity.instructions;
-    }
-  }
-  return instructions;
+  return plannedInstructions(
+    workout.state.activities,
+    session?.activities ?? [],
+  );
 }
