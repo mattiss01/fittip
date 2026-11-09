@@ -63,6 +63,16 @@ export const RENDER_GRACE_MS = 750;
  */
 export const CONFIRMATION_BUDGET_MS = 10_000;
 
+/**
+ * How long before a mutation's pending render its own request can have
+ * started: the click, the dispatch and one commit. A request started earlier
+ * belongs to another write posted to the same address, and its reply says
+ * nothing about this one (owner, 9 Nov 2026: a coach's answer to Fill with
+ * Coach, minutes old, was taken for a save's lost reply, so every save on
+ * the session's edit page reloaded the page before it could land).
+ */
+export const OWN_REQUEST_SLACK_MS = 1_000;
+
 /** How often the surface re-examines an in-flight mutation. */
 export const WATCH_INTERVAL_MS = 250;
 
@@ -119,17 +129,26 @@ export function watchTransition({
  * silently degrade every mutation to the ten-second path.
  */
 export function latestActionResponseAt(
-  entries: readonly { name: string; responseEnd: number }[],
+  entries: readonly { name: string; responseEnd: number; startTime?: number }[],
   actionUrl: string,
+  /** Only requests started at or after this time; see `OWN_REQUEST_SLACK_MS`. */
+  startedAfter: number = Number.NEGATIVE_INFINITY,
 ): number | null {
   let latest: number | null = null;
   for (const entry of entries) {
     if (entry.name !== actionUrl) continue;
     if (!(entry.responseEnd > 0)) continue;
+    if ((entry.startTime ?? Number.POSITIVE_INFINITY) < startedAfter) continue;
     if (latest === null || entry.responseEnd > latest)
       latest = entry.responseEnd;
   }
   return latest;
+}
+
+/** The address this page's Server Actions post to, query string included. */
+export function currentActionUrl(): string {
+  const { origin, pathname, search } = window.location;
+  return `${origin}${pathname}${search}`;
 }
 
 /** Every response to this page's mutations on the timeline, by its end. */

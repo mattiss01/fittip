@@ -4,6 +4,7 @@ import {
   CONFIRMATION_BUDGET_MS,
   actionResponseTimes,
   latestActionResponseAt,
+  OWN_REQUEST_SLACK_MS,
   RENDER_GRACE_MS,
   replyForWrite,
   watchTransition,
@@ -133,6 +134,40 @@ describe("latestActionResponseAt", () => {
     expect(
       latestActionResponseAt([{ name: actionUrl, responseEnd: 0 }], actionUrl),
     ).toBeNull();
+  });
+  it("does not take another write's reply for a save's own (owner, 9 Nov 2026)", () => {
+    // A coach's answer asked for at 1 s, answered at 60 s; Save at 90 s.
+    const entries = [
+      { name: actionUrl, startTime: 1_000, responseEnd: 60_000 },
+    ];
+    const submittedAt = 90_000;
+    const own = latestActionResponseAt(
+      entries,
+      actionUrl,
+      submittedAt - OWN_REQUEST_SLACK_MS,
+    );
+    expect(own).toBeNull();
+    expect(
+      watchTransition({
+        submittedAt,
+        respondedAt: own,
+        consumedAt: null,
+        now: submittedAt + 1_000,
+      }),
+    ).toBe("waiting");
+
+    // The save's own reply, even one that beat its pending render, counts.
+    const fast = [
+      ...entries,
+      { name: actionUrl, startTime: submittedAt - 40, responseEnd: 89_990 },
+    ];
+    expect(
+      latestActionResponseAt(
+        fast,
+        actionUrl,
+        submittedAt - OWN_REQUEST_SLACK_MS,
+      ),
+    ).toBe(89_990);
   });
 });
 
