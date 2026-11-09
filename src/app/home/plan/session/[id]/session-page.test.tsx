@@ -217,6 +217,35 @@ describe("SessionPage", () => {
     expect(more).toHaveAttribute("aria-expanded", "false");
   });
 
+  it("shows each activity's instructions, with the coach's reason folded behind Why", () => {
+    render(
+      page(
+        session({
+          activities: [
+            {
+              personalActivityId: null,
+              name: "Wall handstand",
+              sport: "Gymnastics",
+              instructions: "Chest to wall, push tall through the shoulders.",
+              rationale: "Builds the line for a free hold.",
+              measurementMode: "unmeasured",
+              target: null,
+            },
+          ],
+        }),
+      ),
+    );
+
+    expect(
+      screen.getByText("Chest to wall, push tall through the shoulders."),
+    ).toBeVisible();
+    const why = screen.getByText("Why").closest("details")!;
+    expect(why).not.toHaveAttribute("open");
+    expect(
+      screen.getByText("Builds the line for a free hold."),
+    ).not.toBeVisible();
+  });
+
   it("returns to Today when it was opened from there", () => {
     render(page(session(), undefined, "today"));
     expect(screen.getByRole("link", { name: /Today/ })).toHaveAttribute(

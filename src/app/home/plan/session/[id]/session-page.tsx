@@ -555,6 +555,7 @@ export function SessionPage({
             key: String(index),
             name: activity.name,
             detail: describeMeasurement(activity.target),
+            instructions: activity.instructions ?? null,
             why: activity.rationale ?? null,
           }))}
         />

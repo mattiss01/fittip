@@ -6,7 +6,13 @@ export type ActivityListItem = {
   name: string;
   /** A target or an actual, in words; null when there is nothing to say. */
   detail: string | null;
-  /** The coach's reason for a planned one (ADR-040); absent when none. */
+  /** How to do a planned one, in full; absent when none. */
+  instructions?: string | null;
+  /**
+   * The coach's reason for a planned one (ADR-040); absent when none. Folded
+   * behind "Why" so the instructions are what the card reads (owner,
+   * 9 Nov 2026).
+   */
   why?: string | null;
 };
 
@@ -39,8 +45,14 @@ export function ActivityList({
             {item.detail === null ? null : (
               <span className={styles.detail}>{item.detail}</span>
             )}
+            {item.instructions ? (
+              <p className={styles.instructions}>{item.instructions}</p>
+            ) : null}
             {item.why ? (
-              <span className={styles.why}>Why: {item.why}</span>
+              <details className={styles.why}>
+                <summary>Why</summary>
+                <p>{item.why}</p>
+              </details>
             ) : null}
           </li>
         ))}

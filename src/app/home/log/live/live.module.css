@@ -269,6 +269,15 @@
   font-size: 0.85rem;
 }
 
+/* How to do it, under the plan's target (owner, 9 Nov 2026). */
+.instructions {
+  margin: 0.35rem 0 0;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
 .progress {
   flex: none;
   color: var(--moss);

@@ -69,10 +69,13 @@ export function LiveWorkout({
   workout,
   library,
   modes,
+  plannedInstructions = {},
 }: {
   workout: LiveWorkoutView;
   library: readonly LibraryActivityOption[];
   modes: ModeBySport;
+  /** The planned session's instructions, by the position each answers. */
+  plannedInstructions?: Readonly<Record<number, string>>;
 }) {
   const router = useRouter();
   const prefix = useId();
@@ -269,6 +272,11 @@ export function LiveWorkout({
             key={activity.key}
             idPrefix={`${prefix}-${index}`}
             activity={activity}
+            instructions={instructionsFor(
+              activity,
+              plannedInstructions,
+              library,
+            )}
             hold={activities.length < 2 ? undefined : hold(activity.key)}
             move={activities.length < 2 ? undefined : keys(activity.key)}
             onChange={(edit) => update(activity.key, edit)}
@@ -366,9 +374,30 @@ function SaveLine({
   );
 }
 
+/**
+ * What a card shows as its instructions (owner, 9 Nov 2026): the plan's for
+ * a planned activity, which may differ from its library entry's, and the
+ * library's for one added while training.
+ */
+function instructionsFor(
+  activity: LiveActivity,
+  planned: Readonly<Record<number, string>>,
+  library: readonly LibraryActivityOption[],
+): string | null {
+  if (activity.plannedPosition !== null) {
+    return planned[activity.plannedPosition] ?? null;
+  }
+  if (activity.personalActivityId === null) return null;
+  return (
+    library.find((option) => option.id === activity.personalActivityId)
+      ?.instructions ?? null
+  );
+}
+
 function ActivityCard({
   idPrefix,
   activity,
+  instructions,
   hold,
   move,
   onChange,
@@ -376,6 +405,8 @@ function ActivityCard({
 }: {
   idPrefix: string;
   activity: LiveActivity;
+  /** How to do it, shown while the card is open; null when there are none. */
+  instructions: string | null;
   /** What lets the card's head be held and dragged; absent while alone. */
   hold?: HoldProps;
   /** The arrow keys on the card's fold button; absent while alone. */
@@ -469,6 +500,9 @@ function ActivityCard({
             <h2 className={styles.cardTitle}>{activity.name}</h2>
           )}
           {plan === null ? null : <p className={styles.plan}>Plan: {plan}</p>}
+          {instructions === null ? null : (
+            <p className={styles.instructions}>{instructions}</p>
+          )}
         </div>
         <span className={styles.progress}>{progress}</span>
         {named ? (
