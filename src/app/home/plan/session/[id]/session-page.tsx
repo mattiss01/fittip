@@ -544,10 +544,17 @@ export function SessionPage({
           <p className={page.text}>{session.note}</p>
         )}
         {session.coachNote === null ? null : (
-          <div className={page.coachNote} data-coach-note>
-            <p className={page.coachNoteLabel}>Coach&apos;s note</p>
+          // Folded to its first line until opened (owner, 9 Nov 2026): the
+          // note can run long and pushes the activities down.
+          <details className={page.coachNote} data-coach-note>
+            <summary className={page.coachNoteSummary}>
+              <span className={page.coachNoteLabel}>Coach&apos;s note</span>
+              <span className={page.coachNotePreview} aria-hidden="true">
+                {session.coachNote}
+              </span>
+            </summary>
             <p className={page.text}>{session.coachNote}</p>
-          </div>
+          </details>
         )}
         <ActivityList
           label="Activities"

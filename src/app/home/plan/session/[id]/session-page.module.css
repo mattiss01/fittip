@@ -177,6 +177,54 @@
   text-transform: uppercase;
 }
 
+/* The whole folded box is the control: label, first line and a chevron. */
+.coachNoteSummary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.2rem 0.6rem;
+  min-height: 2.75rem;
+  align-items: center;
+  cursor: pointer;
+  list-style: none;
+}
+
+.coachNoteSummary::-webkit-details-marker {
+  display: none;
+}
+
+.coachNoteSummary::after {
+  content: "";
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-right: 2px solid var(--pine-soft);
+  border-bottom: 2px solid var(--pine-soft);
+  transform: rotate(45deg);
+}
+
+.coachNote[open] .coachNoteSummary::after {
+  transform: rotate(-135deg);
+}
+
+.coachNoteSummary:focus-visible {
+  outline: 2px solid var(--pine-soft);
+  outline-offset: 4px;
+  border-radius: 2px;
+}
+
+.coachNotePreview {
+  grid-column: 1;
+  overflow: hidden;
+  color: var(--pine-soft);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.coachNote[open] .coachNotePreview {
+  display: none;
+}
+
 /* "Bring it back" inside a sentence (ADR-033): a text-weight control with a
    full touch target, not a second main action. */
 .inlineAction {

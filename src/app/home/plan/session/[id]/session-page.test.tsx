@@ -246,6 +246,19 @@ describe("SessionPage", () => {
     ).not.toBeVisible();
   });
 
+  it("folds the coach's note until it is opened", () => {
+    const note = "Wall line first, then free kick-ups. Keep the wrists warm.";
+    render(page(session({ coachNote: note })));
+
+    const fold = document.querySelector("[data-coach-note]")!;
+    expect(fold.tagName).toBe("DETAILS");
+    expect(fold).not.toHaveAttribute("open");
+    expect(screen.getByText("Coach's note")).toBeVisible();
+
+    fireEvent.click(screen.getByText("Coach's note"));
+    expect(fold).toHaveAttribute("open");
+  });
+
   it("returns to Today when it was opened from there", () => {
     render(page(session(), undefined, "today"));
     expect(screen.getByRole("link", { name: /Today/ })).toHaveAttribute(
