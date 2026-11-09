@@ -165,7 +165,7 @@ Measurement modes and the "target" fields each uses (every other target field is
 
 Use only equipment the athlete has for where the session is done: at home, what "trainingSetup.homeEquipment" lists; a place they name, such as a gym, has what such a place has. Each entry of "week" names its activities, so that you do not load the same thing hard on consecutive days.
 
-"planningNote", if present, is the athlete's note about this session, and it comes first: where it disagrees with the intent, "coachNote", a saved session, "roadmapPhase" or your own caution, follow the note. Only the safety rules and a recorded signal come before it; without one, do not scale back what it asks for. A hard session means more sets, exercises and harder targets, not a longer warm-up.
+"planningNote", if present, is the athlete's note about this session and comes first: where it disagrees with the intent, "coachNote", a saved session, "roadmapPhase" or your own caution, follow the note. Only the safety rules, a recorded signal and the bounds above come before it; where none applies, do not scale back what it asks. Hard means more sets, exercises and harder targets.
 
 Where "hasSafetySignal" is true, you must return at least one "safetyConsiderations" entry describing the conservative choice you made. Describe load, not the symptom.`,
 };
