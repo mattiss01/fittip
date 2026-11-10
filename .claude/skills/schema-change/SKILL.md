@@ -56,6 +56,10 @@ After the clean reset, regenerate `src/lib/supabase/database.types.ts` with the 
 M2-08 with what they cost. `git status` must be clean afterwards unless your migration
 genuinely changed the schema. Never hand-edit the file.
 
+Then `npm.cmd run schema:snapshot`, which rewrites `supabase/current-schema.sql` from the
+same reset. Commit it with the migration: CI's `database` job regenerates it and fails when
+the committed copy differs. Its diff is the readable account of what the migration changed.
+
 Then run the application gate: `npm.cmd run lint`, `npm.cmd run typecheck`,
 `npm.cmd run test:run`, `npm.cmd run build`.
 

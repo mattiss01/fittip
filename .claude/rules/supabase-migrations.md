@@ -24,6 +24,9 @@ paths:
   every mutation.
 - After a clean reset, regenerate the committed types (see README) — do not hand-edit
   `src/lib/supabase/database.types.ts`.
+- After the same reset, run `npm.cmd run schema:snapshot` and commit
+  `supabase/current-schema.sql` with the migration. It is generated and never applied; read
+  it for a function as it stands, and its diff for what a migration changed.
 - Gate sequence for a schema ticket: `db reset --local`, `db lint --local --level warning
   --fail-on warning`, `db advisors --local --type all --level warn --fail-on warn`,
   `test db --local supabase/tests/database`.
