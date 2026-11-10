@@ -108,6 +108,12 @@ After a clean `db reset --local`, regenerate the committed types with
 `--schema public` to a manual run: the file also carries `graphql_public`, and
 the flag drops it silently.
 
+Then run `npm run schema:snapshot`. It writes `supabase/current-schema.sql`, the
+schemas FitTip owns (`public` and `private`) as the migrations leave them: the
+one place to read a function as it stands, and the diff that shows which of its
+lines a migration changed. It is generated, never edited and never applied; CI
+fails when it is out of date.
+
 ## Continuous integration
 
 `.github/workflows/ci.yml` runs on `master`, `ticket/**` and `chore/**` branches

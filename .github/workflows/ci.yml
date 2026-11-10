@@ -123,6 +123,19 @@ jobs:
       - name: Apply every migration from zero
         run: npx supabase db reset --local
 
+      # The one readable copy of the schema in force. Regenerated from the
+      # reset above, so a migration pushed without it fails here by name.
+      - name: Schema snapshot is current
+        run: |
+          npm run schema:snapshot
+          # `status`, not `diff`: a snapshot that was never committed is
+          # untracked, and `diff` would call that unchanged.
+          if [ -n "$(git status --porcelain -- supabase/current-schema.sql)" ]; then
+            git diff --stat -- supabase/current-schema.sql
+            echo "::error file=supabase/current-schema.sql::The committed schema snapshot is not what the migrations build. Run 'npm run schema:snapshot' after a local reset and commit the file."
+            exit 1
+          fi
+
       - name: Database lint
         run: npx supabase db lint --local --level warning --fail-on warning
 
