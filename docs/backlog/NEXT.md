@@ -16,8 +16,14 @@ before any code is written.
 **Recurring sessions.** Owner, 5 Nov 2026: a one-off can become a series. Planned only;
 the owner says when to build. It reuses the repeat row and sheet (`repeat-sheet.tsx`).
 
-- [ ] **R2 — Make a one-off session repeat.** Careful lane: a new operation in the plan's
-      change set, so a migration, RLS and pgTAP. Plan to write in full before code.
+- [ ] **R2 — Split the plan's change function, then make a one-off session repeat.** Owner,
+      10 Nov 2026: the two ride together, helpers in the `private` schema. Careful lane.
+      - [~] Split (first commit and migration): the 723-line function keeps everything the
+        change set owns and hands each operation to a `private.` helper, checks in today's
+        order so every refusal keeps its code and message. Proof: no test edited.
+      - Then R2 as a second commit and migration on the same branch, so a red test names
+        one or the other; one CI run, one founder apply, one reviewer pass.
+      - R2 itself, as planned below:
       - Outcome: the one-off itself becomes the first session of a new series from its own
         date, keeping its id, activities, notes, coach note and any log. Never copied and
         deleted. A copy would lose what hangs off the session; a delete removes a log's

@@ -30,6 +30,21 @@ COMMENT ON SCHEMA "public" IS 'standard public schema';
 
 
 
+CREATE TYPE "private"."plan_change_outcome" AS (
+	"entry_session_id" "uuid",
+	"entry_series_id" "uuid",
+	"entry_local_date" "date",
+	"before_state" "jsonb",
+	"after_state" "jsonb",
+	"cap_dates" "date"[],
+	"sweep_series_id" "uuid",
+	"sweep_from" "date"
+);
+
+
+ALTER TYPE "private"."plan_change_outcome" OWNER TO "postgres";
+
+
 CREATE TYPE "public"."ai_spend_reservation_receipt" AS (
 	"reservation_id" "uuid",
 	"settlement_token" "uuid",
@@ -253,6 +268,799 @@ $$;
 
 
 ALTER FUNCTION "private"."clear_memory_confidence_after_owner_edit"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "private"."plan_change_add"("p_user_id" "uuid", "p_plan_id" "uuid", "p_today" "date", "p_now" timestamp with time zone, "p_change" "jsonb", "p_session_id" "uuid") RETURNS "private"."plan_change_outcome"
+    LANGUAGE "plpgsql"
+    SET "search_path" TO ''
+    AS $$
+declare
+  v_outcome private.plan_change_outcome;
+  v_input jsonb;
+  v_local_date date;
+  v_series_id uuid;
+begin
+  if p_change - array['operation', 'sessionId', 'session'] <> '{}'::jsonb
+    or not (p_change ? 'session')
+    or not public.rolling_plan_session_input_is_valid(p_change->'session', true)
+    or exists (select 1 from public.rolling_plan_sessions where id = p_session_id)
+  then raise exception using errcode = '22023', message = 'Invalid rolling plan addition.'; end if;
+  v_input := p_change->'session';
+  v_local_date := (v_input->>'localDate')::date;
+  perform private.plan_change_refuse_past(v_local_date, p_today);
+  v_series_id := (v_input->>'seriesId')::uuid;
+  if v_series_id is not null and not exists (
+    select 1 from public.rolling_plan_series
+    where id = v_series_id and user_id = p_user_id
+  ) then
+    raise exception using errcode = '22023', message = 'Invalid rolling plan addition.';
+  end if;
+  insert into public.rolling_plan_sessions (
+    id, user_id, plan_id, local_date, position, title, sport, intent,
+    expected_duration_minutes, start_time, note, coach_note, status, series_id,
+    occurrence_date, has_diverged, created_at, updated_at
+  ) values (
+    p_session_id, p_user_id, p_plan_id,
+    v_local_date,
+    (v_input->>'position')::smallint,
+    pg_catalog.btrim(v_input->>'title'),
+    pg_catalog.btrim(v_input->>'sport'),
+    nullif(v_input->>'intent', ''),
+    (v_input->>'expectedDurationMinutes')::integer,
+    (v_input->>'startTime')::time,
+    nullif(v_input->>'note', ''),
+    nullif(v_input->>'coachNote', ''),
+    'active', v_series_id,
+    (v_input->>'occurrenceDate')::date,
+    false, p_now, p_now
+  );
+  perform private.plan_change_insert_activities(
+    p_user_id, p_plan_id, p_session_id, v_input->'activities', p_now
+  );
+  v_outcome.after_state := public.rolling_plan_session_state(p_user_id, p_session_id);
+  v_outcome.entry_session_id := p_session_id;
+  v_outcome.cap_dates := array[v_local_date];
+  return v_outcome;
+end;
+$$;
+
+
+ALTER FUNCTION "private"."plan_change_add"("p_user_id" "uuid", "p_plan_id" "uuid", "p_today" "date", "p_now" timestamp with time zone, "p_change" "jsonb", "p_session_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "private"."plan_change_add_series"("p_user_id" "uuid", "p_plan_id" "uuid", "p_today" "date", "p_now" timestamp with time zone, "p_change" "jsonb", "p_series_id" "uuid") RETURNS "private"."plan_change_outcome"
+    LANGUAGE "plpgsql"
+    SET "search_path" TO ''
+    AS $$
+declare
+  v_outcome private.plan_change_outcome;
+  v_input jsonb;
+begin
+  if p_change - array['operation', 'seriesId', 'series'] <> '{}'::jsonb
+    or not (p_change ? 'series')
+    or not public.rolling_plan_series_input_is_valid(p_change->'series')
+    or exists (select 1 from public.rolling_plan_series where id = p_series_id)
+  then raise exception using errcode = '22023', message = 'Invalid rolling plan series.'; end if;
+  v_input := p_change->'series';
+  perform private.plan_change_refuse_past((v_input->>'startDate')::date, p_today);
+  perform private.plan_change_insert_series(
+    p_user_id, p_plan_id, p_series_id, null,
+    (v_input->>'startDate')::date, v_input, p_now
+  );
+  v_outcome.after_state := public.rolling_plan_series_state(p_user_id, p_series_id);
+  v_outcome.entry_series_id := p_series_id;
+  return v_outcome;
+end;
+$$;
+
+
+ALTER FUNCTION "private"."plan_change_add_series"("p_user_id" "uuid", "p_plan_id" "uuid", "p_today" "date", "p_now" timestamp with time zone, "p_change" "jsonb", "p_series_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "private"."plan_change_cancel"("p_user_id" "uuid", "p_today" "date", "p_now" timestamp with time zone, "p_change" "jsonb", "p_session_id" "uuid") RETURNS "private"."plan_change_outcome"
+    LANGUAGE "plpgsql"
+    SET "search_path" TO ''
+    AS $$
+declare
+  v_outcome private.plan_change_outcome;
+  v_session public.rolling_plan_sessions;
+  v_reason text;
+begin
+  v_session := private.plan_change_lock_session(
+    p_user_id, p_session_id, array['active'], p_today
+  );
+  v_outcome.before_state := public.rolling_plan_session_state(p_user_id, p_session_id);
+  -- Cancellation reason: `reason` is optional, and a cancel without one is
+  -- exactly the cancel it always was.
+  if p_change - array['operation', 'sessionId', 'reason'] <> '{}'::jsonb
+    or (
+      p_change ? 'reason'
+      and pg_catalog.jsonb_typeof(p_change->'reason') <> 'null'
+      and not public.rolling_plan_cancellation_reason_is_valid(p_change->'reason')
+    )
+  then
+    raise exception using errcode = '22023', message = 'Invalid rolling plan cancellation.';
+  end if;
+  update public.rolling_plan_sessions set
+    status = 'cancelled', cancelled_at = p_now, updated_at = p_now
+  where id = p_session_id and user_id = p_user_id;
+  v_reason := pg_catalog.btrim(p_change->>'reason', E' \t\r\n');
+  if v_reason is not null then
+    insert into public.rolling_plan_session_cancellations (
+      session_id, user_id, reason, created_at, updated_at
+    ) values (p_session_id, p_user_id, v_reason, p_now, p_now);
+  end if;
+  v_outcome.after_state := public.rolling_plan_session_state(p_user_id, p_session_id);
+  v_outcome.entry_session_id := p_session_id;
+  v_outcome.cap_dates := array[v_session.local_date];
+  return v_outcome;
+end;
+$$;
+
+
+ALTER FUNCTION "private"."plan_change_cancel"("p_user_id" "uuid", "p_today" "date", "p_now" timestamp with time zone, "p_change" "jsonb", "p_session_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "private"."plan_change_delete"("p_user_id" "uuid", "p_today" "date", "p_change" "jsonb", "p_session_id" "uuid") RETURNS "private"."plan_change_outcome"
+    LANGUAGE "plpgsql"
+    SET "search_path" TO ''
+    AS $$
+declare
+  v_outcome private.plan_change_outcome;
+  v_session public.rolling_plan_sessions;
+begin
+  if p_change - array['operation', 'sessionId'] <> '{}'::jsonb then
+    raise exception using errcode = '22023', message = 'Invalid rolling plan deletion.';
+  end if;
+  v_session := private.plan_change_lock_session(
+    p_user_id, p_session_id, array['active', 'cancelled'], p_today
+  );
+  v_outcome.before_state := public.rolling_plan_session_state(p_user_id, p_session_id);
+  delete from public.rolling_plan_sessions
+  where id = p_session_id and user_id = p_user_id;
+  -- M3-20: without this the materializer finds the rule date empty and writes
+  -- the occurrence straight back. The rule date is recorded, not the local
+  -- date, because a moved occurrence is still the series' answer to its rule
+  -- date. Dates behind today can never be filled again, so they are dropped
+  -- here rather than kept forever.
+  if v_session.series_id is not null and v_session.occurrence_date >= p_today then
+    update public.rolling_plan_series set
+      skipped_occurrence_dates = array(
+        select skipped from pg_catalog.unnest(
+          skipped_occurrence_dates || v_session.occurrence_date
+        ) as skipped
+        where skipped >= p_today
+        group by skipped order by skipped
+      )
+    where id = v_session.series_id and user_id = p_user_id;
+  end if;
+  -- Exactly the entry `rolling_plan_sweep_series_occurrences` writes for a
+  -- removed occurrence: a dated `delete` naming no session, which is what
+  -- survives `rolling_plan_change_entries_session_fkey` cascading this row's
+  -- own earlier entries away.
+  v_outcome.after_state := pg_catalog.jsonb_build_object(
+    'localDate', v_session.local_date::text, 'deleted', true
+  );
+  v_outcome.entry_local_date := v_session.local_date;
+  v_outcome.cap_dates := array[v_session.local_date];
+  return v_outcome;
+end;
+$$;
+
+
+ALTER FUNCTION "private"."plan_change_delete"("p_user_id" "uuid", "p_today" "date", "p_change" "jsonb", "p_session_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "private"."plan_change_edit"("p_user_id" "uuid", "p_plan_id" "uuid", "p_today" "date", "p_now" timestamp with time zone, "p_change" "jsonb", "p_session_id" "uuid") RETURNS "private"."plan_change_outcome"
+    LANGUAGE "plpgsql"
+    SET "search_path" TO ''
+    AS $$
+declare
+  v_outcome private.plan_change_outcome;
+  v_session public.rolling_plan_sessions;
+  v_input jsonb;
+begin
+  v_session := private.plan_change_lock_session(
+    p_user_id, p_session_id, array['active'], p_today
+  );
+  v_outcome.before_state := public.rolling_plan_session_state(p_user_id, p_session_id);
+  if p_change - array['operation', 'sessionId', 'session'] <> '{}'::jsonb
+    or not (p_change ? 'session')
+    or not public.rolling_plan_session_input_is_valid(p_change->'session', false)
+  then raise exception using errcode = '22023', message = 'Invalid rolling plan edit.'; end if;
+  v_input := p_change->'session';
+  update public.rolling_plan_sessions set
+    title = pg_catalog.btrim(v_input->>'title'),
+    sport = pg_catalog.btrim(v_input->>'sport'),
+    intent = nullif(v_input->>'intent', ''),
+    expected_duration_minutes = (v_input->>'expectedDurationMinutes')::integer,
+    start_time = (v_input->>'startTime')::time,
+    note = nullif(v_input->>'note', ''),
+    coach_note = nullif(v_input->>'coachNote', ''),
+    updated_at = p_now
+  where id = p_session_id and user_id = p_user_id;
+  delete from public.rolling_plan_activities
+  where session_id = p_session_id and user_id = p_user_id;
+  -- ADR-017, as amended 22 September 2026: an occurrence is diverged when its
+  -- content no longer reads as its rule's, which only an edit does. A move and
+  -- a cancel leave what it says alone, so they leave the flag alone. The
+  -- materializer never revisits an existing occurrence either way.
+  update public.rolling_plan_sessions set has_diverged = true
+  where id = p_session_id and user_id = p_user_id
+    and series_id is not null and not has_diverged;
+  perform private.plan_change_insert_activities(
+    p_user_id, p_plan_id, p_session_id, v_input->'activities', p_now
+  );
+  v_outcome.after_state := public.rolling_plan_session_state(p_user_id, p_session_id);
+  v_outcome.entry_session_id := p_session_id;
+  v_outcome.cap_dates := array[v_session.local_date];
+  return v_outcome;
+end;
+$$;
+
+
+ALTER FUNCTION "private"."plan_change_edit"("p_user_id" "uuid", "p_plan_id" "uuid", "p_today" "date", "p_now" timestamp with time zone, "p_change" "jsonb", "p_session_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "private"."plan_change_edit_series"("p_user_id" "uuid", "p_today" "date", "p_now" timestamp with time zone, "p_change" "jsonb", "p_series_id" "uuid") RETURNS "private"."plan_change_outcome"
+    LANGUAGE "plpgsql"
+    SET "search_path" TO ''
+    AS $$
+declare
+  v_outcome private.plan_change_outcome;
+  v_series public.rolling_plan_series;
+  v_input jsonb;
+  v_sweep_from date;
+begin
+  v_series := private.plan_change_lock_series(p_user_id, p_series_id);
+  v_outcome.before_state := public.rolling_plan_series_state(p_user_id, p_series_id);
+  if p_change - array['operation', 'seriesId', 'series'] <> '{}'::jsonb
+    or not (p_change ? 'series')
+    or not public.rolling_plan_series_input_is_valid(p_change->'series')
+  then raise exception using errcode = '22023', message = 'Invalid rolling plan series change.'; end if;
+  -- No occurrence can precede the segment's own start date, so a segment that
+  -- still starts today or later has had none.
+  if v_series.start_date < p_today then
+    raise exception using errcode = 'PT424',
+      message = 'This series has already started. Change it from a date instead.';
+  end if;
+  v_input := p_change->'series';
+  perform private.plan_change_refuse_past((v_input->>'startDate')::date, p_today);
+  update public.rolling_plan_series set
+    frequency = v_input->>'frequency',
+    interval_count = (v_input->>'intervalCount')::smallint,
+    weekdays = public.rolling_plan_weekday_set(v_input->'weekdays'),
+    start_date = (v_input->>'startDate')::date,
+    end_date = (v_input->>'endDate')::date,
+    title = pg_catalog.btrim(v_input->>'title'),
+    sport = pg_catalog.btrim(v_input->>'sport'),
+    intent = nullif(v_input->>'intent', ''),
+    expected_duration_minutes = (v_input->>'expectedDurationMinutes')::integer,
+    start_time = (v_input->>'startTime')::time,
+    note = nullif(v_input->>'note', ''),
+    coach_note = nullif(v_input->>'coachNote', ''),
+    updated_at = p_now
+  where id = p_series_id and user_id = p_user_id;
+  perform public.rolling_plan_replace_series_activities(
+    p_user_id, p_series_id, v_input->'activities', p_now
+  );
+  -- The rule changed, so every occurrence it already produced is stale.
+  v_sweep_from := least(v_series.start_date, (v_input->>'startDate')::date);
+  -- M3-20: a deleted occurrence is skipped only under the rule it was deleted
+  -- from. The rule is being rewritten from here, and the sweep already discards
+  -- every cancelled and edited occurrence in the same range, so the owner's
+  -- skips there go with them.
+  update public.rolling_plan_series set
+    skipped_occurrence_dates = array(
+      select skipped from pg_catalog.unnest(skipped_occurrence_dates) as skipped
+      where skipped < v_sweep_from order by skipped
+    )
+  where id = p_series_id and user_id = p_user_id;
+  v_outcome.after_state := public.rolling_plan_series_state(p_user_id, p_series_id);
+  v_outcome.entry_series_id := p_series_id;
+  v_outcome.sweep_series_id := p_series_id;
+  v_outcome.sweep_from := v_sweep_from;
+  return v_outcome;
+end;
+$$;
+
+
+ALTER FUNCTION "private"."plan_change_edit_series"("p_user_id" "uuid", "p_today" "date", "p_now" timestamp with time zone, "p_change" "jsonb", "p_series_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "private"."plan_change_end_series"("p_user_id" "uuid", "p_today" "date", "p_now" timestamp with time zone, "p_change" "jsonb", "p_series_id" "uuid") RETURNS "private"."plan_change_outcome"
+    LANGUAGE "plpgsql"
+    SET "search_path" TO ''
+    AS $$
+declare
+  v_outcome private.plan_change_outcome;
+  v_effective_date date;
+begin
+  perform private.plan_change_lock_series(p_user_id, p_series_id);
+  v_outcome.before_state := public.rolling_plan_series_state(p_user_id, p_series_id);
+  if p_change - array['operation', 'seriesId', 'effectiveDate'] <> '{}'::jsonb
+    or not (p_change ? 'effectiveDate')
+    or pg_catalog.jsonb_typeof(p_change->'effectiveDate') <> 'string'
+    or (p_change->>'effectiveDate')::date::text <> p_change->>'effectiveDate'
+  then raise exception using errcode = '22023', message = 'Invalid rolling plan series change.'; end if;
+  v_effective_date := (p_change->>'effectiveDate')::date;
+  perform private.plan_change_refuse_past(v_effective_date, p_today);
+  -- Ending a segment never lengthens it. A segment that already ends earlier
+  -- keeps its own end date, because the sweep only runs from the effective date
+  -- forward and so could never remove the occurrences a pushed-out end date
+  -- would let the next materialization write into the reopened gap.
+  update public.rolling_plan_series set
+    end_date = least(
+      coalesce(end_date, 'infinity'::date), v_effective_date - 1
+    ),
+    updated_at = p_now
+  where id = p_series_id and user_id = p_user_id;
+  v_outcome.after_state := public.rolling_plan_series_state(p_user_id, p_series_id);
+  v_outcome.entry_series_id := p_series_id;
+  v_outcome.sweep_series_id := p_series_id;
+  v_outcome.sweep_from := v_effective_date;
+  return v_outcome;
+end;
+$$;
+
+
+ALTER FUNCTION "private"."plan_change_end_series"("p_user_id" "uuid", "p_today" "date", "p_now" timestamp with time zone, "p_change" "jsonb", "p_series_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "private"."plan_change_insert_activities"("p_user_id" "uuid", "p_plan_id" "uuid", "p_session_id" "uuid", "p_activities" "jsonb", "p_now" timestamp with time zone) RETURNS "void"
+    LANGUAGE "plpgsql"
+    SET "search_path" TO ''
+    AS $$
+declare
+  v_activity jsonb;
+begin
+  for v_activity in
+    select value from pg_catalog.jsonb_array_elements(p_activities)
+  loop
+    if v_activity ? 'personalActivityId'
+      and pg_catalog.jsonb_typeof(v_activity->'personalActivityId') <> 'null'
+      and not exists (
+        select 1 from public.personal_activities
+        where id = (v_activity->>'personalActivityId')::uuid and user_id = p_user_id
+      )
+    then raise exception using errcode = '22023', message = 'Invalid rolling plan activity.'; end if;
+    insert into public.rolling_plan_activities (
+      user_id, plan_id, session_id, personal_activity_id, position,
+      name, sport, instructions, rationale, measurement_mode, target,
+      created_at, updated_at
+    ) values (
+      p_user_id, p_plan_id, p_session_id,
+      (v_activity->>'personalActivityId')::uuid,
+      (v_activity->>'position')::smallint,
+      pg_catalog.btrim(v_activity->>'name'),
+      pg_catalog.btrim(v_activity->>'sport'),
+      nullif(v_activity->>'instructions', ''),
+      nullif(v_activity->>'rationale', ''),
+      v_activity->>'measurementMode', v_activity->'target',
+      p_now, p_now
+    );
+  end loop;
+end;
+$$;
+
+
+ALTER FUNCTION "private"."plan_change_insert_activities"("p_user_id" "uuid", "p_plan_id" "uuid", "p_session_id" "uuid", "p_activities" "jsonb", "p_now" timestamp with time zone) OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "private"."plan_change_insert_series"("p_user_id" "uuid", "p_plan_id" "uuid", "p_series_id" "uuid", "p_predecessor_series_id" "uuid", "p_start_date" "date", "p_input" "jsonb", "p_now" timestamp with time zone) RETURNS "void"
+    LANGUAGE "plpgsql"
+    SET "search_path" TO ''
+    AS $$
+begin
+  insert into public.rolling_plan_series (
+    id, user_id, plan_id, predecessor_series_id, frequency, interval_count,
+    weekdays, start_date, end_date, title, sport, intent,
+    expected_duration_minutes, start_time, note, coach_note, created_at,
+    updated_at
+  ) values (
+    p_series_id, p_user_id, p_plan_id, p_predecessor_series_id,
+    p_input->>'frequency',
+    (p_input->>'intervalCount')::smallint,
+    public.rolling_plan_weekday_set(p_input->'weekdays'),
+    p_start_date,
+    (p_input->>'endDate')::date,
+    pg_catalog.btrim(p_input->>'title'),
+    pg_catalog.btrim(p_input->>'sport'),
+    nullif(p_input->>'intent', ''),
+    (p_input->>'expectedDurationMinutes')::integer,
+    (p_input->>'startTime')::time,
+    nullif(p_input->>'note', ''),
+    nullif(p_input->>'coachNote', ''),
+    p_now, p_now
+  );
+  perform public.rolling_plan_replace_series_activities(
+    p_user_id, p_series_id, p_input->'activities', p_now
+  );
+end;
+$$;
+
+
+ALTER FUNCTION "private"."plan_change_insert_series"("p_user_id" "uuid", "p_plan_id" "uuid", "p_series_id" "uuid", "p_predecessor_series_id" "uuid", "p_start_date" "date", "p_input" "jsonb", "p_now" timestamp with time zone) OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."rolling_plan_weekday_set_is_valid"("p_value" smallint[]) RETURNS boolean
+    LANGUAGE "sql" IMMUTABLE
+    SET "search_path" TO ''
+    AS $$
+  select p_value is not null
+    and pg_catalog.array_length(p_value, 1) between 1 and 7
+    and p_value <@ array[0, 1, 2, 3, 4, 5, 6]::smallint[]
+    and p_value = (
+      select pg_catalog.array_agg(distinct weekday order by weekday)
+      from pg_catalog.unnest(p_value) as weekday
+    );
+$$;
+
+
+ALTER FUNCTION "public"."rolling_plan_weekday_set_is_valid"("p_value" smallint[]) OWNER TO "postgres";
+
+SET default_tablespace = '';
+
+SET default_table_access_method = "heap";
+
+
+CREATE TABLE IF NOT EXISTS "public"."rolling_plan_series" (
+    "id" "uuid" NOT NULL,
+    "user_id" "uuid" NOT NULL,
+    "plan_id" "uuid" NOT NULL,
+    "predecessor_series_id" "uuid",
+    "frequency" "text" NOT NULL,
+    "interval_count" smallint NOT NULL,
+    "weekdays" smallint[],
+    "start_date" "date" NOT NULL,
+    "end_date" "date",
+    "title" "text" NOT NULL,
+    "sport" "text" NOT NULL,
+    "intent" "text",
+    "expected_duration_minutes" integer,
+    "note" "text",
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "skipped_occurrence_dates" "date"[] DEFAULT '{}'::"date"[] NOT NULL,
+    "start_time" time without time zone,
+    "coach_note" "text",
+    CONSTRAINT "rolling_plan_series_coach_note_length" CHECK ((("coach_note" IS NULL) OR (("char_length"("coach_note") >= 1) AND ("char_length"("coach_note") <= 1000)))),
+    CONSTRAINT "rolling_plan_series_duration_check" CHECK ((("expected_duration_minutes" IS NULL) OR (("expected_duration_minutes" >= 1) AND ("expected_duration_minutes" <= 10080)))),
+    CONSTRAINT "rolling_plan_series_frequency_check" CHECK (("frequency" = ANY (ARRAY['daily'::"text", 'weekly'::"text"]))),
+    CONSTRAINT "rolling_plan_series_intent_check" CHECK ((("intent" IS NULL) OR ("char_length"("intent") <= 500))),
+    CONSTRAINT "rolling_plan_series_note_check" CHECK ((("note" IS NULL) OR ("char_length"("note") <= 2000))),
+    CONSTRAINT "rolling_plan_series_range_check" CHECK ((("end_date" IS NULL) OR ("end_date" >= ("start_date" - 1)))),
+    CONSTRAINT "rolling_plan_series_rule_check" CHECK (((("frequency" = 'daily'::"text") AND ("weekdays" IS NULL) AND (("interval_count" >= 1) AND ("interval_count" <= 365))) OR (("frequency" = 'weekly'::"text") AND (("interval_count" >= 1) AND ("interval_count" <= 52)) AND "public"."rolling_plan_weekday_set_is_valid"("weekdays")))),
+    CONSTRAINT "rolling_plan_series_self_check" CHECK ((("predecessor_series_id" IS NULL) OR ("predecessor_series_id" <> "id"))),
+    CONSTRAINT "rolling_plan_series_skipped_dates_check" CHECK (("cardinality"("skipped_occurrence_dates") <= 366)),
+    CONSTRAINT "rolling_plan_series_sport_check" CHECK ((("char_length"(TRIM(BOTH FROM "sport")) >= 1) AND ("char_length"(TRIM(BOTH FROM "sport")) <= 80))),
+    CONSTRAINT "rolling_plan_series_start_time_whole_minutes" CHECK (("start_time" = ("date_trunc"('minute'::"text", ("start_time")::interval))::time without time zone)),
+    CONSTRAINT "rolling_plan_series_title_check" CHECK ((("char_length"(TRIM(BOTH FROM "title")) >= 1) AND ("char_length"(TRIM(BOTH FROM "title")) <= 120)))
+);
+
+
+ALTER TABLE "public"."rolling_plan_series" OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "private"."plan_change_lock_series"("p_user_id" "uuid", "p_series_id" "uuid") RETURNS "public"."rolling_plan_series"
+    LANGUAGE "plpgsql"
+    SET "search_path" TO ''
+    AS $$
+declare
+  v_series public.rolling_plan_series;
+begin
+  select * into v_series from public.rolling_plan_series
+  where id = p_series_id and user_id = p_user_id for update;
+  if not found then
+    raise exception using errcode = '22023', message = 'Invalid rolling plan series change.';
+  end if;
+  return v_series;
+end;
+$$;
+
+
+ALTER FUNCTION "private"."plan_change_lock_series"("p_user_id" "uuid", "p_series_id" "uuid") OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."rolling_plan_sessions" (
+    "id" "uuid" NOT NULL,
+    "user_id" "uuid" NOT NULL,
+    "plan_id" "uuid" NOT NULL,
+    "local_date" "date" NOT NULL,
+    "position" smallint NOT NULL,
+    "title" "text" NOT NULL,
+    "sport" "text" NOT NULL,
+    "intent" "text",
+    "expected_duration_minutes" integer,
+    "note" "text",
+    "status" "text" DEFAULT 'active'::"text" NOT NULL,
+    "active_position" smallint GENERATED ALWAYS AS (
+CASE
+    WHEN ("status" = 'active'::"text") THEN "position"
+    ELSE NULL::smallint
+END) STORED,
+    "cancelled_at" timestamp with time zone,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "series_id" "uuid",
+    "occurrence_date" "date",
+    "has_diverged" boolean DEFAULT false NOT NULL,
+    "start_time" time without time zone,
+    "coach_note" "text",
+    CONSTRAINT "rolling_plan_sessions_cancelled_check" CHECK (((("status" = 'active'::"text") AND ("cancelled_at" IS NULL)) OR (("status" = 'cancelled'::"text") AND ("cancelled_at" IS NOT NULL)))),
+    CONSTRAINT "rolling_plan_sessions_coach_note_length" CHECK ((("coach_note" IS NULL) OR (("char_length"("coach_note") >= 1) AND ("char_length"("coach_note") <= 1000)))),
+    CONSTRAINT "rolling_plan_sessions_duration_check" CHECK ((("expected_duration_minutes" IS NULL) OR (("expected_duration_minutes" >= 1) AND ("expected_duration_minutes" <= 10080)))),
+    CONSTRAINT "rolling_plan_sessions_intent_check" CHECK ((("intent" IS NULL) OR ("char_length"("intent") <= 500))),
+    CONSTRAINT "rolling_plan_sessions_note_check" CHECK ((("note" IS NULL) OR ("char_length"("note") <= 2000))),
+    CONSTRAINT "rolling_plan_sessions_occurrence_check" CHECK (((("series_id" IS NULL) AND ("occurrence_date" IS NULL) AND (NOT "has_diverged")) OR (("series_id" IS NOT NULL) AND ("occurrence_date" IS NOT NULL)))),
+    CONSTRAINT "rolling_plan_sessions_position_check" CHECK ((("position" >= 0) AND ("position" <= 99))),
+    CONSTRAINT "rolling_plan_sessions_sport_check" CHECK ((("char_length"(TRIM(BOTH FROM "sport")) >= 1) AND ("char_length"(TRIM(BOTH FROM "sport")) <= 80))),
+    CONSTRAINT "rolling_plan_sessions_start_time_whole_minutes" CHECK (("start_time" = ("date_trunc"('minute'::"text", ("start_time")::interval))::time without time zone)),
+    CONSTRAINT "rolling_plan_sessions_status_check" CHECK (("status" = ANY (ARRAY['active'::"text", 'cancelled'::"text"]))),
+    CONSTRAINT "rolling_plan_sessions_title_check" CHECK ((("char_length"(TRIM(BOTH FROM "title")) >= 1) AND ("char_length"(TRIM(BOTH FROM "title")) <= 120)))
+);
+
+
+ALTER TABLE "public"."rolling_plan_sessions" OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "private"."plan_change_lock_session"("p_user_id" "uuid", "p_session_id" "uuid", "p_statuses" "text"[], "p_today" "date") RETURNS "public"."rolling_plan_sessions"
+    LANGUAGE "plpgsql"
+    SET "search_path" TO ''
+    AS $$
+declare
+  v_session public.rolling_plan_sessions;
+begin
+  select * into v_session
+  from public.rolling_plan_sessions session
+  where session.id = p_session_id and session.user_id = p_user_id
+    and session.status = any(p_statuses)
+  for update;
+  if not found then
+    raise exception using errcode = '22023', message = 'Invalid rolling plan change.';
+  end if;
+  -- A past session is history: the past boundary blocks the owner.
+  perform private.plan_change_refuse_past(v_session.local_date, p_today);
+  -- Logged session: what a log was measured against is settled, and the record
+  -- of what happened outlives the plan entry it was measured against.
+  -- `completions_plan_fkey` would refuse a delete anyway; raising here turns a
+  -- raw foreign-key violation into an owner-visible refusal. The row lock above
+  -- is stronger than the key share a concurrent completion insert takes, so a
+  -- log being written is waited for and this cannot be raced.
+  if exists (
+    select 1 from public.completions completion
+    where completion.user_id = p_user_id
+      and completion.plan_session_id = p_session_id
+  ) then
+    raise exception using errcode = 'PT425',
+      message = 'This session has training logged against it, so its plan entry cannot be changed.';
+  end if;
+  return v_session;
+end;
+$$;
+
+
+ALTER FUNCTION "private"."plan_change_lock_session"("p_user_id" "uuid", "p_session_id" "uuid", "p_statuses" "text"[], "p_today" "date") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "private"."plan_change_move"("p_user_id" "uuid", "p_today" "date", "p_now" timestamp with time zone, "p_change" "jsonb", "p_session_id" "uuid") RETURNS "private"."plan_change_outcome"
+    LANGUAGE "plpgsql"
+    SET "search_path" TO ''
+    AS $$
+declare
+  v_outcome private.plan_change_outcome;
+  v_session public.rolling_plan_sessions;
+  v_position numeric;
+  v_target_date date;
+begin
+  v_session := private.plan_change_lock_session(
+    p_user_id, p_session_id, array['active'], p_today
+  );
+  v_outcome.before_state := public.rolling_plan_session_state(p_user_id, p_session_id);
+  if p_change - array['operation', 'sessionId', 'localDate', 'position'] <> '{}'::jsonb
+    or not (p_change ?& array['localDate', 'position'])
+    or pg_catalog.jsonb_typeof(p_change->'localDate') <> 'string'
+    or (p_change->>'localDate')::date::text <> p_change->>'localDate'
+    or pg_catalog.jsonb_typeof(p_change->'position') <> 'number'
+  then raise exception using errcode = '22023', message = 'Invalid rolling plan move.'; end if;
+  v_position := (p_change->>'position')::numeric;
+  if v_position <> trunc(v_position) or v_position not between 0 and 99 then
+    raise exception using errcode = '22023', message = 'Invalid rolling plan move.';
+  end if;
+  v_target_date := (p_change->>'localDate')::date;
+  perform private.plan_change_refuse_past(v_target_date, p_today);
+  update public.rolling_plan_sessions set
+    local_date = v_target_date,
+    position = v_position::smallint, updated_at = p_now
+  where id = p_session_id and user_id = p_user_id;
+  v_outcome.after_state := public.rolling_plan_session_state(p_user_id, p_session_id);
+  v_outcome.entry_session_id := p_session_id;
+  v_outcome.cap_dates := array[v_session.local_date, v_target_date];
+  return v_outcome;
+end;
+$$;
+
+
+ALTER FUNCTION "private"."plan_change_move"("p_user_id" "uuid", "p_today" "date", "p_now" timestamp with time zone, "p_change" "jsonb", "p_session_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "private"."plan_change_reactivate"("p_user_id" "uuid", "p_today" "date", "p_now" timestamp with time zone, "p_change" "jsonb", "p_session_id" "uuid") RETURNS "private"."plan_change_outcome"
+    LANGUAGE "plpgsql"
+    SET "search_path" TO ''
+    AS $$
+declare
+  v_outcome private.plan_change_outcome;
+  v_session public.rolling_plan_sessions;
+  v_position numeric;
+begin
+  if p_change - array['operation', 'sessionId'] <> '{}'::jsonb then
+    raise exception using errcode = '22023', message = 'Invalid rolling plan reactivation.';
+  end if;
+  v_session := private.plan_change_lock_session(
+    p_user_id, p_session_id, array['cancelled'], p_today
+  );
+  v_outcome.before_state := public.rolling_plan_session_state(p_user_id, p_session_id);
+  -- Cancelling freed the session's place in the day, and another session may
+  -- hold it now. It returns after the last active one; a day that is already
+  -- full is refused by the dispatcher's cap, not here.
+  select coalesce(pg_catalog.max(session.position), -1) + 1 into v_position
+  from public.rolling_plan_sessions session
+  where session.user_id = p_user_id and session.local_date = v_session.local_date
+    and session.status = 'active';
+  if v_position > 99 then
+    select pg_catalog.min(candidate) into v_position
+    from pg_catalog.generate_series(0, 99) as candidate
+    where not exists (
+      select 1 from public.rolling_plan_sessions session
+      where session.user_id = p_user_id and session.local_date = v_session.local_date
+        and session.status = 'active' and session.position = candidate
+    );
+  end if;
+  update public.rolling_plan_sessions set
+    status = 'active', cancelled_at = null,
+    position = v_position::smallint, updated_at = p_now
+  where id = p_session_id and user_id = p_user_id;
+  -- Cancellation reason: a reactivated session is no longer cancelled, so why
+  -- it was is no longer true of it (owner, 29 Sep 2026).
+  delete from public.rolling_plan_session_cancellations
+  where session_id = p_session_id and user_id = p_user_id;
+  v_outcome.after_state := public.rolling_plan_session_state(p_user_id, p_session_id);
+  v_outcome.entry_session_id := p_session_id;
+  v_outcome.cap_dates := array[v_session.local_date];
+  return v_outcome;
+end;
+$$;
+
+
+ALTER FUNCTION "private"."plan_change_reactivate"("p_user_id" "uuid", "p_today" "date", "p_now" timestamp with time zone, "p_change" "jsonb", "p_session_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "private"."plan_change_refuse_past"("p_date" "date", "p_today" "date") RETURNS "void"
+    LANGUAGE "plpgsql" STABLE
+    SET "search_path" TO ''
+    AS $$
+begin
+  if p_date < p_today then
+    raise exception using errcode = 'PT422',
+      message = 'A plan change cannot target a date before today.';
+  end if;
+end;
+$$;
+
+
+ALTER FUNCTION "private"."plan_change_refuse_past"("p_date" "date", "p_today" "date") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "private"."plan_change_set_recovery_day"("p_user_id" "uuid", "p_plan_id" "uuid", "p_today" "date", "p_now" timestamp with time zone, "p_change" "jsonb") RETURNS "private"."plan_change_outcome"
+    LANGUAGE "plpgsql"
+    SET "search_path" TO ''
+    AS $$
+declare
+  v_outcome private.plan_change_outcome;
+  v_local_date date;
+begin
+  if p_change - array['operation', 'localDate', 'isRecoveryDay'] <> '{}'::jsonb
+    or not (p_change ?& array['localDate', 'isRecoveryDay'])
+    or pg_catalog.jsonb_typeof(p_change->'localDate') <> 'string'
+    or (p_change->>'localDate')::date::text <> p_change->>'localDate'
+    or pg_catalog.jsonb_typeof(p_change->'isRecoveryDay') <> 'boolean'
+  then raise exception using errcode = '22023', message = 'Invalid rolling plan recovery day.'; end if;
+  v_local_date := (p_change->>'localDate')::date;
+  perform private.plan_change_refuse_past(v_local_date, p_today);
+
+  -- A label is not a session, so it never counts toward the per-date cap.
+  v_outcome.before_state := pg_catalog.jsonb_build_object(
+    'localDate', v_local_date::text,
+    'isRecoveryDay', exists (
+      select 1 from public.rolling_plan_recovery_days recovery
+      where recovery.user_id = p_user_id and recovery.local_date = v_local_date
+    )
+  );
+  if (p_change->>'isRecoveryDay')::boolean then
+    insert into public.rolling_plan_recovery_days (
+      user_id, plan_id, local_date, created_at
+    ) values (p_user_id, p_plan_id, v_local_date, p_now)
+    on conflict (user_id, local_date) do nothing;
+  else
+    delete from public.rolling_plan_recovery_days recovery
+    where recovery.user_id = p_user_id and recovery.local_date = v_local_date;
+  end if;
+  v_outcome.after_state := pg_catalog.jsonb_build_object(
+    'localDate', v_local_date::text,
+    'isRecoveryDay', (p_change->>'isRecoveryDay')::boolean
+  );
+  v_outcome.entry_local_date := v_local_date;
+  return v_outcome;
+end;
+$$;
+
+
+ALTER FUNCTION "private"."plan_change_set_recovery_day"("p_user_id" "uuid", "p_plan_id" "uuid", "p_today" "date", "p_now" timestamp with time zone, "p_change" "jsonb") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "private"."plan_change_split_series"("p_user_id" "uuid", "p_plan_id" "uuid", "p_today" "date", "p_now" timestamp with time zone, "p_change" "jsonb", "p_series_id" "uuid") RETURNS "private"."plan_change_outcome"
+    LANGUAGE "plpgsql"
+    SET "search_path" TO ''
+    AS $$
+declare
+  v_outcome private.plan_change_outcome;
+  v_series public.rolling_plan_series;
+  v_input jsonb;
+  v_effective_date date;
+  v_successor_series_id uuid;
+begin
+  v_series := private.plan_change_lock_series(p_user_id, p_series_id);
+  v_outcome.before_state := public.rolling_plan_series_state(p_user_id, p_series_id);
+  if p_change - array[
+    'operation', 'seriesId', 'effectiveDate', 'successorSeriesId', 'series'
+  ] <> '{}'::jsonb
+    or not (p_change ?& array['successorSeriesId', 'series'])
+    or pg_catalog.jsonb_typeof(p_change->'effectiveDate') <> 'string'
+    or (p_change->>'effectiveDate')::date::text <> p_change->>'effectiveDate'
+    or pg_catalog.jsonb_typeof(p_change->'successorSeriesId') <> 'string'
+    or not public.rolling_plan_series_input_is_valid(p_change->'series')
+  then raise exception using errcode = '22023', message = 'Invalid rolling plan series change.'; end if;
+  v_input := p_change->'series';
+  v_effective_date := (p_change->>'effectiveDate')::date;
+  begin v_successor_series_id := (p_change->>'successorSeriesId')::uuid;
+  exception when others then
+    raise exception using errcode = '22023', message = 'Invalid rolling plan series change.';
+  end;
+  perform private.plan_change_refuse_past(v_effective_date, p_today);
+  -- The successor starts on the split date and the predecessor keeps at least
+  -- its own first day, so a split is never a whole-series edit wearing a
+  -- different name.
+  if v_effective_date <= v_series.start_date
+    or (v_input->>'startDate')::date <> v_effective_date
+    or exists (select 1 from public.rolling_plan_series where id = v_successor_series_id)
+  then raise exception using errcode = '22023', message = 'Invalid rolling plan series change.'; end if;
+  -- Closing the predecessor never lengthens it either; the clamp is the one
+  -- `end_series` applies, for the same reason.
+  update public.rolling_plan_series set
+    end_date = least(
+      coalesce(end_date, 'infinity'::date), v_effective_date - 1
+    ),
+    updated_at = p_now
+  where id = p_series_id and user_id = p_user_id
+  returning end_date into v_series.end_date;
+  perform private.plan_change_insert_series(
+    p_user_id, p_plan_id, v_successor_series_id, p_series_id,
+    v_effective_date, v_input, p_now
+  );
+  v_outcome.after_state := public.rolling_plan_series_state(p_user_id, v_successor_series_id)
+    || pg_catalog.jsonb_build_object(
+      'predecessorSeriesId', p_series_id,
+      'predecessorEndDate', v_series.end_date::text
+    );
+  v_outcome.entry_series_id := v_successor_series_id;
+  v_outcome.sweep_series_id := p_series_id;
+  v_outcome.sweep_from := v_effective_date;
+  return v_outcome;
+end;
+$$;
+
+
+ALTER FUNCTION "private"."plan_change_split_series"("p_user_id" "uuid", "p_plan_id" "uuid", "p_today" "date", "p_now" timestamp with time zone, "p_change" "jsonb", "p_series_id" "uuid") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."accept_roadmap_proposal"("p_proposal_id" "uuid", "p_expected_head_revision" bigint) RETURNS "public"."roadmap_acceptance_receipt"
@@ -2036,28 +2844,12 @@ declare
   v_new_revision bigint;
   v_change jsonb;
   v_operation text;
-  v_session_input jsonb;
-  v_session_id uuid;
-  v_local_date date;
-  v_target_date date;
-  v_before jsonb;
-  v_after jsonb;
-  v_activity jsonb;
+  v_id uuid;
+  v_outcome private.plan_change_outcome;
   v_ordinal integer := 0;
-  v_position numeric;
-  v_session_dates date[] := array[]::date[];
-  v_series public.rolling_plan_series;
-  v_series_id uuid;
-  v_series_input jsonb;
-  v_effective_date date;
-  v_successor_series_id uuid;
-  v_sweep_from date;
+  v_cap_dates date[] := array[]::date[];
   v_sweep jsonb;
   v_series_effects jsonb := '[]'::jsonb;
-  v_occurrence_series_id uuid;
-  v_occurrence_date date;
-  -- Cancellation reason: the owner's optional why, kept beside the session.
-  v_cancel_reason text;
 begin
   if v_user_id is null then
     raise exception using errcode = '42501', message = 'An authenticated FitTip user is required.';
@@ -2072,7 +2864,8 @@ begin
   end if;
 
   -- Owner-local today comes from the stored profile zone and auth.uid() only.
-  -- A caller cannot supply either, so neither rule below can be argued away.
+  -- A caller cannot supply either, so no rule an operation applies can be
+  -- argued away.
   select profile.timezone_name into v_timezone
   from public.profiles profile where profile.user_id = v_user_id;
   if v_timezone is null then
@@ -2131,556 +2924,80 @@ begin
       or pg_catalog.jsonb_typeof(v_change->'operation') <> 'string'
     then raise exception using errcode = '22023', message = 'Invalid rolling plan change.'; end if;
     v_operation := v_change->>'operation';
-    v_before := null;
-    v_session_id := null;
-    v_local_date := null;
-    v_series_id := null;
-    v_successor_series_id := null;
-    v_sweep_from := null;
 
     if v_operation = 'set_recovery_day' then
-      if v_change - array['operation', 'localDate', 'isRecoveryDay'] <> '{}'::jsonb
-        or not (v_change ?& array['localDate', 'isRecoveryDay'])
-        or pg_catalog.jsonb_typeof(v_change->'localDate') <> 'string'
-        or (v_change->>'localDate')::date::text <> v_change->>'localDate'
-        or pg_catalog.jsonb_typeof(v_change->'isRecoveryDay') <> 'boolean'
-      then raise exception using errcode = '22023', message = 'Invalid rolling plan recovery day.'; end if;
-      v_local_date := (v_change->>'localDate')::date;
-      if v_local_date < v_today then
-        raise exception using errcode = 'PT422',
-          message = 'A plan change cannot target a date before today.';
-      end if;
-
-      -- A label is not a session, so it never counts toward the per-date cap.
-      v_before := pg_catalog.jsonb_build_object(
-        'localDate', v_local_date::text,
-        'isRecoveryDay', exists (
-          select 1 from public.rolling_plan_recovery_days recovery
-          where recovery.user_id = v_user_id and recovery.local_date = v_local_date
-        )
-      );
-      if (v_change->>'isRecoveryDay')::boolean then
-        insert into public.rolling_plan_recovery_days (
-          user_id, plan_id, local_date, created_at
-        ) values (v_user_id, v_plan.id, v_local_date, v_now)
-        on conflict (user_id, local_date) do nothing;
-      else
-        delete from public.rolling_plan_recovery_days recovery
-        where recovery.user_id = v_user_id and recovery.local_date = v_local_date;
-      end if;
-      v_after := pg_catalog.jsonb_build_object(
-        'localDate', v_local_date::text,
-        'isRecoveryDay', (v_change->>'isRecoveryDay')::boolean
+      v_outcome := private.plan_change_set_recovery_day(
+        v_user_id, v_plan.id, v_today, v_now, v_change
       );
     elsif v_operation in ('add_series', 'edit_series', 'end_series') then
       if not (v_change ? 'seriesId')
         or pg_catalog.jsonb_typeof(v_change->'seriesId') <> 'string'
       then raise exception using errcode = '22023', message = 'Invalid rolling plan series change.'; end if;
-      begin v_series_id := (v_change->>'seriesId')::uuid;
+      begin v_id := (v_change->>'seriesId')::uuid;
       exception when others then
         raise exception using errcode = '22023', message = 'Invalid rolling plan series change.';
       end;
-
       if v_operation = 'add_series' then
-        if v_change - array['operation', 'seriesId', 'series'] <> '{}'::jsonb
-          or not (v_change ? 'series')
-          or not public.rolling_plan_series_input_is_valid(v_change->'series')
-          or exists (select 1 from public.rolling_plan_series where id = v_series_id)
-        then raise exception using errcode = '22023', message = 'Invalid rolling plan series.'; end if;
-        v_series_input := v_change->'series';
-        if (v_series_input->>'startDate')::date < v_today then
-          raise exception using errcode = 'PT422',
-            message = 'A plan change cannot target a date before today.';
-        end if;
-        insert into public.rolling_plan_series (
-          id, user_id, plan_id, predecessor_series_id, frequency, interval_count,
-          weekdays, start_date, end_date, title, sport, intent,
-          expected_duration_minutes, start_time, note, coach_note, created_at,
-          updated_at
-        ) values (
-          v_series_id, v_user_id, v_plan.id, null,
-          v_series_input->>'frequency',
-          (v_series_input->>'intervalCount')::smallint,
-          public.rolling_plan_weekday_set(v_series_input->'weekdays'),
-          (v_series_input->>'startDate')::date,
-          (v_series_input->>'endDate')::date,
-          pg_catalog.btrim(v_series_input->>'title'),
-          pg_catalog.btrim(v_series_input->>'sport'),
-          nullif(v_series_input->>'intent', ''),
-          (v_series_input->>'expectedDurationMinutes')::integer,
-          (v_series_input->>'startTime')::time,
-          nullif(v_series_input->>'note', ''),
-          nullif(v_series_input->>'coachNote', ''),
-          v_now, v_now
+        v_outcome := private.plan_change_add_series(
+          v_user_id, v_plan.id, v_today, v_now, v_change, v_id
         );
-        perform public.rolling_plan_replace_series_activities(
-          v_user_id, v_series_id, v_series_input->'activities', v_now
+      elsif v_operation = 'end_series' then
+        v_outcome := private.plan_change_end_series(
+          v_user_id, v_today, v_now, v_change, v_id
         );
-        v_after := public.rolling_plan_series_state(v_user_id, v_series_id);
+      elsif v_change ? 'effectiveDate' then
+        v_outcome := private.plan_change_split_series(
+          v_user_id, v_plan.id, v_today, v_now, v_change, v_id
+        );
       else
-        select * into v_series from public.rolling_plan_series
-        where id = v_series_id and user_id = v_user_id for update;
-        if not found then
-          raise exception using errcode = '22023', message = 'Invalid rolling plan series change.';
-        end if;
-        v_before := public.rolling_plan_series_state(v_user_id, v_series_id);
-
-        if v_operation = 'end_series' then
-          if v_change - array['operation', 'seriesId', 'effectiveDate'] <> '{}'::jsonb
-            or not (v_change ? 'effectiveDate')
-            or pg_catalog.jsonb_typeof(v_change->'effectiveDate') <> 'string'
-            or (v_change->>'effectiveDate')::date::text <> v_change->>'effectiveDate'
-          then raise exception using errcode = '22023', message = 'Invalid rolling plan series change.'; end if;
-          v_effective_date := (v_change->>'effectiveDate')::date;
-          if v_effective_date < v_today then
-            raise exception using errcode = 'PT422',
-              message = 'A plan change cannot target a date before today.';
-          end if;
-          -- Ending a segment never lengthens it. A segment that already
-          -- ends earlier keeps its own end date, because the sweep below only
-          -- runs from the effective date forward and so could never remove the
-          -- occurrences a pushed-out end date would let the next
-          -- materialization write into the reopened gap.
-          update public.rolling_plan_series set
-            end_date = least(
-              coalesce(end_date, 'infinity'::date), v_effective_date - 1
-            ),
-            updated_at = v_now
-          where id = v_series_id and user_id = v_user_id;
-          v_sweep_from := v_effective_date;
-          v_after := public.rolling_plan_series_state(v_user_id, v_series_id);
-        elsif v_change ? 'effectiveDate' then
-          -- This and future: close the running segment and open a successor
-          -- that points back at it. Occurrences before the split date are never
-          -- touched, so what they meant is preserved.
-          if v_change - array[
-            'operation', 'seriesId', 'effectiveDate', 'successorSeriesId', 'series'
-          ] <> '{}'::jsonb
-            or not (v_change ?& array['successorSeriesId', 'series'])
-            or pg_catalog.jsonb_typeof(v_change->'effectiveDate') <> 'string'
-            or (v_change->>'effectiveDate')::date::text <> v_change->>'effectiveDate'
-            or pg_catalog.jsonb_typeof(v_change->'successorSeriesId') <> 'string'
-            or not public.rolling_plan_series_input_is_valid(v_change->'series')
-          then raise exception using errcode = '22023', message = 'Invalid rolling plan series change.'; end if;
-          v_series_input := v_change->'series';
-          v_effective_date := (v_change->>'effectiveDate')::date;
-          begin v_successor_series_id := (v_change->>'successorSeriesId')::uuid;
-          exception when others then
-            raise exception using errcode = '22023', message = 'Invalid rolling plan series change.';
-          end;
-          if v_effective_date < v_today then
-            raise exception using errcode = 'PT422',
-              message = 'A plan change cannot target a date before today.';
-          end if;
-          -- The successor starts on the split date and the predecessor keeps
-          -- at least its own first day, so a split is never a whole-series
-          -- edit wearing a different name.
-          if v_effective_date <= v_series.start_date
-            or (v_series_input->>'startDate')::date <> v_effective_date
-            or exists (select 1 from public.rolling_plan_series where id = v_successor_series_id)
-          then raise exception using errcode = '22023', message = 'Invalid rolling plan series change.'; end if;
-          -- Closing the predecessor never lengthens it either; the clamp is
-          -- the same one `end_series` applies, for the same reason.
-          update public.rolling_plan_series set
-            end_date = least(
-              coalesce(end_date, 'infinity'::date), v_effective_date - 1
-            ),
-            updated_at = v_now
-          where id = v_series_id and user_id = v_user_id
-          returning end_date into v_series.end_date;
-          insert into public.rolling_plan_series (
-            id, user_id, plan_id, predecessor_series_id, frequency, interval_count,
-            weekdays, start_date, end_date, title, sport, intent,
-            expected_duration_minutes, start_time, note, coach_note, created_at,
-          updated_at
-          ) values (
-            v_successor_series_id, v_user_id, v_plan.id, v_series_id,
-            v_series_input->>'frequency',
-            (v_series_input->>'intervalCount')::smallint,
-            public.rolling_plan_weekday_set(v_series_input->'weekdays'),
-            v_effective_date,
-            (v_series_input->>'endDate')::date,
-            pg_catalog.btrim(v_series_input->>'title'),
-            pg_catalog.btrim(v_series_input->>'sport'),
-            nullif(v_series_input->>'intent', ''),
-            (v_series_input->>'expectedDurationMinutes')::integer,
-            (v_series_input->>'startTime')::time,
-            nullif(v_series_input->>'note', ''),
-            nullif(v_series_input->>'coachNote', ''),
-            v_now, v_now
-          );
-          perform public.rolling_plan_replace_series_activities(
-            v_user_id, v_successor_series_id, v_series_input->'activities', v_now
-          );
-          v_sweep_from := v_effective_date;
-          v_after := public.rolling_plan_series_state(v_user_id, v_successor_series_id)
-            || pg_catalog.jsonb_build_object(
-              'predecessorSeriesId', v_series_id,
-              'predecessorEndDate', v_series.end_date::text
-            );
-        else
-          -- A whole-series edit rewrites what every occurrence of the segment
-          -- means, so it is only offered while the segment has not started.
-          if v_change - array['operation', 'seriesId', 'series'] <> '{}'::jsonb
-            or not (v_change ? 'series')
-            or not public.rolling_plan_series_input_is_valid(v_change->'series')
-          then raise exception using errcode = '22023', message = 'Invalid rolling plan series change.'; end if;
-          -- No occurrence can precede the segment's own start date, so a
-          -- segment that still starts today or later has had none.
-          if v_series.start_date < v_today then
-            raise exception using errcode = 'PT424',
-              message = 'This series has already started. Change it from a date instead.';
-          end if;
-          v_series_input := v_change->'series';
-          if (v_series_input->>'startDate')::date < v_today then
-            raise exception using errcode = 'PT422',
-              message = 'A plan change cannot target a date before today.';
-          end if;
-          update public.rolling_plan_series set
-            frequency = v_series_input->>'frequency',
-            interval_count = (v_series_input->>'intervalCount')::smallint,
-            weekdays = public.rolling_plan_weekday_set(v_series_input->'weekdays'),
-            start_date = (v_series_input->>'startDate')::date,
-            end_date = (v_series_input->>'endDate')::date,
-            title = pg_catalog.btrim(v_series_input->>'title'),
-            sport = pg_catalog.btrim(v_series_input->>'sport'),
-            intent = nullif(v_series_input->>'intent', ''),
-            expected_duration_minutes = (v_series_input->>'expectedDurationMinutes')::integer,
-            start_time = (v_series_input->>'startTime')::time,
-            note = nullif(v_series_input->>'note', ''),
-            coach_note = nullif(v_series_input->>'coachNote', ''),
-            updated_at = v_now
-          where id = v_series_id and user_id = v_user_id;
-          perform public.rolling_plan_replace_series_activities(
-            v_user_id, v_series_id, v_series_input->'activities', v_now
-          );
-          -- The rule changed, so every occurrence it already produced is stale.
-          v_sweep_from := least(
-            v_series.start_date, (v_series_input->>'startDate')::date
-          );
-          -- M3-20: a deleted occurrence is skipped only under the rule it was
-          -- deleted from. The rule is being rewritten from here, and the sweep
-          -- below already discards every cancelled and edited occurrence in
-          -- the same range, so the owner's skips there go with them.
-          update public.rolling_plan_series set
-            skipped_occurrence_dates = array(
-              select skipped from pg_catalog.unnest(skipped_occurrence_dates) as skipped
-              where skipped < v_sweep_from order by skipped
-            )
-          where id = v_series_id and user_id = v_user_id;
-          v_after := public.rolling_plan_series_state(v_user_id, v_series_id);
-        end if;
+        v_outcome := private.plan_change_edit_series(
+          v_user_id, v_today, v_now, v_change, v_id
+        );
       end if;
     else
       if not (v_change ? 'sessionId')
         or pg_catalog.jsonb_typeof(v_change->'sessionId') <> 'string'
       then raise exception using errcode = '22023', message = 'Invalid rolling plan change.'; end if;
-      begin v_session_id := (v_change->>'sessionId')::uuid;
+      begin v_id := (v_change->>'sessionId')::uuid;
       exception when others then
         raise exception using errcode = '22023', message = 'Invalid rolling plan change.';
       end;
-
-      if v_operation = 'add' then
-        if v_change - array['operation', 'sessionId', 'session'] <> '{}'::jsonb
-          or not (v_change ? 'session')
-          or not public.rolling_plan_session_input_is_valid(v_change->'session', true)
-          or exists (select 1 from public.rolling_plan_sessions where id = v_session_id)
-        then raise exception using errcode = '22023', message = 'Invalid rolling plan addition.'; end if;
-        v_session_input := v_change->'session';
-        v_local_date := (v_session_input->>'localDate')::date;
-        if v_local_date < v_today then
-          raise exception using errcode = 'PT422',
-            message = 'A plan change cannot target a date before today.';
-        end if;
-        v_occurrence_series_id := (v_session_input->>'seriesId')::uuid;
-        if v_occurrence_series_id is not null and not exists (
-          select 1 from public.rolling_plan_series
-          where id = v_occurrence_series_id and user_id = v_user_id
-        ) then
-          raise exception using errcode = '22023', message = 'Invalid rolling plan addition.';
-        end if;
-        v_session_dates := v_session_dates || v_local_date;
-        insert into public.rolling_plan_sessions (
-          id, user_id, plan_id, local_date, position, title, sport, intent,
-          expected_duration_minutes, start_time, note, coach_note, status, series_id,
-          occurrence_date, has_diverged, created_at, updated_at
-        ) values (
-          v_session_id, v_user_id, v_plan.id,
-          v_local_date,
-          (v_session_input->>'position')::smallint,
-          pg_catalog.btrim(v_session_input->>'title'),
-          pg_catalog.btrim(v_session_input->>'sport'),
-          nullif(v_session_input->>'intent', ''),
-          (v_session_input->>'expectedDurationMinutes')::integer,
-          (v_session_input->>'startTime')::time,
-          nullif(v_session_input->>'note', ''),
-          nullif(v_session_input->>'coachNote', ''),
-          'active', v_occurrence_series_id,
-          (v_session_input->>'occurrenceDate')::date,
-          false, v_now, v_now
-        );
-      elsif v_operation = 'delete' then
-        -- M3-19: the one owner-driven hard delete of a planned session.
-        --
-        -- A cancelled row is admitted as well as an active one, because a
-        -- session the owner already cancelled is exactly what they may next
-        -- want gone. The past boundary still holds, as it does for every
-        -- other operation.
-        if v_change - array['operation', 'sessionId'] <> '{}'::jsonb then
-          raise exception using errcode = '22023', message = 'Invalid rolling plan deletion.';
-        end if;
-        select session.local_date, session.series_id, session.occurrence_date
-        into v_local_date, v_occurrence_series_id, v_occurrence_date
-        from public.rolling_plan_sessions session
-        where session.id = v_session_id and session.user_id = v_user_id
-          and session.status in ('active', 'cancelled')
-        for update;
-        if not found then raise exception using errcode = '22023', message = 'Invalid rolling plan change.'; end if;
-        if v_local_date < v_today then
-          raise exception using errcode = 'PT422',
-            message = 'A plan change cannot target a date before today.';
-        end if;
-        -- The record of what happened outlives the plan entry it was measured
-        -- against, which is the same reasoning that made `planned_snapshot`
-        -- write-once. `completions_plan_fkey` would refuse the delete anyway;
-        -- raising here is what turns a raw foreign-key violation into an
-        -- owner-visible refusal. The row lock above is stronger than the key
-        -- share a concurrent completion insert takes, so this cannot be raced.
-        if exists (
-          select 1 from public.completions completion
-          where completion.user_id = v_user_id
-            and completion.plan_session_id = v_session_id
-        ) then
-          raise exception using errcode = 'PT425',
-            message = 'This session has training logged against it, so its plan entry cannot be changed.';
-        end if;
-        v_session_dates := v_session_dates || v_local_date;
-        v_before := public.rolling_plan_session_state(v_user_id, v_session_id);
-        delete from public.rolling_plan_sessions
-        where id = v_session_id and user_id = v_user_id;
-        -- M3-20: without this the materializer finds the rule date empty and
-        -- writes the occurrence straight back. The rule date is recorded, not
-        -- the local date, because a moved occurrence is still the series'
-        -- answer to its rule date. Dates behind today can never be filled
-        -- again, so they are dropped here rather than kept forever.
-        if v_occurrence_series_id is not null and v_occurrence_date >= v_today then
-          update public.rolling_plan_series set
-            skipped_occurrence_dates = array(
-              select skipped from pg_catalog.unnest(
-                skipped_occurrence_dates || v_occurrence_date
-              ) as skipped
-              where skipped >= v_today
-              group by skipped order by skipped
-            )
-          where id = v_occurrence_series_id and user_id = v_user_id;
-        end if;
-        -- Exactly the entry `rolling_plan_sweep_series_occurrences` already
-        -- writes for a removed occurrence: a dated `delete` naming no session,
-        -- which is what survives `rolling_plan_change_entries_session_fkey`
-        -- cascading this row's own earlier entries away.
-        v_after := pg_catalog.jsonb_build_object(
-          'localDate', v_local_date::text, 'deleted', true
-        );
-      elsif v_operation = 'reactivate' then
-        -- M3-20: the one operation that admits only a cancelled session. Like
-        -- delete it is the owner's individual act; the past boundary holds,
-        -- because an active planned
-        -- session in the past is something no operation may create. A session
-        -- trained after it was cancelled is logged against the cancelled row,
-        -- whose completion snapshot then records both facts.
-        if v_change - array['operation', 'sessionId'] <> '{}'::jsonb then
-          raise exception using errcode = '22023', message = 'Invalid rolling plan reactivation.';
-        end if;
-        select session.local_date into v_local_date
-        from public.rolling_plan_sessions session
-        where session.id = v_session_id and session.user_id = v_user_id
-          and session.status = 'cancelled'
-        for update;
-        if not found then raise exception using errcode = '22023', message = 'Invalid rolling plan change.'; end if;
-        if v_local_date < v_today then
-          raise exception using errcode = 'PT422',
-            message = 'A plan change cannot target a date before today.';
-        end if;
-        -- Logged session: a cancelled session that was trained anyway keeps
-        -- the state its log was written against.
-        if exists (
-          select 1 from public.completions completion
-          where completion.user_id = v_user_id
-            and completion.plan_session_id = v_session_id
-        ) then
-          raise exception using errcode = 'PT425',
-            message = 'This session has training logged against it, so its plan entry cannot be changed.';
-        end if;
-        v_session_dates := v_session_dates || v_local_date;
-        v_before := public.rolling_plan_session_state(v_user_id, v_session_id);
-        -- Cancelling freed the session's place in the day, and another session
-        -- may hold it now. It returns after the last active one; a day that is
-        -- already full is refused by the cap below, not here.
-        select coalesce(pg_catalog.max(session.position), -1) + 1 into v_position
-        from public.rolling_plan_sessions session
-        where session.user_id = v_user_id and session.local_date = v_local_date
-          and session.status = 'active';
-        if v_position > 99 then
-          select pg_catalog.min(candidate) into v_position
-          from pg_catalog.generate_series(0, 99) as candidate
-          where not exists (
-            select 1 from public.rolling_plan_sessions session
-            where session.user_id = v_user_id and session.local_date = v_local_date
-              and session.status = 'active' and session.position = candidate
+      -- An unrecognized operation lands nowhere rather than in whichever
+      -- branch happens to be written last (M3-19).
+      case v_operation
+        when 'add' then
+          v_outcome := private.plan_change_add(
+            v_user_id, v_plan.id, v_today, v_now, v_change, v_id
           );
-        end if;
-        update public.rolling_plan_sessions set
-          status = 'active', cancelled_at = null,
-          position = v_position::smallint, updated_at = v_now
-        where id = v_session_id and user_id = v_user_id;
-        -- Cancellation reason: a reactivated session is no longer cancelled,
-        -- so why it was is no longer true of it (owner, 29 Sep 2026).
-        delete from public.rolling_plan_session_cancellations
-        where session_id = v_session_id and user_id = v_user_id;
-      elsif v_operation in ('edit', 'move', 'cancel') then
-        select session.local_date into v_local_date
-        from public.rolling_plan_sessions session
-        where session.id = v_session_id and session.user_id = v_user_id
-          and session.status = 'active'
-        for update;
-        if not found then raise exception using errcode = '22023', message = 'Invalid rolling plan change.'; end if;
-        -- A past session is history: the past boundary blocks the owner.
-        if v_local_date < v_today then
-          raise exception using errcode = 'PT422',
-            message = 'A plan change cannot target a date before today.';
-        end if;
-        -- Logged session: what a log was measured against is settled, because
-        -- the page that offers
-        -- none of these is the rule being enforced. Behind the row lock
-        -- above, as Delete's check is, so a log being written is waited for.
-        if exists (
-          select 1 from public.completions completion
-          where completion.user_id = v_user_id
-            and completion.plan_session_id = v_session_id
-        ) then
-          raise exception using errcode = 'PT425',
-            message = 'This session has training logged against it, so its plan entry cannot be changed.';
-        end if;
-        v_session_dates := v_session_dates || v_local_date;
-        v_before := public.rolling_plan_session_state(v_user_id, v_session_id);
-
-        if v_operation = 'edit' then
-          if v_change - array['operation', 'sessionId', 'session'] <> '{}'::jsonb
-            or not (v_change ? 'session')
-            or not public.rolling_plan_session_input_is_valid(v_change->'session', false)
-          then raise exception using errcode = '22023', message = 'Invalid rolling plan edit.'; end if;
-          v_session_input := v_change->'session';
-          update public.rolling_plan_sessions set
-            title = pg_catalog.btrim(v_session_input->>'title'),
-            sport = pg_catalog.btrim(v_session_input->>'sport'),
-            intent = nullif(v_session_input->>'intent', ''),
-            expected_duration_minutes = (v_session_input->>'expectedDurationMinutes')::integer,
-            start_time = (v_session_input->>'startTime')::time,
-            note = nullif(v_session_input->>'note', ''),
-            coach_note = nullif(v_session_input->>'coachNote', ''),
-            updated_at = v_now
-          where id = v_session_id and user_id = v_user_id;
-          delete from public.rolling_plan_activities
-          where session_id = v_session_id and user_id = v_user_id;
-        elsif v_operation = 'move' then
-          if v_change - array['operation', 'sessionId', 'localDate', 'position'] <> '{}'::jsonb
-            or not (v_change ?& array['localDate', 'position'])
-            or pg_catalog.jsonb_typeof(v_change->'localDate') <> 'string'
-            or (v_change->>'localDate')::date::text <> v_change->>'localDate'
-            or pg_catalog.jsonb_typeof(v_change->'position') <> 'number'
-          then raise exception using errcode = '22023', message = 'Invalid rolling plan move.'; end if;
-          v_position := (v_change->>'position')::numeric;
-          if v_position <> trunc(v_position) or v_position not between 0 and 99 then
-            raise exception using errcode = '22023', message = 'Invalid rolling plan move.';
-          end if;
-          v_target_date := (v_change->>'localDate')::date;
-          if v_target_date < v_today then
-            raise exception using errcode = 'PT422',
-              message = 'A plan change cannot target a date before today.';
-          end if;
-          v_session_dates := v_session_dates || v_target_date;
-          update public.rolling_plan_sessions set
-            local_date = v_target_date,
-            position = v_position::smallint, updated_at = v_now
-          where id = v_session_id and user_id = v_user_id;
-        elsif v_operation = 'cancel' then
-          -- Cancellation reason: `reason` is optional, and a cancel without
-          -- one is exactly the cancel it always was.
-          if v_change - array['operation', 'sessionId', 'reason'] <> '{}'::jsonb
-            or (
-              v_change ? 'reason'
-              and pg_catalog.jsonb_typeof(v_change->'reason') <> 'null'
-              and not public.rolling_plan_cancellation_reason_is_valid(v_change->'reason')
-            )
-          then
-            raise exception using errcode = '22023', message = 'Invalid rolling plan cancellation.';
-          end if;
-          update public.rolling_plan_sessions set
-            status = 'cancelled', cancelled_at = v_now, updated_at = v_now
-          where id = v_session_id and user_id = v_user_id;
-          v_cancel_reason := pg_catalog.btrim(v_change->>'reason', E' \t\r\n');
-          if v_cancel_reason is not null then
-            insert into public.rolling_plan_session_cancellations (
-              session_id, user_id, reason, created_at, updated_at
-            ) values (v_session_id, v_user_id, v_cancel_reason, v_now, v_now);
-          end if;
+        when 'delete' then
+          v_outcome := private.plan_change_delete(
+            v_user_id, v_today, v_change, v_id
+          );
+        when 'reactivate' then
+          v_outcome := private.plan_change_reactivate(
+            v_user_id, v_today, v_now, v_change, v_id
+          );
+        when 'edit' then
+          v_outcome := private.plan_change_edit(
+            v_user_id, v_plan.id, v_today, v_now, v_change, v_id
+          );
+        when 'move' then
+          v_outcome := private.plan_change_move(
+            v_user_id, v_today, v_now, v_change, v_id
+          );
+        when 'cancel' then
+          v_outcome := private.plan_change_cancel(
+            v_user_id, v_today, v_now, v_change, v_id
+          );
         else
-          -- M3-19: cancel used to be this chain's fallthrough. Now that one of
-          -- the operations beside it destroys a row, an unrecognized operation
-          -- has to land nowhere rather than in whichever branch happens to be
-          -- written last.
           raise exception using errcode = '22023', message = 'Invalid rolling plan change.';
-        end if;
-
-        -- ADR-017, as amended 22 September 2026: an occurrence is diverged
-        -- when its content no longer reads as its rule's, which only an edit
-        -- does. A move and a cancel leave what it says alone, so they
-        -- leave the flag alone. The materializer never revisits an existing
-        -- occurrence either way.
-        if v_operation = 'edit' then
-          update public.rolling_plan_sessions set has_diverged = true
-          where id = v_session_id and user_id = v_user_id
-            and series_id is not null and not has_diverged;
-        end if;
-      else
-        raise exception using errcode = '22023', message = 'Invalid rolling plan change.';
-      end if;
-
-      if v_operation in ('add', 'edit') then
-        for v_activity in
-          select value from pg_catalog.jsonb_array_elements(v_session_input->'activities')
-        loop
-          if v_activity ? 'personalActivityId'
-            and pg_catalog.jsonb_typeof(v_activity->'personalActivityId') <> 'null'
-            and not exists (
-              select 1 from public.personal_activities
-              where id = (v_activity->>'personalActivityId')::uuid and user_id = v_user_id
-            )
-          then raise exception using errcode = '22023', message = 'Invalid rolling plan activity.'; end if;
-          insert into public.rolling_plan_activities (
-            user_id, plan_id, session_id, personal_activity_id, position,
-            name, sport, instructions, rationale, measurement_mode, target,
-            created_at, updated_at
-          ) values (
-            v_user_id, v_plan.id, v_session_id,
-            (v_activity->>'personalActivityId')::uuid,
-            (v_activity->>'position')::smallint,
-            pg_catalog.btrim(v_activity->>'name'),
-            pg_catalog.btrim(v_activity->>'sport'),
-            nullif(v_activity->>'instructions', ''),
-            nullif(v_activity->>'rationale', ''),
-            v_activity->>'measurementMode', v_activity->'target',
-            v_now, v_now
-          );
-        end loop;
-      end if;
-
-      if v_operation <> 'delete' then
-        v_after := public.rolling_plan_session_state(v_user_id, v_session_id);
-      end if;
+      end case;
     end if;
 
-    if v_before is not null and v_before = v_after then
+    v_cap_dates := v_cap_dates || coalesce(v_outcome.cap_dates, array[]::date[]);
+    if v_outcome.before_state is not null
+      and v_outcome.before_state = v_outcome.after_state
+    then
       raise exception using errcode = '22023', message = 'A plan change must change current state.';
     end if;
     insert into public.rolling_plan_change_entries (
@@ -2688,27 +3005,19 @@ begin
       ordinal, change_kind, before_state, after_state, created_at
     ) values (
       v_user_id, v_plan.id, v_change_set_id,
-      case when v_operation in ('add', 'edit', 'move', 'cancel', 'reactivate')
-        then v_session_id else null end,
-      case when v_operation = 'add_series' then v_series_id
-        when v_operation = 'end_series' then v_series_id
-        when v_operation = 'edit_series'
-          then coalesce(v_successor_series_id, v_series_id)
-        else null end,
-      case when v_operation in ('set_recovery_day', 'delete') then v_local_date
-        else null end,
-      v_ordinal, v_operation, v_before, v_after, v_now
+      v_outcome.entry_session_id, v_outcome.entry_series_id, v_outcome.entry_local_date,
+      v_ordinal, v_operation, v_outcome.before_state, v_outcome.after_state, v_now
     );
     v_ordinal := v_ordinal + 1;
 
-    if v_sweep_from is not null then
+    if v_outcome.sweep_from is not null then
       v_sweep := public.rolling_plan_sweep_series_occurrences(
-        v_user_id, v_plan.id, v_change_set_id, v_series_id,
-        v_sweep_from, v_today, v_ordinal, v_now
+        v_user_id, v_plan.id, v_change_set_id, v_outcome.sweep_series_id,
+        v_outcome.sweep_from, v_today, v_ordinal, v_now
       );
       v_ordinal := (v_sweep->>'nextOrdinal')::integer;
       v_series_effects := v_series_effects || pg_catalog.jsonb_build_object(
-        'seriesId', v_series_id,
+        'seriesId', v_outcome.sweep_series_id,
         'operation', v_operation,
         'deleted', v_sweep->'deleted',
         'divergedDeleted', v_sweep->'divergedDeleted',
@@ -2724,7 +3033,7 @@ begin
   if exists (
     select 1 from public.rolling_plan_sessions session
     where session.user_id = v_user_id and session.status = 'active'
-      and session.local_date = any(v_session_dates)
+      and session.local_date = any(v_cap_dates)
     group by session.local_date
     having pg_catalog.count(*) > 10
   ) then
@@ -8579,23 +8888,6 @@ $$;
 ALTER FUNCTION "public"."rolling_plan_weekday_set"("p_value" "jsonb") OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."rolling_plan_weekday_set_is_valid"("p_value" smallint[]) RETURNS boolean
-    LANGUAGE "sql" IMMUTABLE
-    SET "search_path" TO ''
-    AS $$
-  select p_value is not null
-    and pg_catalog.array_length(p_value, 1) between 1 and 7
-    and p_value <@ array[0, 1, 2, 3, 4, 5, 6]::smallint[]
-    and p_value = (
-      select pg_catalog.array_agg(distinct weekday order by weekday)
-      from pg_catalog.unnest(p_value) as weekday
-    );
-$$;
-
-
-ALTER FUNCTION "public"."rolling_plan_weekday_set_is_valid"("p_value" smallint[]) OWNER TO "postgres";
-
-
 CREATE OR REPLACE FUNCTION "public"."saved_session_activity_input_is_valid"("p_value" "jsonb") RETURNS boolean
     LANGUAGE "plpgsql" STABLE
     SET "search_path" TO ''
@@ -9208,10 +9500,6 @@ $$;
 
 
 ALTER FUNCTION "public"."write_roadmap"("p_content" "jsonb", "p_expected_head_revision" bigint) OWNER TO "postgres";
-
-SET default_tablespace = '';
-
-SET default_table_access_method = "heap";
 
 
 CREATE TABLE IF NOT EXISTS "public"."ai_spend_reservations" (
@@ -9958,44 +10246,6 @@ CREATE TABLE IF NOT EXISTS "public"."rolling_plan_recovery_days" (
 ALTER TABLE "public"."rolling_plan_recovery_days" OWNER TO "postgres";
 
 
-CREATE TABLE IF NOT EXISTS "public"."rolling_plan_series" (
-    "id" "uuid" NOT NULL,
-    "user_id" "uuid" NOT NULL,
-    "plan_id" "uuid" NOT NULL,
-    "predecessor_series_id" "uuid",
-    "frequency" "text" NOT NULL,
-    "interval_count" smallint NOT NULL,
-    "weekdays" smallint[],
-    "start_date" "date" NOT NULL,
-    "end_date" "date",
-    "title" "text" NOT NULL,
-    "sport" "text" NOT NULL,
-    "intent" "text",
-    "expected_duration_minutes" integer,
-    "note" "text",
-    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "skipped_occurrence_dates" "date"[] DEFAULT '{}'::"date"[] NOT NULL,
-    "start_time" time without time zone,
-    "coach_note" "text",
-    CONSTRAINT "rolling_plan_series_coach_note_length" CHECK ((("coach_note" IS NULL) OR (("char_length"("coach_note") >= 1) AND ("char_length"("coach_note") <= 1000)))),
-    CONSTRAINT "rolling_plan_series_duration_check" CHECK ((("expected_duration_minutes" IS NULL) OR (("expected_duration_minutes" >= 1) AND ("expected_duration_minutes" <= 10080)))),
-    CONSTRAINT "rolling_plan_series_frequency_check" CHECK (("frequency" = ANY (ARRAY['daily'::"text", 'weekly'::"text"]))),
-    CONSTRAINT "rolling_plan_series_intent_check" CHECK ((("intent" IS NULL) OR ("char_length"("intent") <= 500))),
-    CONSTRAINT "rolling_plan_series_note_check" CHECK ((("note" IS NULL) OR ("char_length"("note") <= 2000))),
-    CONSTRAINT "rolling_plan_series_range_check" CHECK ((("end_date" IS NULL) OR ("end_date" >= ("start_date" - 1)))),
-    CONSTRAINT "rolling_plan_series_rule_check" CHECK (((("frequency" = 'daily'::"text") AND ("weekdays" IS NULL) AND (("interval_count" >= 1) AND ("interval_count" <= 365))) OR (("frequency" = 'weekly'::"text") AND (("interval_count" >= 1) AND ("interval_count" <= 52)) AND "public"."rolling_plan_weekday_set_is_valid"("weekdays")))),
-    CONSTRAINT "rolling_plan_series_self_check" CHECK ((("predecessor_series_id" IS NULL) OR ("predecessor_series_id" <> "id"))),
-    CONSTRAINT "rolling_plan_series_skipped_dates_check" CHECK (("cardinality"("skipped_occurrence_dates") <= 366)),
-    CONSTRAINT "rolling_plan_series_sport_check" CHECK ((("char_length"(TRIM(BOTH FROM "sport")) >= 1) AND ("char_length"(TRIM(BOTH FROM "sport")) <= 80))),
-    CONSTRAINT "rolling_plan_series_start_time_whole_minutes" CHECK (("start_time" = ("date_trunc"('minute'::"text", ("start_time")::interval))::time without time zone)),
-    CONSTRAINT "rolling_plan_series_title_check" CHECK ((("char_length"(TRIM(BOTH FROM "title")) >= 1) AND ("char_length"(TRIM(BOTH FROM "title")) <= 120)))
-);
-
-
-ALTER TABLE "public"."rolling_plan_series" OWNER TO "postgres";
-
-
 CREATE TABLE IF NOT EXISTS "public"."rolling_plan_series_activities" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "user_id" "uuid" NOT NULL,
@@ -10035,48 +10285,6 @@ CREATE TABLE IF NOT EXISTS "public"."rolling_plan_session_cancellations" (
 
 
 ALTER TABLE "public"."rolling_plan_session_cancellations" OWNER TO "postgres";
-
-
-CREATE TABLE IF NOT EXISTS "public"."rolling_plan_sessions" (
-    "id" "uuid" NOT NULL,
-    "user_id" "uuid" NOT NULL,
-    "plan_id" "uuid" NOT NULL,
-    "local_date" "date" NOT NULL,
-    "position" smallint NOT NULL,
-    "title" "text" NOT NULL,
-    "sport" "text" NOT NULL,
-    "intent" "text",
-    "expected_duration_minutes" integer,
-    "note" "text",
-    "status" "text" DEFAULT 'active'::"text" NOT NULL,
-    "active_position" smallint GENERATED ALWAYS AS (
-CASE
-    WHEN ("status" = 'active'::"text") THEN "position"
-    ELSE NULL::smallint
-END) STORED,
-    "cancelled_at" timestamp with time zone,
-    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "series_id" "uuid",
-    "occurrence_date" "date",
-    "has_diverged" boolean DEFAULT false NOT NULL,
-    "start_time" time without time zone,
-    "coach_note" "text",
-    CONSTRAINT "rolling_plan_sessions_cancelled_check" CHECK (((("status" = 'active'::"text") AND ("cancelled_at" IS NULL)) OR (("status" = 'cancelled'::"text") AND ("cancelled_at" IS NOT NULL)))),
-    CONSTRAINT "rolling_plan_sessions_coach_note_length" CHECK ((("coach_note" IS NULL) OR (("char_length"("coach_note") >= 1) AND ("char_length"("coach_note") <= 1000)))),
-    CONSTRAINT "rolling_plan_sessions_duration_check" CHECK ((("expected_duration_minutes" IS NULL) OR (("expected_duration_minutes" >= 1) AND ("expected_duration_minutes" <= 10080)))),
-    CONSTRAINT "rolling_plan_sessions_intent_check" CHECK ((("intent" IS NULL) OR ("char_length"("intent") <= 500))),
-    CONSTRAINT "rolling_plan_sessions_note_check" CHECK ((("note" IS NULL) OR ("char_length"("note") <= 2000))),
-    CONSTRAINT "rolling_plan_sessions_occurrence_check" CHECK (((("series_id" IS NULL) AND ("occurrence_date" IS NULL) AND (NOT "has_diverged")) OR (("series_id" IS NOT NULL) AND ("occurrence_date" IS NOT NULL)))),
-    CONSTRAINT "rolling_plan_sessions_position_check" CHECK ((("position" >= 0) AND ("position" <= 99))),
-    CONSTRAINT "rolling_plan_sessions_sport_check" CHECK ((("char_length"(TRIM(BOTH FROM "sport")) >= 1) AND ("char_length"(TRIM(BOTH FROM "sport")) <= 80))),
-    CONSTRAINT "rolling_plan_sessions_start_time_whole_minutes" CHECK (("start_time" = ("date_trunc"('minute'::"text", ("start_time")::interval))::time without time zone)),
-    CONSTRAINT "rolling_plan_sessions_status_check" CHECK (("status" = ANY (ARRAY['active'::"text", 'cancelled'::"text"]))),
-    CONSTRAINT "rolling_plan_sessions_title_check" CHECK ((("char_length"(TRIM(BOTH FROM "title")) >= 1) AND ("char_length"(TRIM(BOTH FROM "title")) <= 120)))
-);
-
-
-ALTER TABLE "public"."rolling_plan_sessions" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."rolling_plans" (
@@ -12010,7 +12218,87 @@ GRANT USAGE ON SCHEMA "public" TO "service_role";
 
 
 
+REVOKE ALL ON TYPE "private"."plan_change_outcome" FROM PUBLIC;
+
+
+
 REVOKE ALL ON FUNCTION "private"."clear_memory_confidence_after_owner_edit"() FROM PUBLIC;
+
+
+
+REVOKE ALL ON FUNCTION "private"."plan_change_add"("p_user_id" "uuid", "p_plan_id" "uuid", "p_today" "date", "p_now" timestamp with time zone, "p_change" "jsonb", "p_session_id" "uuid") FROM PUBLIC;
+
+
+
+REVOKE ALL ON FUNCTION "private"."plan_change_add_series"("p_user_id" "uuid", "p_plan_id" "uuid", "p_today" "date", "p_now" timestamp with time zone, "p_change" "jsonb", "p_series_id" "uuid") FROM PUBLIC;
+
+
+
+REVOKE ALL ON FUNCTION "private"."plan_change_cancel"("p_user_id" "uuid", "p_today" "date", "p_now" timestamp with time zone, "p_change" "jsonb", "p_session_id" "uuid") FROM PUBLIC;
+
+
+
+REVOKE ALL ON FUNCTION "private"."plan_change_delete"("p_user_id" "uuid", "p_today" "date", "p_change" "jsonb", "p_session_id" "uuid") FROM PUBLIC;
+
+
+
+REVOKE ALL ON FUNCTION "private"."plan_change_edit"("p_user_id" "uuid", "p_plan_id" "uuid", "p_today" "date", "p_now" timestamp with time zone, "p_change" "jsonb", "p_session_id" "uuid") FROM PUBLIC;
+
+
+
+REVOKE ALL ON FUNCTION "private"."plan_change_edit_series"("p_user_id" "uuid", "p_today" "date", "p_now" timestamp with time zone, "p_change" "jsonb", "p_series_id" "uuid") FROM PUBLIC;
+
+
+
+REVOKE ALL ON FUNCTION "private"."plan_change_end_series"("p_user_id" "uuid", "p_today" "date", "p_now" timestamp with time zone, "p_change" "jsonb", "p_series_id" "uuid") FROM PUBLIC;
+
+
+
+REVOKE ALL ON FUNCTION "private"."plan_change_insert_activities"("p_user_id" "uuid", "p_plan_id" "uuid", "p_session_id" "uuid", "p_activities" "jsonb", "p_now" timestamp with time zone) FROM PUBLIC;
+
+
+
+REVOKE ALL ON FUNCTION "private"."plan_change_insert_series"("p_user_id" "uuid", "p_plan_id" "uuid", "p_series_id" "uuid", "p_predecessor_series_id" "uuid", "p_start_date" "date", "p_input" "jsonb", "p_now" timestamp with time zone) FROM PUBLIC;
+
+
+
+REVOKE ALL ON FUNCTION "public"."rolling_plan_weekday_set_is_valid"("p_value" smallint[]) FROM PUBLIC;
+
+
+
+GRANT SELECT ON TABLE "public"."rolling_plan_series" TO "authenticated";
+
+
+
+REVOKE ALL ON FUNCTION "private"."plan_change_lock_series"("p_user_id" "uuid", "p_series_id" "uuid") FROM PUBLIC;
+
+
+
+GRANT SELECT ON TABLE "public"."rolling_plan_sessions" TO "authenticated";
+
+
+
+REVOKE ALL ON FUNCTION "private"."plan_change_lock_session"("p_user_id" "uuid", "p_session_id" "uuid", "p_statuses" "text"[], "p_today" "date") FROM PUBLIC;
+
+
+
+REVOKE ALL ON FUNCTION "private"."plan_change_move"("p_user_id" "uuid", "p_today" "date", "p_now" timestamp with time zone, "p_change" "jsonb", "p_session_id" "uuid") FROM PUBLIC;
+
+
+
+REVOKE ALL ON FUNCTION "private"."plan_change_reactivate"("p_user_id" "uuid", "p_today" "date", "p_now" timestamp with time zone, "p_change" "jsonb", "p_session_id" "uuid") FROM PUBLIC;
+
+
+
+REVOKE ALL ON FUNCTION "private"."plan_change_refuse_past"("p_date" "date", "p_today" "date") FROM PUBLIC;
+
+
+
+REVOKE ALL ON FUNCTION "private"."plan_change_set_recovery_day"("p_user_id" "uuid", "p_plan_id" "uuid", "p_today" "date", "p_now" timestamp with time zone, "p_change" "jsonb") FROM PUBLIC;
+
+
+
+REVOKE ALL ON FUNCTION "private"."plan_change_split_series"("p_user_id" "uuid", "p_plan_id" "uuid", "p_today" "date", "p_now" timestamp with time zone, "p_change" "jsonb", "p_series_id" "uuid") FROM PUBLIC;
 
 
 
@@ -12277,10 +12565,6 @@ REVOKE ALL ON FUNCTION "public"."rolling_plan_sweep_series_occurrences"("p_user_
 
 
 REVOKE ALL ON FUNCTION "public"."rolling_plan_weekday_set"("p_value" "jsonb") FROM PUBLIC;
-
-
-
-REVOKE ALL ON FUNCTION "public"."rolling_plan_weekday_set_is_valid"("p_value" smallint[]) FROM PUBLIC;
 
 
 
@@ -12736,19 +13020,11 @@ GRANT SELECT ON TABLE "public"."rolling_plan_recovery_days" TO "authenticated";
 
 
 
-GRANT SELECT ON TABLE "public"."rolling_plan_series" TO "authenticated";
-
-
-
 GRANT SELECT ON TABLE "public"."rolling_plan_series_activities" TO "authenticated";
 
 
 
 GRANT SELECT ON TABLE "public"."rolling_plan_session_cancellations" TO "authenticated";
-
-
-
-GRANT SELECT ON TABLE "public"."rolling_plan_sessions" TO "authenticated";
 
 
 
