@@ -128,7 +128,7 @@ describe("what every prompt says about the athlete's data (ADR-023)", () => {
     // 17,966 until ADR-035 sent the "don't repeat" list.
     // 19,341 until the safety rule for a health condition (21 Oct 2026).
     // 19,366 until how hard to push took its paragraph (12 Nov 2026).
-    expect(tokens("create_roadmap", STATIC_PREFIX_BUDGET)).toBe(19_566);
+    expect(tokens("create_roadmap", STATIC_PREFIX_BUDGET)).toBe(19_591);
     // 14,991 until the plan's logs took 10,200 bytes (16 Oct 2026); 15,216
     // until the prompt said an empty week is an answer (17 Oct 2026); 15,291
     // until the coach could suggest a cancel (ADR-033, 19 Oct 2026); 15,391
@@ -136,7 +136,7 @@ describe("what every prompt says about the athlete's data (ADR-023)", () => {
     // 16,766 until ADR-035 sent the "don't repeat" list; 18,141 until how
     // hard to push took its paragraph (12 Nov 2026).
     expect(tokens("create_seven_day_plan", PLAN_STATIC_PREFIX_BUDGET)).toBe(
-      18_341,
+      18_366,
     );
     // 14,929 until timed sets and intervals joined the mode lines (ADR-038);
     // 14,954 until the safety rule for a health condition (21 Oct 2026);
@@ -150,7 +150,7 @@ describe("what every prompt says about the athlete's data (ADR-023)", () => {
         "fill_session_activities",
         SESSION_ACTIVITIES_STATIC_PREFIX_BUDGET,
       ),
-    ).toBe(16_529);
+    ).toBe(16_554);
   });
 });
 
@@ -623,8 +623,14 @@ describe("how hard to push (owner, 12 Nov 2026)", () => {
         );
         // It never outranks safety, a signal or the athlete's own note.
         expect(paragraphs[index]).toContain(
-          "The safety rules and a recorded signal come before this level, and so does the athlete's planning note for this request.",
+          "The safety rules come before this level, and so does anything the athlete reports about pain, illness, injury or fatigue, wherever they report it. So do their planning note and feedback for this request.",
         );
+        // A fill keeps the session's own intent at every level.
+        if (operation === "fill_session_activities") {
+          expect(paragraphs[index]).toContain(
+            "an easy session stays easy and a hard one stays hard.",
+          );
+        }
         expect(paragraphs[index].length).toBeLessThanOrEqual(
           COACH_AI_PUSH_PARAGRAPH_BUDGET,
         );

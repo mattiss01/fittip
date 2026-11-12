@@ -29,7 +29,7 @@ import {
 import styles from "./training-settings.module.css";
 
 type Part = "frequency" | "days" | "places" | "equipment";
-type PartState = "saving" | "saved" | "refused" | undefined;
+export type PartState = "saving" | "saved" | "refused" | undefined;
 type Save = (part: Part, fill: (form: FormData) => void) => Promise<boolean>;
 
 /**
@@ -171,7 +171,7 @@ export function TrainingSettings({
  * Beside a part's heading: "Saved" once its last change is stored, "Not
  * saved" when it was refused, which the notice above says why.
  */
-function Saved({ state }: { state: PartState }) {
+export function Saved({ state }: { state: PartState }) {
   return (
     <span
       className={styles.saved}
@@ -452,7 +452,10 @@ function OwnList({
  * with `now`. One still waiting is sent on `flush()`, when the component
  * leaves the page, and when the page itself is hidden or closed.
  */
-function useDebouncedSend<T>(delay: number, sendValue: (value: T) => void) {
+export function useDebouncedSend<T>(
+  delay: number,
+  sendValue: (value: T) => void,
+) {
   const pending = useRef<{ value: T } | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latestSend = useRef(sendValue);

@@ -124,9 +124,22 @@ export type CoachPushLevel = (typeof COACH_PUSH_LEVELS)[number]["key"];
 /** What an account that never chose is coached at (owner, 12 Nov 2026). */
 export const DEFAULT_COACH_PUSH_LEVEL: CoachPushLevel = "balanced";
 
-/** A stored or sent value as one of the five, or null when it is none. */
+/** A sent value as one of the five, or null when it is none: a form refuses it. */
 export function toCoachPushLevel(value: unknown): CoachPushLevel | null {
   return COACH_PUSH_LEVELS.find((level) => level.key === value)?.key ?? null;
+}
+
+/**
+ * A stored value as one of the five levels, with its words. A value the app
+ * does not know is read as the default, never as though the owner chose it.
+ */
+export function coachPushLevelOrDefault(
+  value: unknown,
+): (typeof COACH_PUSH_LEVELS)[number] {
+  return (
+    COACH_PUSH_LEVELS.find((level) => level.key === value) ??
+    COACH_PUSH_LEVELS.find((level) => level.key === DEFAULT_COACH_PUSH_LEVEL)!
+  );
 }
 
 export type TrainingSetupView = {

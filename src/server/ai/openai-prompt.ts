@@ -1,8 +1,7 @@
 import "server-only";
 
 import {
-  COACH_PUSH_LEVELS,
-  DEFAULT_COACH_PUSH_LEVEL,
+  coachPushLevelOrDefault,
   type CoachPushLevel,
 } from "@/lib/training/training-setup";
 import {
@@ -777,12 +776,21 @@ export function coachAIStaticPrefix(operation: CoachAIOperation): string {
  * stays byte-identical for every level and the cache is shared. Each is held
  * under `COACH_AI_PUSH_PARAGRAPH_BUDGET`, which `openai-prompt.test.ts` adds
  * to every worst case. Every one ends with `PUSH_PRIORITY`: the level never
- * outranks safety, a recorded signal or the athlete's note for the request.
+ * outranks safety, anything the athlete reports about how they are, or what
+ * they wrote about this request. A fill also keeps the session's own intent
+ * (`FILL_KEEPS_THE_INTENT`): the level moves the numbers, never how hard the
+ * athlete said the session is.
+ *
+ * Plan wording stays at the level of the session ("empty the tank"), never a
+ * set or a rep: the plan call is told not to break a session down.
  */
-export const COACH_AI_PUSH_PARAGRAPH_BUDGET = 800;
+export const COACH_AI_PUSH_PARAGRAPH_BUDGET = 900;
 
 const PUSH_PRIORITY =
-  "The safety rules and a recorded signal come before this level, and so does the athlete's planning note for this request.";
+  "The safety rules come before this level, and so does anything the athlete reports about pain, illness, injury or fatigue, wherever they report it. So do their planning note and feedback for this request.";
+
+const FILL_KEEPS_THE_INTENT =
+  "The session's intent still says how hard it is: an easy session stays easy and a hard one stays hard. This level sets how far the numbers move.";
 
 const PUSH_INSTRUCTIONS: Record<
   CoachPushLevel,
@@ -794,7 +802,7 @@ const PUSH_INSTRUCTIONS: Record<
     create_seven_day_plan:
       "Keep sessions easy to moderate, with at most one moderately hard session in the range. Each intent says to stay relaxed and finish fresh.",
     fill_session_activities:
-      'Repeat recent numbers or step slightly below them, keep rest generous, and leave a few reps in reserve on every set. Say in "instructions" what comfortable effort feels like.',
+      'Repeat recent numbers or step slightly below them, whether load, reps, distance, pace or time. Keep rest generous and some effort in reserve. Say in "instructions" what comfortable effort feels like.',
   },
   steady: {
     create_roadmap:
@@ -802,31 +810,31 @@ const PUSH_INSTRUCTIONS: Record<
     create_seven_day_plan:
       "Mostly easy and moderate sessions, with one harder session where the week has room for it. Intents ask for controlled effort with something left in the tank.",
     fill_session_activities:
-      "Progress from recent numbers in small steps: a rep or two more, or the smallest load increase. Leave two or three reps in reserve on the main work.",
+      "Progress from recent numbers in small steps: a rep or two more, the smallest load increase, a little further or a touch faster. Leave some effort in reserve on the main work.",
   },
   balanced: {
     create_roadmap:
-      "They want real progress, not maintenance. Each phase asks more than the last, with a clear build and a lighter stretch before the next. Milestones are honest improvements: a little further, faster or heavier than now.",
+      'They want real progress on their goals. Each build phase asks more than the one before, with a lighter stretch where load has climbed. Milestones are honest improvements: a little further, faster or heavier than now. A supporting goal can still be held at "maintenance".',
     create_seven_day_plan:
-      'A range of three or more sessions holds one or two that are clearly hard, and the rest easy, so the hard ones can be hard. Say so in each intent: a hard session names the effort, such as "the last rounds should be a real fight". An easy one says to keep it easy.',
+      'A range of three or more sessions holds one or two that are clearly hard, and the rest easy, so the hard ones can be hard. Say so in each intent: a hard session names the effort, such as "the last part should be a real fight". An easy one says to keep it easy.',
     fill_session_activities:
-      'Progress from recent numbers by a clear step: more reps, load or time, not only one more set. Where the session\'s intent is hard, the last set of the main work ends close to the limit, and "instructions" say so. An easy session stays easy.',
+      'Progress from recent numbers by a clear step: more reps, load, distance or time, or a faster pace, not only one more set. In a hard session the main work ends close to the limit, and "instructions" say so.',
   },
   ambitious: {
     create_roadmap:
-      "They want to be pushed and accept being tired. Build load steadily and noticeably across phases, with lighter weeks only where recovery needs them. Milestones sit clearly ahead of where they are now and take real work to reach.",
+      "They want to be pushed. Build load steadily and noticeably across phases, with lighter weeks only where recovery needs them. Milestones sit clearly ahead of where they are now and take real work to reach.",
     create_seven_day_plan:
-      'A range of three or more sessions holds two hard ones, never on consecutive days, and the easy sessions exist to make those possible. Hard intents ask for real effort, such as "go close to failure on the last set" or "hold a pace that hurts". Being tired the next day is expected.',
+      'A range of three or more sessions holds two hard ones, never on consecutive days, and the easy sessions exist to make those possible. Hard intents ask for real effort, such as "this should feel hard by the end" or "hold a pace that hurts". Ordinary tiredness the next day is expected.',
     fill_session_activities:
-      'Progress by a noticeable step, and add a set to the main work where the time allows. Main work ends one or two reps short of failure, with rest kept short where it fits. "instructions" say how hard each set should feel. An easy session stays easy.',
+      'Progress by a noticeable step, and add a set or a repeat to the main work where the time allows. In a hard session the main work ends just short of the limit, with rest kept short where it fits. "instructions" say how hard it should feel.',
   },
   all_in: {
     create_roadmap:
       'They want goals that are hard to hit. Build as fast as their history supports, each phase a real step up. Milestones sit at the edge of what is reachable in the time, so that hitting one is a genuine achievement. Say plainly in "summary" that the roadmap is demanding.',
     create_seven_day_plan:
-      'A range of three or more sessions holds two or three hard ones, never on consecutive days, and one of them is the key session to go all in on: name it in its intent and in "weekDescription". Hard intents are demanding and specific, such as "all-out on the last set" or "empty the tank". Easy days stay easy, because they make the hard ones possible.',
+      'A range of three or more sessions holds two or three hard ones, never on consecutive days, and one of them is the key session to go all in on: name it in its intent and in "weekDescription". Hard intents are demanding, such as "empty the tank" or "the hardest session of your week". Easy days stay easy, because they make the hard ones possible.',
     fill_session_activities:
-      'Set the main work at or past their best recent result: heavier, more reps, faster or longer. Add a set or a finisher where the time allows, and keep rest short. The last set of each main exercise goes to their limit with good form, and "instructions" say plainly that this should be hard. With no history, the conservative start still applies. An easy session stays easy.',
+      'Set the main work at or just past their best result of the last few weeks: heavier, more reps, faster or longer. Add a set, a repeat or a finisher where the time allows, and keep rest short. In a hard session the main work goes to their limit with good form, and "instructions" say plainly that it should be hard. With no history, the conservative start still applies.',
   },
 };
 
@@ -836,10 +844,11 @@ export function coachAIPushInstructions(
   level: CoachPushLevel,
 ): string {
   // An unknown level is coached as the default, as the profile reads one.
-  const known =
-    COACH_PUSH_LEVELS.find((entry) => entry.key === level) ??
-    COACH_PUSH_LEVELS.find((entry) => entry.key === DEFAULT_COACH_PUSH_LEVEL)!;
-  return `# How hard to push: ${known.label}\n\nThe athlete chose "${known.label}" (${known.line}) ${PUSH_INSTRUCTIONS[known.key][operation]} ${PUSH_PRIORITY}`;
+  const known = coachPushLevelOrDefault(level);
+  const body = PUSH_INSTRUCTIONS[known.key][operation];
+  const intent =
+    operation === "fill_session_activities" ? ` ${FILL_KEEPS_THE_INTENT}` : "";
+  return `# How hard to push: ${known.label}\n\nThe athlete chose "${known.label}" (${known.line}) ${body}${intent} ${PUSH_PRIORITY}`;
 }
 
 /**

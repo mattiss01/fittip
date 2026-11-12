@@ -14,19 +14,15 @@ const LAST = COACH_PUSH_LEVELS[COACH_PUSH_LEVELS.length - 1];
 /**
  * How hard the coach pushes (owner, 12 Nov 2026): a slider from the gentlest
  * level on the left to "All in" on the right, the chosen level's name and
- * what it means shown above it as it moves. The level's key is sent under
- * `name`, so a form saves it like any other field.
+ * what it means shown above it as it moves. The level's key is sent as
+ * `pushLevel`, so a form saves it like any other field. The slider's own
+ * name is said to a screen reader; the page's heading says it to the eye.
  */
 export function PushSlider({
   initial,
-  name = "pushLevel",
-  label = "How hard your coach pushes you",
   onChange,
 }: {
   initial: CoachPushLevel;
-  name?: string;
-  /** The slider's accessible name; the page's heading says it to the eye. */
-  label?: string;
   onChange?: (level: CoachPushLevel) => void;
 }) {
   const [index, setIndex] = useState(() =>
@@ -39,15 +35,15 @@ export function PushSlider({
   const describedBy = useId();
 
   return (
-    <div className={styles.slider} data-push-slider>
+    <div className={styles.slider}>
       <div aria-live="polite" className={styles.chosen} id={describedBy}>
         <strong>{level.label}</strong>
         <span>{level.line}</span>
       </div>
-      <input name={name} type="hidden" value={level.key} />
+      <input name="pushLevel" type="hidden" value={level.key} />
       <input
         aria-describedby={describedBy}
-        aria-label={label}
+        aria-label="How hard your coach pushes you"
         aria-valuetext={`${index + 1} of ${COACH_PUSH_LEVELS.length}: ${level.label}`}
         className={styles.range}
         max={COACH_PUSH_LEVELS.length}

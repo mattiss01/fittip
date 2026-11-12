@@ -16,8 +16,7 @@ import {
 } from "@/lib/sports/sport-colours";
 import type { Database } from "@/lib/supabase/database.types";
 import {
-  DEFAULT_COACH_PUSH_LEVEL,
-  toCoachPushLevel,
+  coachPushLevelOrDefault,
   WEEKDAYS,
   type TrainingSetupView,
 } from "@/lib/training/training-setup";
@@ -237,8 +236,7 @@ export class ProfileRepository {
         trainingPlaces: row.training_places,
         homeEquipment: row.home_equipment,
         // As with gender: a stored value the app does not know is the default.
-        pushLevel:
-          toCoachPushLevel(row.coach_push_level) ?? DEFAULT_COACH_PUSH_LEVEL,
+        pushLevel: coachPushLevelOrDefault(row.coach_push_level).key,
       },
       setup: toSetupState(row),
     };

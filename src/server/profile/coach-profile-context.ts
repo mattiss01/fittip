@@ -3,9 +3,9 @@ import "server-only";
 import { HEIGHT_CM_RANGE, WEIGHT_KG_RANGE } from "@/lib/profile/body-measures";
 import { GENDERS } from "@/lib/profile/profile-contract";
 import {
+  coachPushLevelOrDefault,
   DEFAULT_COACH_PUSH_LEVEL,
   SESSIONS_PER_WEEK_RANGE,
-  toCoachPushLevel,
   WEEKDAY_LABELS,
   WEEKDAYS,
 } from "@/lib/training/training-setup";
@@ -114,8 +114,7 @@ export function selectCoachProfileContext(
       homeEquipment: names(training.homeEquipment),
       // One of the five, or the default: a value the app does not know is
       // never passed on as though the owner had chosen it.
-      pushLevel:
-        toCoachPushLevel(training.pushLevel) ?? DEFAULT_COACH_PUSH_LEVEL,
+      pushLevel: coachPushLevelOrDefault(training.pushLevel).key,
     },
   };
 }
