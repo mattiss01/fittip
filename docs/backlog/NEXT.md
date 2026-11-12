@@ -78,6 +78,19 @@ Ordered by dependency. A lane is named where it is not the build lane.
 
 **Coach and records.**
 
+- [ ] **The plan coach does not see a recovery day.** Live run, 12 Nov 2026: Tom at All in
+      was offered hard trainer intervals in place of Tuesday's easy ride, a day marked
+      "Already a recovery day" (and his physio appointment). Since 17 Oct 2026 the coach
+      never reads recovery days and an empty day is rest to it, and since the push level a
+      plan may offer an open session harder in its place, so a marked day is now easier to
+      load. The owner's to decide: send the marked days (the AI data boundary, careful
+      lane) or keep them the owner's alone.
+- [ ] **A fill drops what does not match the session's sport.** All ten live fills of Chris's
+      "Trainer intervals" (12 Nov 2026), at every push level, left out the planned "Hip &
+      core circuit" ("so the session stays focused on the bike"), so Accept removes it.
+      The prompt says the athlete's activities are the starting point. Whether a strength
+      add-on on a bike day should survive a fill is the owner's to say.
+
 - [ ] **A fill's sources are recorded and never checked.** A suggestion names the
       logs, library entries and saved sessions it was built from, and since ADR-023
       the logs whose flags it was sent. Nothing compares them, so a flag corrected
