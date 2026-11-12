@@ -359,13 +359,15 @@ export function RecurrenceFields({
 export function recurrenceProblem(
   values: FormData,
   startDate: string,
+  /** The start is itself the first session, so the rule must fall on it. */
+  startsOnStartDate = false,
 ): string | null {
   const frequency = values.get("frequency");
   const endDate = values.get("endDate");
   if (frequency !== "daily" && frequency !== "weekly") {
     return "Check how often it repeats.";
   }
-  return checkRule(
+  const checked = checkRule(
     {
       frequency,
       intervalText: String(values.get("intervalCount") ?? ""),
@@ -375,7 +377,11 @@ export function recurrenceProblem(
     },
     startDate,
     1,
-  ).problem;
+  );
+  if (checked.problem !== null) return checked.problem;
+  return startsOnStartDate && checked.dates[0] !== startDate
+    ? `Include ${weekdayName(weekday(startDate))}, the day this session is on.`
+    : null;
 }
 
 /** A saved rule in one line, as a recurring session's repeat row shows it. */

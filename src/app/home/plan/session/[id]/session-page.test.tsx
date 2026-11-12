@@ -134,6 +134,7 @@ function page(
       series={segment}
       today={TODAY}
       dateRange={{ first: DATES[0], last: DATES[DATES.length - 1] }}
+      repeatsThrough={DATES[DATES.length - 1]}
       expectedRevision={3}
       origin={origin}
       originDate={null}
@@ -204,6 +205,7 @@ describe("SessionPage", () => {
       // On its own day it can be tracked live (ADR-037).
       "Track live",
       "Duplicate",
+      "Repeat…",
       "Save to library",
       "Cancel session",
       "Delete",
@@ -907,8 +909,13 @@ describe("SessionPage", () => {
 
     expect(screen.getByRole("link", { name: "Edit log" })).toBeVisible();
     expect(screen.queryByRole("button", { name: "Edit" })).toBeNull();
-    // A skip records no training, so there is nothing to save either.
-    expect(screen.queryByRole("button", { name: "More actions" })).toBeNull();
+    // A skip records no training, so there is nothing to save; a one-off
+    // still ahead may only be made to repeat (R2).
+    openMenu();
+    expect(
+      screen.queryByRole("button", { name: "Save to library" }),
+    ).toBeNull();
+    expect(screen.getByRole("button", { name: "Repeat…" })).toBeVisible();
   });
 
   it("lets a past session be logged and nothing else", () => {
@@ -972,5 +979,92 @@ describe("SessionPage", () => {
     expect(
       screen.getByRole("link", { name: "Reload this session" }),
     ).toBeVisible();
+  });
+
+  // R2: a one-off becomes the first session of a series of its own.
+  it("makes a one-off repeat from its own date, from the repeat row", async () => {
+    render(page(session()));
+    fireEvent.click(screen.getByRole("button", { name: /Doesn't repeat/ }));
+    expect(screen.getByRole("dialog")).toHaveTextContent(
+      /becomes the first of the repeat/,
+    );
+    await act(async () =>
+      fireEvent.click(screen.getByRole("button", { name: /^Repeat from / })),
+    );
+    const sent = (seriesDispatch.mock.calls.at(-1) as [FormData])[0];
+    expect(sent.get("operation")).toBe("repeat_session");
+    expect(sent.get("sessionId")).toBe(session().id);
+    expect(sent.get("expectedRevision")).toBe("3");
+    expect(sent.get("frequency")).toBe("weekly");
+    // Monday, the day the session is on.
+    expect(sent.getAll("weekdays")).toEqual(["1"]);
+    // The template is read from the session in the database, not sent.
+    expect(sent.get("title")).toBeNull();
+  });
+
+  it("refuses a repeat that leaves out the session's own day", async () => {
+    render(page(session()));
+    fireEvent.click(screen.getByRole("button", { name: /Doesn't repeat/ }));
+    fireEvent.click(screen.getByRole("radio", { name: "Custom" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /Tue/ }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /Mon/ }));
+    await act(async () =>
+      fireEvent.click(screen.getByRole("button", { name: /^Repeat from / })),
+    );
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Include Monday, the day this session is on.",
+    );
+    expect(seriesDispatch).not.toHaveBeenCalled();
+  });
+
+  it("offers Repeat… on a logged one-off still ahead, whose log stays", () => {
+    render(
+      page(
+        session({
+          log: {
+            completionId: "7f000000-0000-4000-8000-0000000000c2",
+            outcome: "completed",
+            actualLocalDate: TODAY,
+          },
+        }),
+      ),
+    );
+    openMenu();
+    fireEvent.click(screen.getByRole("button", { name: "Repeat…" }));
+    expect(screen.getByRole("dialog")).toHaveTextContent(
+      /stays as it is with anything logged on it/,
+    );
+  });
+
+  it("offers no repeat for a one-off past the dates recurring sessions reach", () => {
+    render(
+      <SessionPage
+        session={session({ localDate: DATES[5] })}
+        today={TODAY}
+        dateRange={{ first: DATES[0], last: DATES[DATES.length - 1] }}
+        repeatsThrough={DATES[4]}
+        expectedRevision={3}
+        origin="plan"
+        originDate={null}
+      />,
+    );
+    expect(screen.queryByRole("button", { name: /Doesn't repeat/ })).toBeNull();
+    openMenu();
+    expect(screen.queryByRole("button", { name: "Repeat…" })).toBeNull();
+  });
+
+  it("asks for unsaved edits to be saved before a one-off repeats", async () => {
+    render(editPage(session()));
+    fireEvent.change(screen.getByLabelText(/^Title/), {
+      target: { value: "Longer run" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Doesn't repeat/ }));
+    await act(async () =>
+      fireEvent.click(screen.getByRole("button", { name: /^Repeat from / })),
+    );
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      /save your changes first/,
+    );
+    expect(seriesDispatch).not.toHaveBeenCalled();
   });
 });

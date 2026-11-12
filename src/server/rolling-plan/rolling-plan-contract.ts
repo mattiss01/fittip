@@ -1068,6 +1068,116 @@ export function registerRollingPlanContract(
       // they meant, which is the whole point of an effective-dated successor.
       expect(filled.sessions.slice(0, 2)).toEqual(before.slice(0, 2));
     });
+
+    it("makes a one-off the first session of a series it becomes, keeping it", async () => {
+      const { plan, day } = requireSubject(subject);
+      const sessionId = randomUUID();
+      const seriesId = randomUUID();
+      await plan.applyChangeSet(changeSet([add(sessionId, day(1), 0)]), 0);
+      const [before] = (await plan.getPlanSlice(day(1), day(1))).sessions;
+
+      const receipt = await plan.applyChangeSet(
+        changeSet([
+          {
+            operation: "repeat_session",
+            sessionId,
+            seriesId,
+            rule: { frequency: "daily", intervalCount: 7 },
+          },
+        ]),
+        1,
+      );
+      expect(receipt).toMatchObject({
+        result: "applied",
+        planRevision: 2,
+        seriesEffects: [],
+      });
+
+      const [after] = (await plan.getPlanSlice(day(1), day(1))).sessions;
+      // The same session, now its series' occurrence on its own date.
+      expect(after).toEqual({
+        ...before,
+        seriesId,
+        occurrenceDate: day(1),
+        hasDiverged: false,
+      });
+      const series = (await plan.listSeries()).find(
+        (candidate) => candidate.id === seriesId,
+      );
+      expect(series).toMatchObject({
+        frequency: "daily",
+        intervalCount: 7,
+        startDate: day(1),
+        title: "Aerobic run",
+        sport: "Running",
+        expectedDurationMinutes: 60,
+        activities: [{ name: "Easy running", position: 0 }],
+      });
+
+      // The window fills around it and never doubles its date.
+      await plan.materializeSeries(randomUUID(), 2);
+      const filled = await plan.getPlanSlice(day(0), day(15));
+      expect(filled.sessions.map((session) => session.localDate)).toEqual([
+        day(1),
+        day(8),
+        day(15),
+      ]);
+      expect(filled.sessions[0].id).toBe(sessionId);
+    });
+
+    it("lets a logged one-off repeat and refuses what may not", async () => {
+      const { plan, day, completeSession } = requireSubject(subject);
+      const logged = randomUUID();
+      const cancelled = randomUUID();
+      const other = randomUUID();
+      await plan.applyChangeSet(
+        changeSet([
+          add(logged, day(0), 0),
+          add(cancelled, day(1), 0),
+          add(other, day(2), 0),
+        ]),
+        0,
+      );
+      await plan.applyChangeSet(
+        changeSet([{ operation: "cancel", sessionId: cancelled }]),
+        1,
+      );
+      await completeSession(logged);
+      const repeat = (
+        sessionId: string,
+        rule: unknown,
+        seriesId = randomUUID(),
+      ) =>
+        changeSet([{ operation: "repeat_session", sessionId, seriesId, rule }]);
+      const weekly = (offset: number) => ({
+        frequency: "weekly",
+        intervalCount: 1,
+        weekdays: [new Date(`${day(offset)}T00:00:00.000Z`).getUTCDay()],
+      });
+
+      // Unlike an edit, a log does not settle this: it stays with the session.
+      await plan.applyChangeSet(repeat(logged, weekly(0)), 2);
+      const [now] = (await plan.getPlanSlice(day(0), day(0))).sessions;
+      expect(now).toMatchObject({ id: logged, occurrenceDate: day(0) });
+
+      for (const refused of [
+        // Already in a series.
+        repeat(logged, weekly(0)),
+        // Cancelled.
+        repeat(cancelled, weekly(1)),
+        // A rule that does not fall on the session's own date.
+        repeat(other, weekly(3)),
+        // An end before the session's date.
+        repeat(other, { ...weekly(2), endDate: day(1) }),
+        // Content belongs to the session, not to the rule.
+        repeat(other, { ...weekly(2), title: "Smuggled" }),
+      ]) {
+        await expect(plan.applyChangeSet(refused, 3)).rejects.toBeInstanceOf(
+          RollingPlanValidationError,
+        );
+      }
+      expect((await plan.getPlanSlice(day(0), day(2))).revision).toBe(3);
+    });
   });
 }
 

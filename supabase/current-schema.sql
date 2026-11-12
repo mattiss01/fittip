@@ -951,6 +951,114 @@ $$;
 ALTER FUNCTION "private"."plan_change_refuse_past"("p_date" "date", "p_today" "date") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "private"."plan_change_repeat_session"("p_user_id" "uuid", "p_plan_id" "uuid", "p_today" "date", "p_now" timestamp with time zone, "p_change" "jsonb", "p_session_id" "uuid") RETURNS "private"."plan_change_outcome"
+    LANGUAGE "plpgsql"
+    SET "search_path" TO ''
+    AS $$
+declare
+  v_outcome private.plan_change_outcome;
+  v_session public.rolling_plan_sessions;
+  v_series_id uuid;
+  v_input jsonb;
+begin
+  if p_change - array['operation', 'sessionId', 'seriesId', 'rule'] <> '{}'::jsonb
+    or not (p_change ?& array['seriesId', 'rule'])
+    or pg_catalog.jsonb_typeof(p_change->'seriesId') <> 'string'
+    or pg_catalog.jsonb_typeof(p_change->'rule') <> 'object'
+    or (p_change->'rule')
+      - array['frequency', 'intervalCount', 'weekdays', 'endDate'] <> '{}'::jsonb
+  then raise exception using errcode = '22023', message = 'Invalid rolling plan repeat.'; end if;
+  begin v_series_id := (p_change->>'seriesId')::uuid;
+  exception when others then
+    raise exception using errcode = '22023', message = 'Invalid rolling plan repeat.';
+  end;
+  if exists (select 1 from public.rolling_plan_series where id = v_series_id) then
+    raise exception using errcode = '22023', message = 'Invalid rolling plan repeat.';
+  end if;
+
+  -- Locked as every session operation locks it, so a log being written is
+  -- waited for. Unlike an edit, a log does not refuse it: the log stays.
+  select * into v_session
+  from public.rolling_plan_sessions session
+  where session.id = p_session_id and session.user_id = p_user_id
+    and session.status = 'active'
+  for update;
+  if not found then
+    raise exception using errcode = '22023', message = 'Invalid rolling plan change.';
+  end if;
+  perform private.plan_change_refuse_past(v_session.local_date, p_today);
+  if v_session.series_id is not null or v_session.local_date > p_today + 90 then
+    raise exception using errcode = '22023', message = 'Invalid rolling plan repeat.';
+  end if;
+  v_outcome.before_state := public.rolling_plan_session_state(p_user_id, p_session_id);
+
+  -- The template is the session as it stands, from its own date.
+  v_input := (p_change->'rule') || pg_catalog.jsonb_build_object(
+    'startDate', v_session.local_date::text,
+    'title', v_session.title,
+    'sport', v_session.sport,
+    'intent', v_session.intent,
+    'expectedDurationMinutes', v_session.expected_duration_minutes,
+    'startTime', pg_catalog.to_char(v_session.start_time, 'HH24:MI'),
+    'note', v_session.note,
+    'coachNote', v_session.coach_note,
+    'activities', coalesce((
+      select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
+        'personalActivityId', activity.personal_activity_id,
+        'position', activity.position,
+        'name', activity.name,
+        'sport', activity.sport,
+        'instructions', activity.instructions,
+        'rationale', activity.rationale,
+        'measurementMode', activity.measurement_mode,
+        'target', activity.target
+      ) order by activity.position, activity.id)
+      from public.rolling_plan_activities activity
+      where activity.user_id = p_user_id and activity.session_id = p_session_id
+    ), '[]'::jsonb)
+  );
+  if not public.rolling_plan_series_input_is_valid(v_input)
+    -- The session is the series' first occurrence, so its date must be one
+    -- the rule repeats on.
+    or not exists (
+      select 1 from public.rolling_plan_series_dates(
+        v_input->>'frequency',
+        (v_input->>'intervalCount')::smallint,
+        public.rolling_plan_weekday_set(v_input->'weekdays'),
+        v_session.local_date,
+        (v_input->>'endDate')::date,
+        v_session.local_date,
+        v_session.local_date
+      )
+    )
+  then raise exception using errcode = '22023', message = 'Invalid rolling plan repeat.'; end if;
+
+  perform private.plan_change_insert_series(
+    p_user_id, p_plan_id, v_series_id, null, v_session.local_date, v_input, p_now
+  );
+  -- Only what makes it an occurrence changes. Its content already is the
+  -- template, so it has not diverged.
+  update public.rolling_plan_sessions set
+    series_id = v_series_id,
+    occurrence_date = v_session.local_date,
+    has_diverged = false,
+    updated_at = p_now
+  where id = p_session_id and user_id = p_user_id;
+
+  v_outcome.after_state := public.rolling_plan_session_state(p_user_id, p_session_id)
+    || pg_catalog.jsonb_build_object(
+      'series', public.rolling_plan_series_state(p_user_id, v_series_id)
+    );
+  v_outcome.entry_session_id := p_session_id;
+  v_outcome.entry_series_id := v_series_id;
+  return v_outcome;
+end;
+$$;
+
+
+ALTER FUNCTION "private"."plan_change_repeat_session"("p_user_id" "uuid", "p_plan_id" "uuid", "p_today" "date", "p_now" timestamp with time zone, "p_change" "jsonb", "p_session_id" "uuid") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "private"."plan_change_set_recovery_day"("p_user_id" "uuid", "p_plan_id" "uuid", "p_today" "date", "p_now" timestamp with time zone, "p_change" "jsonb") RETURNS "private"."plan_change_outcome"
     LANGUAGE "plpgsql"
     SET "search_path" TO ''
@@ -2984,6 +3092,10 @@ begin
         when 'move' then
           v_outcome := private.plan_change_move(
             v_user_id, v_today, v_now, v_change, v_id
+          );
+        when 'repeat_session' then
+          v_outcome := private.plan_change_repeat_session(
+            v_user_id, v_plan.id, v_today, v_now, v_change, v_id
           );
         when 'cancel' then
           v_outcome := private.plan_change_cancel(
@@ -10206,10 +10318,10 @@ CREATE TABLE IF NOT EXISTS "public"."rolling_plan_change_entries" (
     "series_id" "uuid",
     CONSTRAINT "rolling_plan_change_entries_after_size_check" CHECK (("octet_length"(("after_state")::"text") <= 262144)),
     CONSTRAINT "rolling_plan_change_entries_before_size_check" CHECK ((("before_state" IS NULL) OR ("octet_length"(("before_state")::"text") <= 262144))),
-    CONSTRAINT "rolling_plan_change_entries_kind_check" CHECK (("change_kind" = ANY (ARRAY['add'::"text", 'edit'::"text", 'move'::"text", 'set_lock'::"text", 'cancel'::"text", 'set_recovery_day'::"text", 'add_series'::"text", 'edit_series'::"text", 'end_series'::"text", 'delete'::"text", 'reactivate'::"text"]))),
+    CONSTRAINT "rolling_plan_change_entries_kind_check" CHECK (("change_kind" = ANY (ARRAY['add'::"text", 'edit'::"text", 'move'::"text", 'set_lock'::"text", 'cancel'::"text", 'set_recovery_day'::"text", 'add_series'::"text", 'edit_series'::"text", 'end_series'::"text", 'delete'::"text", 'reactivate'::"text", 'repeat_session'::"text"]))),
     CONSTRAINT "rolling_plan_change_entries_ordinal_check" CHECK ((("ordinal" >= 0) AND ("ordinal" <= 99))),
     CONSTRAINT "rolling_plan_change_entries_states_check" CHECK (((("change_kind" = ANY (ARRAY['add'::"text", 'add_series'::"text"])) AND ("before_state" IS NULL)) OR (("change_kind" <> ALL (ARRAY['add'::"text", 'add_series'::"text"])) AND ("before_state" IS NOT NULL)))),
-    CONSTRAINT "rolling_plan_change_entries_target_check" CHECK (((("change_kind" = ANY (ARRAY['set_recovery_day'::"text", 'delete'::"text"])) AND ("session_id" IS NULL) AND ("series_id" IS NULL) AND ("local_date" IS NOT NULL)) OR (("change_kind" = ANY (ARRAY['add_series'::"text", 'edit_series'::"text", 'end_series'::"text"])) AND ("session_id" IS NULL) AND ("series_id" IS NOT NULL) AND ("local_date" IS NULL)) OR (("change_kind" = ANY (ARRAY['add'::"text", 'edit'::"text", 'move'::"text", 'set_lock'::"text", 'cancel'::"text", 'reactivate'::"text"])) AND ("session_id" IS NOT NULL) AND ("series_id" IS NULL) AND ("local_date" IS NULL))))
+    CONSTRAINT "rolling_plan_change_entries_target_check" CHECK (((("change_kind" = ANY (ARRAY['set_recovery_day'::"text", 'delete'::"text"])) AND ("session_id" IS NULL) AND ("series_id" IS NULL) AND ("local_date" IS NOT NULL)) OR (("change_kind" = ANY (ARRAY['add_series'::"text", 'edit_series'::"text", 'end_series'::"text"])) AND ("session_id" IS NULL) AND ("series_id" IS NOT NULL) AND ("local_date" IS NULL)) OR (("change_kind" = ANY (ARRAY['add'::"text", 'edit'::"text", 'move'::"text", 'set_lock'::"text", 'cancel'::"text", 'reactivate'::"text"])) AND ("session_id" IS NOT NULL) AND ("series_id" IS NULL) AND ("local_date" IS NULL)) OR (("change_kind" = 'repeat_session'::"text") AND ("session_id" IS NOT NULL) AND ("series_id" IS NOT NULL) AND ("local_date" IS NULL))))
 );
 
 
@@ -12291,6 +12403,10 @@ REVOKE ALL ON FUNCTION "private"."plan_change_reactivate"("p_user_id" "uuid", "p
 
 
 REVOKE ALL ON FUNCTION "private"."plan_change_refuse_past"("p_date" "date", "p_today" "date") FROM PUBLIC;
+
+
+
+REVOKE ALL ON FUNCTION "private"."plan_change_repeat_session"("p_user_id" "uuid", "p_plan_id" "uuid", "p_today" "date", "p_now" timestamp with time zone, "p_change" "jsonb", "p_session_id" "uuid") FROM PUBLIC;
 
 
 

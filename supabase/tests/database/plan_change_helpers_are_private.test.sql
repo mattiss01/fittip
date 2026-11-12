@@ -21,8 +21,8 @@ where namespace.nspname = 'private' and procedure.proname like 'plan\_change\_%'
 
 select is(
   (select count(*)::integer from plan_change_helper),
-  16,
-  'the dispatcher has its sixteen helpers in private'
+  17,
+  'the dispatcher has its seventeen helpers in private'
 );
 select is(
   (

@@ -85,8 +85,25 @@ export type RollingPlanSeries = RollingPlanSeriesInput & {
   skippedOccurrenceDates?: string[];
 };
 
+/** A repeat without its start: a one-off's repeat starts on its own date. */
+export type RollingPlanRepeatRule = Pick<
+  RollingPlanSeriesInput,
+  "frequency" | "intervalCount" | "weekdays" | "endDate"
+>;
+
 export type RollingPlanChange =
   | { operation: "add"; sessionId: string; session: RollingPlanSessionInput }
+  /**
+   * R2: the one-off itself becomes the first session of a new series from its
+   * own date, keeping its id, content, activities and any log. The series
+   * template is read from the session, never sent, so only the rule is.
+   */
+  | {
+      operation: "repeat_session";
+      sessionId: string;
+      seriesId: string;
+      rule: RollingPlanRepeatRule;
+    }
   | {
       operation: "add_series";
       seriesId: string;
@@ -568,9 +585,30 @@ function parseChange(value: unknown): RollingPlanChange {
     case "reactivate":
       assertOnlyKeys(record, ["operation", "sessionId"]);
       return { operation, sessionId };
+    case "repeat_session":
+      assertOnlyKeys(record, ["operation", "sessionId", "seriesId", "rule"]);
+      return {
+        operation,
+        sessionId,
+        seriesId: readUuid(record.seriesId),
+        rule: parseRepeatRule(record.rule),
+      };
     default:
       throw new RollingPlanValidationError();
   }
+}
+
+function parseRepeatRule(value: unknown): RollingPlanRepeatRule {
+  const record = readRecord(value);
+  assertOnlyKeys(record, ["frequency", "intervalCount", "weekdays", "endDate"]);
+  const frequency = readChoice(record.frequency, ["daily", "weekly"] as const);
+  return {
+    frequency,
+    ...parseRecurrence(frequency, record.intervalCount, record.weekdays),
+    ...(record.endDate === undefined || record.endDate === null
+      ? {}
+      : { endDate: readIsoDate(record.endDate) }),
+  };
 }
 
 function parseSeries(value: unknown): RollingPlanSeriesInput {
