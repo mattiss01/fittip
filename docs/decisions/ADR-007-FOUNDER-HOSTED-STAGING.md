@@ -10,6 +10,9 @@ chat and explicitly requested implementation
 **Recovery approved by:** [ADR-022](ADR-022-PASSWORD-RECOVERY.md), for the
 owner's account only; the rest of the approval boundary below stands
 
+**Friends admitted by:** [ADR-043](ADR-043-A-FRIENDS-BETA.md), 12 November 2026, which supersedes
+the owner-only, no-friends and no-durability clauses below and the M0 gates they name
+
 **Supersedes:** only ADR-006's prohibition on hosted use for the narrow
 founder/synthetic staging scope; ADR-006 remains the historical local-AI
 decision

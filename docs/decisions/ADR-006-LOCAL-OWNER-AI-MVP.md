@@ -9,6 +9,9 @@ principle in this task
 
 **Scope:** local development only; product-owner data or synthetic data only
 
+**Friends admitted by:** [ADR-043](ADR-043-A-FRIENDS-BETA.md), 12 November 2026, which supersedes
+the friend-data prohibition and the M0 gates named below
+
 ## Context
 
 AI-generated training proposals are core to FitTip's value. Waiting for the

@@ -220,6 +220,8 @@ The whole-context byte ceiling remains a denial.
   public registration, the free-text line must be revisited alongside M0-04
   consent, and reversing it later means either a migration or grandfathering
   already-logged notes. That cost is accepted knowingly.
+  Examined on 12 November 2026: [ADR-043](ADR-043-A-FRIENDS-BETA.md) keeps decision 4
+  for friends, behind a recorded consent to the AI processing.
 - A coach that reads notes will occasionally act on something the owner wrote
   carelessly. The planning note (see below) is the deliberate channel; the
   completion note is not, and now travels anyway.
