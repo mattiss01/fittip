@@ -13,44 +13,33 @@ before any code is written.
 
 ## Now
 
-**Friends beta.** Owner, 12 Nov 2026: give three to five friends access soon. Planned only;
-the owner says when to build. Today ADR-006, ADR-007 and ADR-013 forbid any friend's data,
-and the hosted app admits one user id. These are what has to be true first, in order. All
-careful lane except B1, which is the owner's.
+**Friends beta.** Owner, 12 Nov 2026: three to five friends, decided in
+[ADR-043](../decisions/ADR-043-A-FRIENDS-BETA.md). Planned only; the owner says when to build.
+No friend is admitted until B1, B2 and B3 have merged. All careful lane.
 
-- [ ] **B1 — An ADR for the beta's shape.** Owner, 12 Nov 2026: three to five friends;
-      accounts made by hand as the owner's was, no sign-up or mail (B5); a friend's notes
-      reach the coach in full, as the owner's do, which keeps ADR-013 decision 4 and makes
-      B3's consent say so; a weekly dump of the founder project to the owner's laptop, and
-      one before each hosted migration, not a paid plan (B4); every green merge reaches
-      them at once, as today; English for now (the language switch below comes soon
-      after). The ADR supersedes ADR-007's friend clause and says what the beta is not:
-      public sign-up, commercial use, analytics. Open: who runs the weekly dump.
-- [ ] **B2 — Admit a list of people, not one.** `FITTIP_OWNER_USER_ID`
-      (`runtime-policy.ts`) becomes a server-only list of verified user ids. Hosted sign-up
-      stays off in FitTip and in Supabase Auth. Fails closed on a missing or malformed
-      entry; never decided from email or user metadata. Proof: runtime-policy and proxy
-      tests for a listed, an unlisted and a malformed id. Per-user isolation is already
-      enforced by RLS and proved on the test athletes; nothing there changes.
-- [ ] **B3 — Consent before the coach.** A privacy notice (what is stored, where: Supabase
-      Frankfurt, Vercel, OpenAI; how long; how to delete) and a separate, recorded yes
-      before a person's first coach call. No call without it; withdrawing stops calls;
-      account delete (ADR-039) removes the record. Starts from the `M0-04` design draft,
-      never approved. A migration and the AI data boundary. Not legal advice: the owner
-      decides whether anyone checks it.
-- [ ] **B4 — Friends' data survives.** ADR-007's "no durability promise" and the owner's
-      13 Oct 2026 rule that no stored data needs to survive both end with the first
-      friend: from then on a migration carries existing rows forward, and the agent's
-      rules and memory say so. The weekly dump (B1) is restored once into the local stack
-      before the first invitation, to prove it restores.
-- [ ] **B5 — Mail, or knowingly without.** Hosted password reset needs the owner's own
-      mail sender (ADR-022), and Supabase's built-in one is believed to deliver only to
-      the project's team members; check before relying on it. With hand-made accounts the
-      beta can start without it: the owner sets a forgotten password from the SQL editor,
-      and the invitation says so.
-
-Unchanged by the beta: AI spend ceilings are per person (2 USD a day, 20 USD in all), so a
-friend cannot use up the owner's, though the owner pays for both.
+- [ ] **B1 — Admit a list of people, not one.** `FITTIP_OWNER_USER_ID`
+      (`runtime-policy.ts`) becomes a server-only list of verified user ids, read by the
+      proxy, the pages and the coach's enablement (`enablement.ts`, `composition.ts`) alike.
+      Hosted sign-up stays off in FitTip and in Supabase Auth. Fails closed on a missing,
+      empty or malformed entry; never decided from email or user metadata. Proof:
+      runtime-policy, proxy and enablement tests for a listed, an unlisted and a malformed
+      id. Per-user isolation is already enforced by RLS and proved on the test athletes.
+- [ ] **B2 — Consent before the coach.** ADR-043 decision 5: a privacy notice and a separate,
+      recorded yes before a person's first coach call; without it the coach is not offered,
+      withdrawing stops calls, account delete (ADR-039) removes the record. The notice states
+      the AI provider's data-use and retention terms as they are, checked when it is
+      written, and that the owner can read the database. A migration and the AI data
+      boundary. Covers the owner too, who consents like anyone else.
+- [ ] **B3 — Friends' data survives.** ADR-043 decisions 6 and 7: a weekly dump of the
+      founder project to the owner's laptop and one before each hosted migration, one
+      restored into the local stack to prove it, the laptop's disk encryption checked, and
+      the retention period the notice states. The agent's rules and memory drop "no stored
+      data needs to survive". Open: who runs the weekly dump (the owner, or a scheduled
+      task).
+- [ ] **B4 — First invitations.** The owner creates each account by hand with a one-time
+      password and passes it on privately (ADR-043 decision 3); the invitation says a
+      forgotten password is reset by the owner. `CLAUDE.md` stops calling FitTip an app
+      "for one athlete" in the same step.
 
 - [ ] **Language switch.** Owner, 12 Nov 2026: soon, after the beta starts in English. The
       app's text in English and German, chosen in Settings. To settle with the owner
