@@ -76,6 +76,8 @@ test.describe("M3-14B recurring series surface", () => {
         // Today's session can be tracked live (ADR-037).
         "Track live",
         "Duplicate",
+        // A one-off can be made to repeat from its own date (R2).
+        "Repeat…",
         "Save to library",
         "Cancel session",
         "Delete",
