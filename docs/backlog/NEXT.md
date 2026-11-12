@@ -13,6 +13,44 @@ before any code is written.
 
 ## Now
 
+**Friends beta.** Owner, 12 Nov 2026: give three to five friends access soon. Planned only;
+the owner says when to build. Today ADR-006, ADR-007 and ADR-013 forbid any friend's data,
+and the hosted app admits one user id. These are what has to be true first, in order. All
+careful lane except B1, which is the owner's.
+
+- [ ] **B1 — The beta's shape, decided by the owner, then an ADR.** Open: who and how many;
+      accounts made by hand as the owner's was, or sign-up with mail (B5); whether a
+      friend's free-text notes reach the coach or only its flags (ADR-013 decision 4, which
+      says it must be revisited before friends); paid Supabase backups or a dump the owner
+      runs (B4); whether every merge still reaches them at once; whether English is enough.
+      The answers become an ADR superseding ADR-007's friend clause, saying also what the
+      beta is not: public sign-up, commercial use, analytics.
+- [ ] **B2 — Admit a list of people, not one.** `FITTIP_OWNER_USER_ID`
+      (`runtime-policy.ts`) becomes a server-only list of verified user ids. Hosted sign-up
+      stays off in FitTip and in Supabase Auth. Fails closed on a missing or malformed
+      entry; never decided from email or user metadata. Proof: runtime-policy and proxy
+      tests for a listed, an unlisted and a malformed id. Per-user isolation is already
+      enforced by RLS and proved on the test athletes; nothing there changes.
+- [ ] **B3 — Consent before the coach.** A privacy notice (what is stored, where: Supabase
+      Frankfurt, Vercel, OpenAI; how long; how to delete) and a separate, recorded yes
+      before a person's first coach call. No call without it; withdrawing stops calls;
+      account delete (ADR-039) removes the record. Starts from the `M0-04` design draft,
+      never approved. A migration and the AI data boundary. Not legal advice: the owner
+      decides whether anyone checks it.
+- [ ] **B4 — Friends' data survives.** ADR-007's "no durability promise" and the owner's
+      13 Oct 2026 rule that no stored data needs to survive both end with the first
+      friend: from then on a migration carries existing rows forward, and the agent's
+      rules and memory say so. Backups as B1 decides, with one restore tried before the
+      first invitation.
+- [ ] **B5 — Mail, or knowingly without.** Hosted password reset needs the owner's own
+      mail sender (ADR-022), and Supabase's built-in one is believed to deliver only to
+      the project's team members; check before relying on it. With hand-made accounts the
+      beta can start without it: the owner sets a forgotten password from the SQL editor,
+      and the invitation says so.
+
+Unchanged by the beta: AI spend ceilings are per person (2 USD a day, 20 USD in all), so a
+friend cannot use up the owner's, though the owner pays for both.
+
 **Activities in training.** The owner named this on 24 Sep 2026. A session can now hold
 activities and the editor writes them; what is left is everywhere else they should appear.
 The live tables are `rolling_plan_activities` and `completion_activities`; M3-11 dropped
