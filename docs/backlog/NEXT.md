@@ -15,15 +15,8 @@ before any code is written.
 
 **Friends beta.** Owner, 12 Nov 2026: three to five friends, decided in
 [ADR-043](../decisions/ADR-043-A-FRIENDS-BETA.md). Planned only; the owner says when to build.
-No friend is admitted until B1, B2 and B3 have merged. All careful lane.
+No friend is admitted until B2 and B3 have merged. All careful lane.
 
-- [ ] **B1 — Admit a list of people, not one.** `FITTIP_OWNER_USER_ID`
-      (`runtime-policy.ts`) becomes a server-only list of verified user ids, read by the
-      proxy, the pages and the coach's enablement (`enablement.ts`, `composition.ts`) alike.
-      Hosted sign-up stays off in FitTip and in Supabase Auth. Fails closed on a missing,
-      empty or malformed entry; never decided from email or user metadata. Proof:
-      runtime-policy, proxy and enablement tests for a listed, an unlisted and a malformed
-      id. Per-user isolation is already enforced by RLS and proved on the test athletes.
 - [ ] **B2 — Consent before the coach.** ADR-043 decision 5: a privacy notice and a separate,
       recorded yes before a person's first coach call; without it the coach is not offered,
       withdrawing stops calls, account delete (ADR-039) removes the record. The notice states
@@ -39,7 +32,10 @@ No friend is admitted until B1, B2 and B3 have merged. All careful lane.
 - [ ] **B4 — First invitations.** The owner creates each account by hand with a one-time
       password and passes it on privately (ADR-043 decision 3); the invitation says a
       forgotten password is reset by the owner. `CLAUDE.md` stops calling FitTip an app
-      "for one athlete" in the same step.
+      "for one athlete" in the same step. Each friend's id goes into
+      `FITTIP_ALLOWED_USER_IDS`, and into `FITTIP_AI_OWNER_ALLOWLIST` once they have
+      consented. A Vercel variable changes only the next deployment, so adding or removing
+      someone takes a redeploy; until then a removed friend can still reach their own rows.
 
 - [ ] **Language switch.** Owner, 12 Nov 2026: soon, after the beta starts in English. The
       app's text in English and German, chosen in Settings. To settle with the owner
@@ -123,6 +119,15 @@ Ordered by dependency. A lane is named where it is not the build lane.
 ## Fix in passing
 
 Not worth their own slot; do them when work lands nearby.
+
+- **Local mode on Vercel rests on Vercel's own variables.** `readRuntimePolicy` treats a
+  runtime with no `FITTIP_RUNTIME_MODE` as local, which admits every verified user, unless
+  `VERCEL` or `VERCEL_ENV` is set. Two misconfigurations at once would open the hosted
+  app; refusing local mode against a hosted `*.supabase.co` URL in
+  `readServerSupabaseEnvironment` would close it (B1's review, 12 Nov 2026).
+- **Two ADRs name the retired `FITTIP_OWNER_USER_ID`.** ADR-007's runtime table and
+  ADR-039 decision 5 (deleting the admitted account no longer locks everyone out, only
+  that person). A dated note on each, in a commit of its own.
 
 - **For the owner to look at.** The date fields' width fix (13 Oct 2026) has not been seen
   on a phone or in a desktop browser's calendar mark. And with this week at the week
