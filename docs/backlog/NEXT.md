@@ -83,8 +83,9 @@ Ordered by dependency. A lane is named where it is not the build lane.
       "Already a recovery day" (and his physio appointment). Since 17 Oct 2026 the coach
       never reads recovery days and an empty day is rest to it, and since the push level a
       plan may offer an open session harder in its place, so a marked day is now easier to
-      load. The owner's to decide: send the marked days (the AI data boundary, careful
-      lane) or keep them the owner's alone.
+      load. Owner, 12 Nov 2026: kept as it is for now, because what a recovery day is in the
+      app is itself undecided. Sending the marked days would be the AI data boundary,
+      careful lane.
 - [ ] **A fill drops what does not match the session's sport.** All ten live fills of Chris's
       "Trainer intervals" (12 Nov 2026), at every push level, left out the planned "Hip &
       core circuit" ("so the session stays focused on the bike"), so Accept removes it.
