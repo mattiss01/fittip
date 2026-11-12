@@ -33,7 +33,7 @@ describe("production auth proxy", () => {
     process.env.NEXT_PUBLIC_SUPABASE_URL = "http://127.0.0.1:54321";
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = "sb_publishable_test";
     delete process.env.FITTIP_RUNTIME_MODE;
-    delete process.env.FITTIP_OWNER_USER_ID;
+    delete process.env.FITTIP_ALLOWED_USER_IDS;
     createServerClientMock.mockReturnValue({
       auth: { getClaims: getClaimsMock, signOut: signOutMock },
     });
@@ -89,7 +89,8 @@ describe("production auth proxy", () => {
     process.env.NEXT_PUBLIC_SUPABASE_URL =
       "https://abcdefghijklmnopqrst.supabase.co";
     process.env.FITTIP_RUNTIME_MODE = "founder-staging";
-    process.env.FITTIP_OWNER_USER_ID = "00000000-0000-4000-8000-000000000001";
+    process.env.FITTIP_ALLOWED_USER_IDS =
+      "00000000-0000-4000-8000-000000000001";
     getClaimsMock.mockResolvedValue({
       data: { claims: { sub: "00000000-0000-4000-8000-000000000002" } },
       error: null,
@@ -107,7 +108,7 @@ describe("production auth proxy", () => {
     process.env.NEXT_PUBLIC_SUPABASE_URL =
       "https://abcdefghijklmnopqrst.supabase.co";
     process.env.FITTIP_RUNTIME_MODE = "founder-staging";
-    process.env.FITTIP_OWNER_USER_ID = ownerId;
+    process.env.FITTIP_ALLOWED_USER_IDS = ownerId;
     getClaimsMock.mockResolvedValue({
       data: { claims: { sub: ownerId } },
       error: null,
@@ -120,9 +121,38 @@ describe("production auth proxy", () => {
     expectPrivateHeaders(response);
   });
 
+  it("admits every listed founder-staging user and denies one outside the list", async () => {
+    const ownerId = "00000000-0000-4000-8000-000000000001";
+    const friendId = "00000000-0000-4000-8000-000000000002";
+    process.env.NEXT_PUBLIC_SUPABASE_URL =
+      "https://abcdefghijklmnopqrst.supabase.co";
+    process.env.FITTIP_RUNTIME_MODE = "founder-staging";
+    process.env.FITTIP_ALLOWED_USER_IDS = `${ownerId}, ${friendId}`;
+
+    getClaimsMock.mockResolvedValue({
+      data: { claims: { sub: friendId } },
+      error: null,
+    });
+    const admitted = await proxy(request("/home/today"));
+    expect(admitted.status).toBe(200);
+    expect(signOutMock).not.toHaveBeenCalled();
+    expectPrivateHeaders(admitted);
+
+    getClaimsMock.mockResolvedValue({
+      data: { claims: { sub: "00000000-0000-4000-8000-000000000003" } },
+      error: null,
+    });
+    const denied = await proxy(request("/home/today"));
+    expect(denied.status).toBe(303);
+    expect(new URL(denied.headers.get("location") ?? "").pathname).toBe("/");
+    expect(signOutMock).toHaveBeenCalledOnce();
+    expectPrivateHeaders(denied);
+  });
+
   it("redirects founder staging signup before constructing a Supabase client", async () => {
     process.env.FITTIP_RUNTIME_MODE = "founder-staging";
-    process.env.FITTIP_OWNER_USER_ID = "00000000-0000-4000-8000-000000000001";
+    process.env.FITTIP_ALLOWED_USER_IDS =
+      "00000000-0000-4000-8000-000000000001";
 
     const response = await proxy(request("/signup"));
 

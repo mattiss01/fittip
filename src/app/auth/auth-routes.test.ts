@@ -109,7 +109,7 @@ describe("production authentication route handlers", () => {
       skipped: false,
     });
     delete process.env.FITTIP_RUNTIME_MODE;
-    delete process.env.FITTIP_OWNER_USER_ID;
+    delete process.env.FITTIP_ALLOWED_USER_IDS;
     delete process.env.VERCEL;
     delete process.env.VERCEL_ENV;
   });
@@ -414,7 +414,8 @@ describe("production authentication route handlers", () => {
 
   it("does not sign out the configured founder when denial fallback is revisited", async () => {
     process.env.FITTIP_RUNTIME_MODE = "founder-staging";
-    process.env.FITTIP_OWNER_USER_ID = "00000000-0000-4000-8000-000000000001";
+    process.env.FITTIP_ALLOWED_USER_IDS =
+      "00000000-0000-4000-8000-000000000001";
     const response = await denied(new Request(`${origin}/auth/denied`));
 
     expectPrivate303(response, "/");
@@ -423,7 +424,8 @@ describe("production authentication route handlers", () => {
 
   it("does not sign out an anonymous founder-staging request", async () => {
     process.env.FITTIP_RUNTIME_MODE = "founder-staging";
-    process.env.FITTIP_OWNER_USER_ID = "00000000-0000-4000-8000-000000000001";
+    process.env.FITTIP_ALLOWED_USER_IDS =
+      "00000000-0000-4000-8000-000000000001";
     client.auth.getClaims.mockResolvedValue({
       data: { claims: {} },
       error: null,
@@ -436,7 +438,8 @@ describe("production authentication route handlers", () => {
 
   it("clears only a verified founder-staging non-owner session locally", async () => {
     process.env.FITTIP_RUNTIME_MODE = "founder-staging";
-    process.env.FITTIP_OWNER_USER_ID = "00000000-0000-4000-8000-000000000001";
+    process.env.FITTIP_ALLOWED_USER_IDS =
+      "00000000-0000-4000-8000-000000000001";
     client.auth.getClaims.mockResolvedValue({
       data: { claims: { sub: "00000000-0000-4000-8000-000000000002" } },
       error: null,
@@ -456,7 +459,8 @@ describe("production authentication route handlers", () => {
 
   it("closes hosted signup before constructing an Auth client", async () => {
     process.env.FITTIP_RUNTIME_MODE = "founder-staging";
-    process.env.FITTIP_OWNER_USER_ID = "00000000-0000-4000-8000-000000000001";
+    process.env.FITTIP_ALLOWED_USER_IDS =
+      "00000000-0000-4000-8000-000000000001";
 
     const response = await signup(
       post("/auth/signup", {
@@ -473,7 +477,8 @@ describe("production authentication route handlers", () => {
 
   it("signs out a non-owner after hosted sign-in before profile creation", async () => {
     process.env.FITTIP_RUNTIME_MODE = "founder-staging";
-    process.env.FITTIP_OWNER_USER_ID = "00000000-0000-4000-8000-000000000001";
+    process.env.FITTIP_ALLOWED_USER_IDS =
+      "00000000-0000-4000-8000-000000000001";
     client.auth.getClaims.mockResolvedValue({
       data: { claims: { sub: "00000000-0000-4000-8000-000000000002" } },
       error: null,
@@ -493,7 +498,8 @@ describe("production authentication route handlers", () => {
 
   it("signs out a non-owner after hosted callback before profile creation", async () => {
     process.env.FITTIP_RUNTIME_MODE = "founder-staging";
-    process.env.FITTIP_OWNER_USER_ID = "00000000-0000-4000-8000-000000000001";
+    process.env.FITTIP_ALLOWED_USER_IDS =
+      "00000000-0000-4000-8000-000000000001";
     client.auth.getClaims.mockResolvedValue({
       data: { claims: { sub: "00000000-0000-4000-8000-000000000002" } },
       error: null,

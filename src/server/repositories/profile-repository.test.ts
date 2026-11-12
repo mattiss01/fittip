@@ -14,7 +14,7 @@ const USER_ID = "00000000-0000-4000-8000-000000000001";
 describe("ProfileRepository", () => {
   afterEach(() => {
     delete process.env.FITTIP_RUNTIME_MODE;
-    delete process.env.FITTIP_OWNER_USER_ID;
+    delete process.env.FITTIP_ALLOWED_USER_IDS;
     delete process.env.VERCEL;
     delete process.env.VERCEL_ENV;
   });
@@ -173,7 +173,7 @@ describe("ProfileRepository", () => {
 
   it("rejects a founder-staging non-owner before reading profile data", async () => {
     process.env.FITTIP_RUNTIME_MODE = "founder-staging";
-    process.env.FITTIP_OWNER_USER_ID = USER_ID;
+    process.env.FITTIP_ALLOWED_USER_IDS = USER_ID;
     const table = vi.fn();
     const repository = new ProfileRepository(
       createClient(table, {
@@ -192,7 +192,7 @@ describe("ProfileRepository", () => {
 
   it("rejects a founder-staging non-owner before creating profile data", async () => {
     process.env.FITTIP_RUNTIME_MODE = "founder-staging";
-    process.env.FITTIP_OWNER_USER_ID = USER_ID;
+    process.env.FITTIP_ALLOWED_USER_IDS = USER_ID;
     const table = vi.fn();
     const repository = new ProfileRepository(
       createClient(table, {

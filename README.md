@@ -75,8 +75,12 @@ money. Any missing or malformed setting keeps it offline.
 ### Hosted mode
 
 Every Vercel environment runs in `founder-staging` mode: `FITTIP_RUNTIME_MODE`
-and `FITTIP_OWNER_USER_ID` restrict it to one pre-created owner account, sign-up
-is closed, and any other session is signed out. Leave both unset locally.
+and `FITTIP_ALLOWED_USER_IDS` restrict it to the pre-created accounts listed
+(comma-separated Auth user ids: the owner and at most five friends, ADR-043),
+sign-up is closed, and any other session is signed out. A blank, malformed or
+seventh entry refuses the whole list. Leave both unset locally. The live coach
+has its own list, `FITTIP_AI_OWNER_ALLOWLIST`; an admitted account outside it
+gets no coaching.
 
 ## Checks
 

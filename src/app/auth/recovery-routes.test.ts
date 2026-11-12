@@ -200,7 +200,7 @@ describe("password recovery route handlers", () => {
 
     it("never changes the password of an account this environment does not allow", async () => {
       vi.stubEnv("FITTIP_RUNTIME_MODE", "founder-staging");
-      vi.stubEnv("FITTIP_OWNER_USER_ID", OWNER);
+      vi.stubEnv("FITTIP_ALLOWED_USER_IDS", OWNER);
       client.auth.getClaims.mockResolvedValue({
         data: { claims: { sub: "00000000-0000-4000-8000-000000000002" } },
         error: null,
@@ -215,7 +215,7 @@ describe("password recovery route handlers", () => {
 
     it("lets the owner's account through on the hosted environment", async () => {
       vi.stubEnv("FITTIP_RUNTIME_MODE", "founder-staging");
-      vi.stubEnv("FITTIP_OWNER_USER_ID", OWNER);
+      vi.stubEnv("FITTIP_ALLOWED_USER_IDS", OWNER);
 
       expectPrivate303(await reset(resetForm()), "/?auth=password-changed");
       expect(calls).toEqual(["verify", "update", "signOut:global"]);

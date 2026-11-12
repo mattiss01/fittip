@@ -26,7 +26,7 @@ migrations from zero.
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
 
-Leave `FITTIP_RUNTIME_MODE` and `FITTIP_OWNER_USER_ID` unset for local runs.
+Leave `FITTIP_RUNTIME_MODE` and `FITTIP_ALLOWED_USER_IDS` unset for local runs.
 
 `e2e/planning.spec.ts` and `e2e/m1-04-today-progress.spec.ts` also need
 `SUPABASE_SERVICE_ROLE_KEY` to create and delete a disposable confirmed user. Supply it only at
