@@ -12,6 +12,11 @@ import {
 type ClaimsClient = Pick<SupabaseClient<Database>, "auth">;
 
 export class VerifiedUserAccessError extends Error {
+  /**
+   * `"not-owner"` means a verified user outside `FITTIP_ALLOWED_USER_IDS`. The
+   * name predates the friends beta (ADR-043) and is kept because every `/home`
+   * page matches on it; it reads "not admitted".
+   */
   constructor(
     readonly policy: RuntimePolicy,
     readonly reason: "anonymous" | "not-owner",

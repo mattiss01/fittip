@@ -36,7 +36,7 @@ describe("readServerSupabaseEnvironment", () => {
     expect(() =>
       readServerSupabaseEnvironment({
         FITTIP_RUNTIME_MODE: "founder-staging",
-        FITTIP_OWNER_USER_ID: OWNER_ID,
+        FITTIP_ALLOWED_USER_IDS: OWNER_ID,
         NEXT_PUBLIC_SUPABASE_URL: url,
         NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: PUBLISHABLE_KEY,
       }),
@@ -51,7 +51,7 @@ describe("readServerSupabaseEnvironment", () => {
       readServerSupabaseEnvironment({
         VERCEL_ENV: "production",
         FITTIP_RUNTIME_MODE: "founder-staging",
-        FITTIP_OWNER_USER_ID: OWNER_ID,
+        FITTIP_ALLOWED_USER_IDS: OWNER_ID,
         NEXT_PUBLIC_SUPABASE_URL: url,
         NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: PUBLISHABLE_KEY,
       }),

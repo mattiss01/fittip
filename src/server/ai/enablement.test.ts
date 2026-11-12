@@ -25,7 +25,7 @@ const LOCAL: Record<string, string | undefined> = {
 const FOUNDER: Record<string, string | undefined> = {
   ...LOCAL,
   FITTIP_RUNTIME_MODE: "founder-staging",
-  FITTIP_OWNER_USER_ID: OWNER,
+  FITTIP_ALLOWED_USER_IDS: OWNER,
   VERCEL: "1",
   VERCEL_ENV: "production",
 };
@@ -65,6 +65,25 @@ describe("live enablement gate", () => {
     expect(enable(FOUNDER).environment).toBe("founder-staging");
   });
 
+  // ADR-043: admission to the app and the coach's own allowlist are separate
+  // lists. A second admitted person changes nothing for the coach until the
+  // coach's list names them too.
+  it("serves an admitted friend only once the coach's own allowlist names them", () => {
+    const admitted = {
+      ...FOUNDER,
+      FITTIP_ALLOWED_USER_IDS: `${OWNER},${OTHER_OWNER}`,
+    };
+
+    expect(enable(admitted).environment).toBe("founder-staging");
+    expect(denialCode(admitted, OTHER_OWNER)).toBe("owner_denied");
+    expect(
+      enable(
+        { ...admitted, FITTIP_AI_OWNER_ALLOWLIST: `${OWNER},${OTHER_OWNER}` },
+        OTHER_OWNER,
+      ).ownerId,
+    ).toBe(OTHER_OWNER);
+  });
+
   it("never returns the credential it checked for", () => {
     expect(JSON.stringify(enable(LOCAL))).not.toContain(CREDENTIAL);
   });
@@ -91,6 +110,16 @@ describe("live enablement gate", () => {
     [
       "an unknown runtime mode",
       { ...FOUNDER, FITTIP_RUNTIME_MODE: "staging" },
+      "not_enabled",
+    ],
+    [
+      "a hosted runtime with no admitted users",
+      omit(FOUNDER, "FITTIP_ALLOWED_USER_IDS"),
+      "not_enabled",
+    ],
+    [
+      "a malformed admitted-user list",
+      { ...FOUNDER, FITTIP_ALLOWED_USER_IDS: `${OWNER},,${OTHER_OWNER}` },
       "not_enabled",
     ],
     [
@@ -182,13 +211,13 @@ describe("live enablement gate", () => {
     expect(
       resolveCoachAIEnvironment(
         { VERCEL_ENV: "preview" },
-        { mode: "founder-staging", ownerUserId: OWNER },
+        { mode: "founder-staging", allowedUserIds: [OWNER] },
       ),
     ).toBeNull();
     expect(
       resolveCoachAIEnvironment(
         { VERCEL_ENV: "production" },
-        { mode: "local", ownerUserId: null },
+        { mode: "local", allowedUserIds: null },
       ),
     ).toBeNull();
   });

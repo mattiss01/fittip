@@ -17,12 +17,13 @@ describe("SignUpPage", () => {
 
   afterEach(() => {
     delete process.env.FITTIP_RUNTIME_MODE;
-    delete process.env.FITTIP_OWNER_USER_ID;
+    delete process.env.FITTIP_ALLOWED_USER_IDS;
   });
 
   it("redirects founder staging directly when proxy interception is bypassed", async () => {
     process.env.FITTIP_RUNTIME_MODE = "founder-staging";
-    process.env.FITTIP_OWNER_USER_ID = "00000000-0000-4000-8000-000000000001";
+    process.env.FITTIP_ALLOWED_USER_IDS =
+      "00000000-0000-4000-8000-000000000001";
 
     await expect(
       SignUpPage({ searchParams: Promise.resolve({}) }),

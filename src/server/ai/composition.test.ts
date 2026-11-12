@@ -58,7 +58,7 @@ function liveEnvironment(
 ): Record<string, string | undefined> {
   return {
     FITTIP_RUNTIME_MODE: "founder-staging",
-    FITTIP_OWNER_USER_ID: OWNER_ID,
+    FITTIP_ALLOWED_USER_IDS: OWNER_ID,
     VERCEL_ENV: "production",
     FITTIP_AI_LIVE: "enabled",
     FITTIP_AI_OWNER_ALLOWLIST: OWNER_ID,
