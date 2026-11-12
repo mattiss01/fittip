@@ -15,6 +15,10 @@ export const SETUP_STEPS = [
   "weight",
   "sports",
   "goals",
+  // How hard the coach pushes, right after what the owner wants to train for
+  // (owner, 12 Nov 2026). An account part way through setup on 12 Nov 2026
+  // reopens a screen off, which loses nothing.
+  "push",
   "frequency",
   "days",
   "places",

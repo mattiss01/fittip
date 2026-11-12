@@ -5,6 +5,7 @@ import type {
   TrainingMeasurement,
   TrainingMeasurementMode,
 } from "@/lib/training/measurement";
+import type { CoachPushLevel } from "@/lib/training/training-setup";
 import type { GoalTier } from "@/server/goals/goal-records";
 import type { MemoryType } from "@/server/memory/memory-records";
 
@@ -104,6 +105,12 @@ export type CoachAITrainingSetupReference = {
   availabilityNote: string | null;
   trainingPlaces: string[];
   homeEquipment: string[];
+  /**
+   * How hard the athlete wants to be pushed (ADR-023 amended 12 Nov 2026).
+   * It also selects the paragraph `buildCoachAIMessages` sends after the
+   * shared prefix.
+   */
+  pushLevel: CoachPushLevel;
 };
 
 /** The exact memory fields allowed to leave this system. */

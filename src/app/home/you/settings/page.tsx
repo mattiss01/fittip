@@ -22,6 +22,8 @@ const SETTINGS = [
   { href: "/home/you/settings/about", name: "About you" },
   { href: "/home/you/settings/sports", name: "Your sports" },
   { href: "/home/you/settings/training", name: "Training setup" },
+  // How hard the coach pushes (owner, 12 Nov 2026).
+  { href: "/home/you/settings/coaching", name: "Coaching style" },
   { href: "/home/you/settings/units", name: "Units and time zone" },
 ] as const;
 

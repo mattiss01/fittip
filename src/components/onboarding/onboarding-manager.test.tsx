@@ -111,12 +111,12 @@ describe("OnboardingManager", () => {
     expect(
       screen.getByRole("heading", { name: "What's your name?" }),
     ).toBeVisible();
-    // Nothing is done on the first of twelve screens.
+    // Nothing is done on the first of thirteen screens.
     const bar = screen.getByRole("progressbar", {
       name: "Guided setup progress",
     });
     expect(bar).toHaveAttribute("aria-valuenow", "0");
-    expect(bar).toHaveAttribute("aria-valuetext", "Step 1 of 12, 0% done");
+    expect(bar).toHaveAttribute("aria-valuetext", "Step 1 of 13, 0% done");
     // One bar, not a row of steps to jump between, and nothing to delete: a
     // screen is left by Back, Next or "Continue later".
     expect(screen.queryAllByRole("listitem")).toHaveLength(0);
@@ -179,7 +179,7 @@ describe("OnboardingManager", () => {
 
   it("reopens on the screen the profile stores", () => {
     render(
-      <OnboardingManager goals={[]} profile={atStep(namedProfile(), 9)} />,
+      <OnboardingManager goals={[]} profile={atStep(namedProfile(), 10)} />,
     );
 
     expect(
@@ -187,7 +187,7 @@ describe("OnboardingManager", () => {
     ).toBeVisible();
     expect(screen.getByRole("progressbar")).toHaveAttribute(
       "aria-valuetext",
-      "Step 9 of 12, 67% done",
+      "Step 10 of 13, 69% done",
     );
   });
 
@@ -214,7 +214,7 @@ describe("OnboardingManager", () => {
     render(
       <OnboardingManager
         goals={[]}
-        profile={atStep(namedProfile(), 8)}
+        profile={atStep(namedProfile(), 9)}
         reminder
       />,
     );
@@ -280,11 +280,11 @@ describe("OnboardingManager", () => {
     // from that screen, so it reopens there.
     cleanup();
     render(
-      <OnboardingManager goals={[]} profile={atStep(namedProfile(), 8)} />,
+      <OnboardingManager goals={[]} profile={atStep(namedProfile(), 9)} />,
     );
     fireEvent.click(later());
     fireEvent.click(later());
-    await waitFor(() => expect(leaveSetupAction).toHaveBeenCalledWith(8));
+    await waitFor(() => expect(leaveSetupAction).toHaveBeenCalledWith(9));
   });
 
   it("starts the goals screen from the goals the account already has, and saves them as goals", async () => {
@@ -323,8 +323,8 @@ describe("OnboardingManager", () => {
     expect(sent.get("goalTargetDate:0")).toBe("2026-11-15");
     expect(sent.get("goalTier:0")).toBe("supporting");
     expect(sent.get("intent")).toBe("continue");
-    // Saved, setup moves on to how often.
-    expect(await heading("How often do you want to train?")).toBeVisible();
+    // Saved, setup moves on to how hard the coach pushes.
+    expect(await heading("How hard should your coach push you?")).toBeVisible();
     expect(recordSetupStepAction).toHaveBeenLastCalledWith(8);
   });
 
@@ -430,9 +430,44 @@ describe("OnboardingManager", () => {
     );
   });
 
-  it("asks how often with a number to step, and the days that are out as chips", async () => {
+  it("asks how hard the coach pushes on a slider from gentle to all in, starting balanced", async () => {
     const { container } = render(
       <OnboardingManager goals={[]} profile={atStep(namedProfile(), 8)} />,
+    );
+    const sent = () => new FormData(container.querySelector("form")!);
+
+    expect(
+      screen.getByRole("heading", {
+        name: "How hard should your coach push you?",
+      }),
+    ).toBeVisible();
+    const slider = screen.getByRole("slider", {
+      name: "How hard your coach pushes you",
+    });
+    // One on the left to five on the right, at the middle until moved.
+    expect(slider).toHaveAttribute("min", "1");
+    expect(slider).toHaveAttribute("max", "5");
+    expect(slider).toHaveValue("3");
+    expect(slider).toHaveAttribute("aria-valuetext", "3 of 5: Balanced");
+    expect(sent().getAll("part")).toEqual(["push"]);
+    expect(sent().get("pushLevel")).toBe("balanced");
+
+    // The level's name and what it means follow the thumb.
+    fireEvent.change(slider, { target: { value: "5" } });
+    expect(screen.getByText("All in", { selector: "strong" })).toBeVisible();
+    expect(screen.getByText("Make it hard to hit. Stretch me.")).toBeVisible();
+    expect(sent().get("pushLevel")).toBe("all_in");
+    fireEvent.change(slider, { target: { value: "1" } });
+    expect(sent().get("pushLevel")).toBe("gentle");
+
+    next();
+    expect(await heading("How often do you want to train?")).toBeVisible();
+    expect(recordSetupStepAction).toHaveBeenLastCalledWith(9);
+  });
+
+  it("asks how often with a number to step, and the days that are out as chips", async () => {
+    const { container } = render(
+      <OnboardingManager goals={[]} profile={atStep(namedProfile(), 9)} />,
     );
 
     const often = screen.getByLabelText("Sessions a week");
@@ -478,7 +513,7 @@ describe("OnboardingManager", () => {
     // No Home among the places: the equipment screen is passed over, both
     // ways.
     const { rerender } = render(
-      <OnboardingManager goals={[]} profile={atStep(namedProfile(), 10)} />,
+      <OnboardingManager goals={[]} profile={atStep(namedProfile(), 11)} />,
     );
     expect(
       screen.getByRole("heading", { name: "Where can you train?" }),
@@ -495,7 +530,7 @@ describe("OnboardingManager", () => {
     expect(await heading("Anything your coach should know?")).toBeVisible();
     expect(screen.getByRole("progressbar")).toHaveAttribute(
       "aria-valuetext",
-      "Step 12 of 12, 92% done",
+      "Step 13 of 13, 92% done",
     );
     back();
     expect(await heading("Where can you train?")).toBeVisible();
@@ -509,7 +544,7 @@ describe("OnboardingManager", () => {
             ...namedProfile(),
             training: { ...namedProfile().training, trainingPlaces: ["Home"] },
           },
-          10,
+          11,
         )}
       />,
     );
@@ -522,7 +557,7 @@ describe("OnboardingManager", () => {
 
   it("offers what to write about on the last screen, a field for each tap", async () => {
     const { container } = render(
-      <OnboardingManager goals={[]} profile={atStep(namedProfile(), 12)} />,
+      <OnboardingManager goals={[]} profile={atStep(namedProfile(), 13)} />,
     );
     const form = () => new FormData(container.querySelector("form")!);
     const tap = (name: string) =>
@@ -737,6 +772,7 @@ function namedProfile(): ProfileDetailsView {
       availabilityNote: null,
       trainingPlaces: [],
       homeEquipment: [],
+      pushLevel: "balanced",
     },
     setup: { step: 1, finished: false, skipped: false },
   };

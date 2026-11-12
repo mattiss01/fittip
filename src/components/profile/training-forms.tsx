@@ -11,6 +11,7 @@ import {
   ProfileNotice,
   useSaved,
 } from "@/components/profile/profile-forms";
+import { PushSlider } from "@/components/profile/push-slider";
 import {
   AVAILABILITY_NOTE_MAX_LENGTH,
   HOME_EQUIPMENT_PRESET_GROUPS,
@@ -31,6 +32,10 @@ import {
  * never become memory items.
  */
 export const TRAINING_QUESTIONS = {
+  push: {
+    heading: "How hard should your coach push you?",
+    caption: "Slide to choose. You can change it in Settings",
+  },
   frequency: {
     heading: "How often do you want to train?",
     caption: "Sessions a week. A rough number is enough",
@@ -102,6 +107,9 @@ function TrainingFields({
   paged?: boolean;
   onPlaces?: (atHome: boolean) => void;
 }) {
+  if (question === "push") {
+    return <PushSlider initial={training.pushLevel} />;
+  }
   if (question === "frequency") {
     return (
       <MeasureInput

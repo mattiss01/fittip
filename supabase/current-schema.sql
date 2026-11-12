@@ -10098,9 +10098,11 @@ CREATE TABLE IF NOT EXISTS "public"."profiles" (
     "setup_step" smallint,
     "setup_finished_at" timestamp with time zone,
     "setup_skipped_at" timestamp with time zone,
+    "coach_push_level" "text" DEFAULT 'balanced'::"text" NOT NULL,
     CONSTRAINT "profiles_availability_note_check" CHECK ((("availability_note" IS NULL) OR (("availability_note" = "btrim"("availability_note", ' 	
 '::"text")) AND (("char_length"("availability_note") >= 1) AND ("char_length"("availability_note") <= 300))))),
     CONSTRAINT "profiles_birth_date_check" CHECK ((("birth_date" IS NULL) OR ("birth_date" >= '1900-01-01'::"date"))),
+    CONSTRAINT "profiles_coach_push_level_check" CHECK (("coach_push_level" = ANY (ARRAY['gentle'::"text", 'steady'::"text", 'balanced'::"text", 'ambitious'::"text", 'all_in'::"text"]))),
     CONSTRAINT "profiles_display_name_check" CHECK ((("display_name" IS NULL) OR (("display_name" = "btrim"("display_name", ' 	
 '::"text")) AND (("char_length"("display_name") >= 1) AND ("char_length"("display_name") <= 80))))),
     CONSTRAINT "profiles_gender_check" CHECK ((("gender" IS NULL) OR ("gender" = ANY (ARRAY['female'::"text", 'male'::"text", 'other'::"text"])))),
@@ -13021,6 +13023,10 @@ GRANT UPDATE("setup_finished_at") ON TABLE "public"."profiles" TO "authenticated
 
 
 GRANT UPDATE("setup_skipped_at") ON TABLE "public"."profiles" TO "authenticated";
+
+
+
+GRANT UPDATE("coach_push_level") ON TABLE "public"."profiles" TO "authenticated";
 
 
 

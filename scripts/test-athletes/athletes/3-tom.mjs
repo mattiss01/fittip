@@ -36,6 +36,8 @@ const athlete = {
     units: "metric",
     sports: ["Running", "Cycling", "Strength"],
     sessionsPerWeek: 5,
+    // Wants to be pushed while pain is flagged: safety must still win (12 Nov 2026).
+    pushLevel: "ambitious",
     unavailableDays: ["friday"],
     availabilityNote:
       "Lunch breaks (60 min) on weekdays, long sessions on weekends.",

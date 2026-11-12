@@ -4,12 +4,18 @@ import { COACH_AI_LIVE_LIMITS } from "@/server/ai/budget";
 import { COACH_AI_CONTEXT_LIMITS } from "@/server/ai/context";
 import { TRAINING_MEASUREMENT_MODES } from "@/lib/training/measurement";
 import {
+  COACH_PUSH_LEVELS,
+  type CoachPushLevel,
+} from "@/lib/training/training-setup";
+import {
   COACH_AI_FIXTURE_CONTEXT,
   COACH_AI_FIXTURE_PLANNING_NOTE,
 } from "@/server/ai/fixtures/fixture-corpus";
 import {
   buildCoachAIMessages,
+  COACH_AI_PUSH_PARAGRAPH_BUDGET,
   COACH_AI_RESPONSE_SCHEMAS,
+  coachAIPushInstructions,
   coachAIStaticPrefix,
 } from "@/server/ai/openai-prompt";
 
@@ -111,34 +117,40 @@ describe("what every prompt says about the athlete's data (ADR-023)", () => {
       prefixBudget: number,
     ) =>
       Math.ceil(
-        (prefixBudget + 64 + COACH_AI_CONTEXT_LIMITS[operation].bytes.total) /
+        (prefixBudget +
+          COACH_AI_PUSH_PARAGRAPH_BUDGET +
+          64 +
+          COACH_AI_CONTEXT_LIMITS[operation].bytes.total) /
           4,
       );
 
     // 14,179 until ADR-028: a request to change the roadmap sends it whole.
     // 17,966 until ADR-035 sent the "don't repeat" list.
     // 19,341 until the safety rule for a health condition (21 Oct 2026).
-    expect(tokens("create_roadmap", STATIC_PREFIX_BUDGET)).toBe(19_366);
+    // 19,366 until how hard to push took its paragraph (12 Nov 2026).
+    expect(tokens("create_roadmap", STATIC_PREFIX_BUDGET)).toBe(19_591);
     // 14,991 until the plan's logs took 10,200 bytes (16 Oct 2026); 15,216
     // until the prompt said an empty week is an answer (17 Oct 2026); 15,291
     // until the coach could suggest a cancel (ADR-033, 19 Oct 2026); 15,391
     // until every decision went back with the previous proposal (same day);
-    // 16,766 until ADR-035 sent the "don't repeat" list.
+    // 16,766 until ADR-035 sent the "don't repeat" list; 18,141 until how
+    // hard to push took its paragraph (12 Nov 2026).
     expect(tokens("create_seven_day_plan", PLAN_STATIC_PREFIX_BUDGET)).toBe(
-      18_141,
+      18_366,
     );
     // 14,929 until timed sets and intervals joined the mode lines (ADR-038);
     // 14,954 until the safety rule for a health condition (21 Oct 2026);
     // 14,991 until the coach's note and each activity's reason (ADR-040);
     // 16,091 until a reason was asked to hold whatever the numbers; 16,129
     // until the athlete's note came first (9 Nov 2026); 16,229 until the
-    // coach was asked to add up the minutes (same day).
+    // coach was asked to add up the minutes (same day); 16,329 until how hard
+    // to push took its paragraph (12 Nov 2026).
     expect(
       tokens(
         "fill_session_activities",
         SESSION_ACTIVITIES_STATIC_PREFIX_BUDGET,
       ),
-    ).toBe(16_329);
+    ).toBe(16_554);
   });
 });
 
@@ -156,6 +168,7 @@ describe("the roadmap prompt", () => {
     // must still fit under the ceiling without the context shrinking.
     const worstCase =
       STATIC_PREFIX_BUDGET +
+      COACH_AI_PUSH_PARAGRAPH_BUDGET +
       64 +
       COACH_AI_CONTEXT_LIMITS.create_roadmap.bytes.total;
     expect(Math.ceil(worstCase / 4)).toBeLessThanOrEqual(
@@ -181,8 +194,11 @@ describe("the roadmap prompt", () => {
 
     expect(messages[0].role).toBe("system");
     expect(messages[0].content).toBe(coachAIStaticPrefix("create_roadmap"));
-    expect(messages[1].role).toBe("user");
-    expect(messages[1].content).toContain(COACH_AI_FIXTURE_PLANNING_NOTE);
+    // How hard to push sits between them: static per level, never the owner's.
+    expect(messages[1].role).toBe("system");
+    expect(messages[1].content).not.toContain(COACH_AI_FIXTURE_PLANNING_NOTE);
+    expect(messages[2].role).toBe("user");
+    expect(messages[2].content).toContain(COACH_AI_FIXTURE_PLANNING_NOTE);
     // No owner content in the cacheable half.
     expect(messages[0].content).not.toContain(COACH_AI_FIXTURE_PLANNING_NOTE);
     expect(messages[0].content).not.toContain(
@@ -269,7 +285,7 @@ describe("the roadmap prompt", () => {
     // Indentation measured 21-32% larger across the four bake-off scenarios. At
     // an 8,000-token input ceiling that is a fifth of the budget spent on
     // whitespace no model needs.
-    expect(messages[1].content).toContain(
+    expect(messages[2].content).toContain(
       JSON.stringify(COACH_AI_FIXTURE_CONTEXT),
     );
   });
@@ -386,6 +402,7 @@ describe("the plan prompt", () => {
     expect(prefix.length).toBeLessThanOrEqual(PLAN_STATIC_PREFIX_BUDGET);
     const worstCase =
       PLAN_STATIC_PREFIX_BUDGET +
+      COACH_AI_PUSH_PARAGRAPH_BUDGET +
       64 +
       COACH_AI_CONTEXT_LIMITS.create_seven_day_plan.bytes.total;
     expect(Math.ceil(worstCase / 4)).toBeLessThanOrEqual(
@@ -551,6 +568,7 @@ describe("the session activities prompt", () => {
     );
     const worstCase =
       SESSION_ACTIVITIES_STATIC_PREFIX_BUDGET +
+      COACH_AI_PUSH_PARAGRAPH_BUDGET +
       64 +
       COACH_AI_CONTEXT_LIMITS.fill_session_activities.bytes.total;
     expect(Math.ceil(worstCase / 4)).toBeLessThanOrEqual(
@@ -580,5 +598,79 @@ describe("the session activities prompt", () => {
     expect(
       schema.properties.activities.items.properties.measurementMode.enum,
     ).toEqual([...TRAINING_MEASUREMENT_MODES]);
+  });
+});
+
+describe("how hard to push (owner, 12 Nov 2026)", () => {
+  const OPERATIONS = [
+    "create_roadmap",
+    "create_seven_day_plan",
+    "fill_session_activities",
+  ] as const;
+
+  it.each(OPERATIONS)(
+    "gives %s its own paragraph for each level, within budget",
+    (operation) => {
+      const paragraphs = COACH_PUSH_LEVELS.map((level) =>
+        coachAIPushInstructions(operation, level.key),
+      );
+
+      // Five levels, five different instructions: never just a number.
+      expect(new Set(paragraphs).size).toBe(COACH_PUSH_LEVELS.length);
+      COACH_PUSH_LEVELS.forEach((level, index) => {
+        expect(paragraphs[index]).toContain(
+          `# How hard to push: ${level.label}`,
+        );
+        // It never outranks safety, a signal or the athlete's own note.
+        expect(paragraphs[index]).toContain(
+          "The safety rules come before this level, and so does anything the athlete reports about pain, illness, injury or fatigue, wherever they report it. So do their planning note and feedback for this request.",
+        );
+        // A fill keeps the session's own intent at every level.
+        if (operation === "fill_session_activities") {
+          expect(paragraphs[index]).toContain(
+            "an easy session stays easy and a hard one stays hard.",
+          );
+        }
+        expect(paragraphs[index].length).toBeLessThanOrEqual(
+          COACH_AI_PUSH_PARAGRAPH_BUDGET,
+        );
+      });
+    },
+  );
+
+  it("is sent after the shared prefix, which stays the same at every level", () => {
+    const at = (pushLevel: CoachPushLevel) =>
+      buildCoachAIMessages("create_seven_day_plan", {
+        ...COACH_AI_FIXTURE_CONTEXT,
+        trainingSetup: { ...COACH_AI_FIXTURE_CONTEXT.trainingSetup, pushLevel },
+      });
+    const gentle = at("gentle");
+    const allIn = at("all_in");
+
+    expect(gentle[0].content).toBe(allIn[0].content);
+    expect(gentle[1].content).toContain("Easy does it");
+    expect(allIn[1].content).toContain("All in");
+    expect(allIn[1].content).toContain("key session to go all in on");
+  });
+
+  it("coaches a level it does not know as balanced", () => {
+    expect(
+      coachAIPushInstructions(
+        "fill_session_activities",
+        "extreme" as CoachPushLevel,
+      ),
+    ).toBe(coachAIPushInstructions("fill_session_activities", "balanced"));
+  });
+
+  it("lets the shared rules defer to the level rather than fight it", () => {
+    expect(coachAIStaticPrefix("create_roadmap")).toContain(
+      "including the athlete's own stated wish to train harder or how hard they chose to be pushed.",
+    );
+    expect(coachAIStaticPrefix("fill_session_activities")).toContain(
+      "in the push level's steps, more where the note asks for it.",
+    );
+    expect(coachAIStaticPrefix("fill_session_activities")).not.toContain(
+      "in small steps by default",
+    );
   });
 });

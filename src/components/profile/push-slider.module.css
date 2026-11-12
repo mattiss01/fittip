@@ -1,0 +1,113 @@
+.slider {
+  display: grid;
+  gap: 0.6rem;
+}
+
+/* The level as it stands: its name large, what it means under it. */
+.chosen {
+  display: grid;
+  gap: 0.2rem;
+  min-height: 4.2rem;
+  text-align: center;
+}
+
+.chosen strong {
+  color: var(--ledger-ink);
+  font: 700 1.5rem/1.2 var(--font-sans);
+}
+
+.chosen span {
+  color: var(--ledger-muted);
+  font-size: 0.95rem;
+}
+
+/* A touch-sized track: the input is as tall as a finger, the bar thin.
+   Specific enough to undo what text fields are given, globally and in setup's
+   forms (`.stepForm input`): no box, no padding, no white ground. */
+.slider input.range {
+  width: 100%;
+  min-height: 0;
+  height: 2.75rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  accent-color: var(--pine);
+  cursor: pointer;
+  appearance: none;
+}
+
+.slider input.range:focus {
+  outline: none;
+}
+
+.slider input.range::-webkit-slider-runnable-track {
+  height: 0.4rem;
+  border-radius: var(--radius-pill);
+  background: var(--rule);
+}
+
+.slider input.range::-moz-range-track {
+  height: 0.4rem;
+  border-radius: var(--radius-pill);
+  background: var(--rule);
+}
+
+.slider input.range::-webkit-slider-thumb {
+  width: 1.75rem;
+  height: 1.75rem;
+  margin-top: -0.675rem;
+  border: 3px solid var(--paper);
+  border-radius: 50%;
+  background: var(--pine);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.25);
+  appearance: none;
+}
+
+.slider input.range::-moz-range-thumb {
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 3px solid var(--paper);
+  border-radius: 50%;
+  background: var(--pine);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.25);
+}
+
+/* Keyboard focus rings the thumb, not the whole row. */
+.slider input.range:focus-visible::-webkit-slider-thumb {
+  outline: 3px solid var(--ledger-ink);
+  outline-offset: 2px;
+}
+
+.slider input.range:focus-visible::-moz-range-thumb {
+  outline: 3px solid var(--ledger-ink);
+  outline-offset: 2px;
+}
+
+/* Five marks under the track, filled up to the level chosen. The thumb's
+   centre travels a thumb's width less than the track, hence the inset. */
+.ticks {
+  display: flex;
+  justify-content: space-between;
+  margin: -0.9rem 0.875rem 0;
+}
+
+.ticks span {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--rule);
+}
+
+.ticks span[data-reached] {
+  background: var(--pine);
+}
+
+.ends {
+  display: flex;
+  justify-content: space-between;
+  color: var(--ledger-muted);
+  font-size: 0.85rem;
+}

@@ -16,6 +16,7 @@ import {
 } from "@/lib/sports/sport-colours";
 import type { Database } from "@/lib/supabase/database.types";
 import {
+  coachPushLevelOrDefault,
   WEEKDAYS,
   type TrainingSetupView,
 } from "@/lib/training/training-setup";
@@ -30,7 +31,7 @@ import {
 
 const PROFILE_COLUMNS = "user_id, created_at, timezone_name" as const;
 const PROFILE_DETAIL_COLUMNS =
-  "timezone_name, display_name, birth_date, height_cm, gender, units_system, sessions_per_week, unavailable_days, availability_note, training_places, home_equipment, setup_step, setup_finished_at, setup_skipped_at" as const;
+  "timezone_name, display_name, birth_date, height_cm, gender, units_system, sessions_per_week, unavailable_days, availability_note, training_places, home_equipment, coach_push_level, setup_step, setup_finished_at, setup_skipped_at" as const;
 const SETUP_STATE_COLUMNS =
   "setup_step, setup_finished_at, setup_skipped_at" as const;
 const WEIGHT_ENTRY_COLUMNS = "measured_on, weight_kg" as const;
@@ -234,6 +235,8 @@ export class ProfileRepository {
         availabilityNote: row.availability_note,
         trainingPlaces: row.training_places,
         homeEquipment: row.home_equipment,
+        // As with gender: a stored value the app does not know is the default.
+        pushLevel: coachPushLevelOrDefault(row.coach_push_level).key,
       },
       setup: toSetupState(row),
     };
@@ -353,6 +356,9 @@ export class ProfileRepository {
       ...(change.homeEquipment === undefined
         ? {}
         : { home_equipment: change.homeEquipment }),
+      ...(change.pushLevel === undefined
+        ? {}
+        : { coach_push_level: change.pushLevel }),
     });
   }
 

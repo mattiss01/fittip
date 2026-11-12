@@ -1186,6 +1186,7 @@ export type Database = {
         Row: {
           availability_note: string | null;
           birth_date: string | null;
+          coach_push_level: string;
           created_at: string;
           display_name: string | null;
           gender: string | null;
@@ -1204,6 +1205,7 @@ export type Database = {
         Insert: {
           availability_note?: string | null;
           birth_date?: string | null;
+          coach_push_level?: string;
           created_at?: string;
           display_name?: string | null;
           gender?: string | null;
@@ -1222,6 +1224,7 @@ export type Database = {
         Update: {
           availability_note?: string | null;
           birth_date?: string | null;
+          coach_push_level?: string;
           created_at?: string;
           display_name?: string | null;
           gender?: string | null;

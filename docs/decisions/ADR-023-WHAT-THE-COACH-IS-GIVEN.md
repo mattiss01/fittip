@@ -194,3 +194,23 @@ its worst case 15,216 tokens of 18,000 (15,291 since 17 October 2026, when the p
 learned that a week left as it is is an answer and its budget went to 9,000). Twenty logs
 fit at the corpus's largest of 501 bytes, and fourteen, not thirteen, as long as a note may
 be. The plan is no longer sized to 15,000 tokens; nothing else about it changes.
+
+## Amended, 12 November 2026: how hard the coach pushes
+
+The owner found every suggestion timid and decided on a setting for it: one choice of five,
+in words (Easy does it, Steady, Balanced, Ambitious, All in), stored on the profile as
+`coach_push_level` and `balanced` until the owner picks another.
+
+- **It is sent as `trainingSetup.pushLevel`**, one of the five keys, on all three calls.
+  It is a choice the owner made about coaching, not something about them, and it adds a
+  dozen bytes to a source that already has 4,600.
+- **It also selects one fixed paragraph of instructions** per level and call, sent as a
+  second system message after the shared prefix, so the prefix every request caches stays
+  byte-identical. The paragraphs are FitTip's own text, never the owner's, and change how
+  steep the progression is, how many hard sessions a week holds and how the intent is
+  worded, not only an adjective.
+- **It never outranks safety.** The safety rules and a recorded signal come first, then a
+  planning note about this request, then the level, exactly as the owner's own wish to
+  train harder already ranked below safety in decision 4. Each paragraph says so.
+- An unknown stored value is sent as `balanced`, as other out-of-range profile values are
+  sent as unknown rather than as though entered.

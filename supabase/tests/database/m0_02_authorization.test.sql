@@ -157,7 +157,8 @@ select hasnt_table('public', 'invites', 'no invite table exists');
 -- birthday, height, gender, units and sports, which that migration's own test
 -- names one by one. The count stays pinned so a tenth is a decision too.
 -- Sixteen since 6 Nov 2026, when the sports moved to a table of their own.
-select is((select count(*)::bigint from information_schema.columns where table_schema = 'public' and table_name = 'profiles'), 16::bigint, 'profiles has exactly the sixteen approved columns');
+-- Seventeen since 12 Nov 2026: how hard the coach pushes (`coach_push_level`).
+select is((select count(*)::bigint from information_schema.columns where table_schema = 'public' and table_name = 'profiles'), 17::bigint, 'profiles has exactly the seventeen approved columns');
 
 select * from finish();
 

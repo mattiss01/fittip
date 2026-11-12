@@ -56,6 +56,31 @@ describe("parseTrainingSetup", () => {
     });
   });
 
+  it("reads how hard the coach pushes, and only one of the five", () => {
+    expect(
+      parseTrainingSetup(
+        form([
+          ["part", "push"],
+          ["pushLevel", "all_in"],
+        ]),
+      ),
+    ).toEqual({ pushLevel: "all_in" });
+    for (const sent of ["extreme", "", "5"]) {
+      expect(() =>
+        parseTrainingSetup(
+          form([
+            ["part", "push"],
+            ["pushLevel", sent],
+          ]),
+        ),
+      ).toThrow(ProfileDetailsValidationError);
+    }
+    // Missing altogether is not a level either.
+    expect(() => parseTrainingSetup(form([["part", "push"]]))).toThrow(
+      ProfileDetailsValidationError,
+    );
+  });
+
   it("clears an answer left empty", () => {
     expect(
       parseTrainingSetup(
@@ -213,10 +238,10 @@ describe("parseSetupNotes", () => {
 });
 
 describe("parseSetupStepNumber", () => {
-  it("takes one of setup's twelve screens and nothing else", () => {
+  it("takes one of setup's thirteen screens and nothing else", () => {
     expect(parseSetupStepNumber(1)).toBe(1);
-    expect(parseSetupStepNumber("12")).toBe(12);
-    for (const value of [0, 13, 2.5, "x", null, undefined]) {
+    expect(parseSetupStepNumber("13")).toBe(13);
+    for (const value of [0, 14, 2.5, "x", null, undefined]) {
       expect(() => parseSetupStepNumber(value)).toThrow(
         ProfileDetailsValidationError,
       );
