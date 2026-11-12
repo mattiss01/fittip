@@ -18,13 +18,14 @@ the owner says when to build. Today ADR-006, ADR-007 and ADR-013 forbid any frie
 and the hosted app admits one user id. These are what has to be true first, in order. All
 careful lane except B1, which is the owner's.
 
-- [ ] **B1 — The beta's shape, decided by the owner, then an ADR.** Open: who and how many;
-      accounts made by hand as the owner's was, or sign-up with mail (B5); whether a
-      friend's free-text notes reach the coach or only its flags (ADR-013 decision 4, which
-      says it must be revisited before friends); paid Supabase backups or a dump the owner
-      runs (B4); whether every merge still reaches them at once; whether English is enough.
-      The answers become an ADR superseding ADR-007's friend clause, saying also what the
-      beta is not: public sign-up, commercial use, analytics.
+- [ ] **B1 — An ADR for the beta's shape.** Owner, 12 Nov 2026: three to five friends;
+      accounts made by hand as the owner's was, no sign-up or mail (B5); a friend's notes
+      reach the coach in full, as the owner's do, which keeps ADR-013 decision 4 and makes
+      B3's consent say so; a weekly dump of the founder project to the owner's laptop, and
+      one before each hosted migration, not a paid plan (B4); every green merge reaches
+      them at once, as today; English for now (the language switch below comes soon
+      after). The ADR supersedes ADR-007's friend clause and says what the beta is not:
+      public sign-up, commercial use, analytics. Open: who runs the weekly dump.
 - [ ] **B2 — Admit a list of people, not one.** `FITTIP_OWNER_USER_ID`
       (`runtime-policy.ts`) becomes a server-only list of verified user ids. Hosted sign-up
       stays off in FitTip and in Supabase Auth. Fails closed on a missing or malformed
@@ -40,8 +41,8 @@ careful lane except B1, which is the owner's.
 - [ ] **B4 — Friends' data survives.** ADR-007's "no durability promise" and the owner's
       13 Oct 2026 rule that no stored data needs to survive both end with the first
       friend: from then on a migration carries existing rows forward, and the agent's
-      rules and memory say so. Backups as B1 decides, with one restore tried before the
-      first invitation.
+      rules and memory say so. The weekly dump (B1) is restored once into the local stack
+      before the first invitation, to prove it restores.
 - [ ] **B5 — Mail, or knowingly without.** Hosted password reset needs the owner's own
       mail sender (ADR-022), and Supabase's built-in one is believed to deliver only to
       the project's team members; check before relying on it. With hand-made accounts the
@@ -50,6 +51,12 @@ careful lane except B1, which is the owner's.
 
 Unchanged by the beta: AI spend ceilings are per person (2 USD a day, 20 USD in all), so a
 friend cannot use up the owner's, though the owner pays for both.
+
+- [ ] **Language switch.** Owner, 12 Nov 2026: soon, after the beta starts in English. The
+      app's text in English and German, chosen in Settings. To settle with the owner
+      first: where the choice is stored (a profile column is a migration, careful lane)
+      and whether the coach then answers in it (the prompts, careful lane); the user's own
+      names (activities, sports) are never translated.
 
 **Activities in training.** The owner named this on 24 Sep 2026. A session can now hold
 activities and the editor writes them; what is left is everywhere else they should appear.
@@ -153,10 +160,9 @@ Not worth their own slot; do them when work lands nearby.
   lower is faster and cheaper, and weighs less at once (knee, pain rule, the days after).
   Per operation is possible (plan and fill low, roadmap medium). Needs one paid test call
   each, and the parameter confirmed against OpenAI's own reference first.
-- **What goes in Settings.** Owner, 2 Oct 2026. The gear on You opens a page that says
-  "Nothing to set yet." Meant for it: account details, subscription, language, and light
-  or dark mode. None is decided or listed there; Sign out stays on You. Account details
-  touch auth and a subscription touches spend, so both are careful lane.
+- **What goes in Settings.** Owner, 2 Oct 2026. Still meant for it: a subscription and
+  light or dark mode (language moved to Now, 12 Nov 2026). Neither is decided; Sign out
+  stays on You. A subscription touches spend, so it is careful lane.
 - **GPS for runs — idea, for a native app.** Owner, 21 Oct 2026: a browser loses the
   phone's position once the screen locks, so a run's distance is typed for now. Worth
   revisiting if FitTip becomes a real app.
