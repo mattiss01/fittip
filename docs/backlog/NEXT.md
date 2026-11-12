@@ -13,33 +13,6 @@ before any code is written.
 
 ## Now
 
-**Recurring sessions.** Owner, 5 Nov 2026: a one-off can become a series. Planned only;
-the owner says when to build. It reuses the repeat row and sheet (`repeat-sheet.tsx`).
-
-- [ ] **R2 — Make a one-off session repeat.** Careful lane: a new operation in the plan's
-      change set, so a migration, RLS and pgTAP. Plan to write in full before code.
-      - Outcome: the one-off itself becomes the first session of a new series from its own
-        date, keeping its id, activities, notes, coach note and any log. Never copied and
-        deleted. A copy would lose what hangs off the session; a delete removes a log's
-        session, which only the owner's own delete may do (ADR-031).
-      - Owner: only a session dated today or later and on or before the repeats-through
-        date (the 13-week window, R3b-3). A past session stays a record. Active only, and
-        not already in a series.
-      - Surface: on a one-off, the repeat row reads "Doesn't repeat ›" on its page and in its
-        edit form, and ⋯ gains "Repeat…" that opens the same sheet. The button reads
-        "Repeat from Fri 6 Nov"; a session outside the window shows no row.
-      - Server: a `repeat_session` operation in `apply_rolling_plan_change_set` that, in one
-        transaction and under the plan revision check, creates the series from the
-        session's content (its activities copied to the series template), sets the
-        session's `series_id` and `occurrence_date` to its own date with `has_diverged`
-        false, then fills the window like `add_series` (same ten-per-day skip and receipt).
-        Ownership and window checked in SQL from the session row, not from the form.
-      - Owner, 5 Nov 2026: a session already logged may become the first occurrence; its
-        log and the log's link to it stay exactly as they are.
-      - Proof: pgTAP for ownership, the window, a session in a series, and that the log and
-        its link are unchanged; then the founder apply (ADR-018) with `migration list` and
-        advisors reported before merge.
-
 **Activities in training.** The owner named this on 24 Sep 2026. A session can now hold
 activities and the editor writes them; what is left is everywhere else they should appear.
 The live tables are `rolling_plan_activities` and `completion_activities`; M3-11 dropped

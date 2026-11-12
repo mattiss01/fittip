@@ -131,7 +131,7 @@ async function SessionRead({
   requestedDate: string | null;
   timezoneName: string;
 }) {
-  const { today, lastPlaceableDate } = planWindowFor(timezoneName);
+  const { today, lastDate, lastPlaceableDate } = planWindowFor(timezoneName);
 
   let session: PlanSessionView | null = null;
   let revision = 0;
@@ -244,6 +244,7 @@ async function SessionRead({
         series={segment === undefined ? undefined : toSeriesView(segment)}
         today={today}
         dateRange={{ first: today, last: lastPlaceableDate }}
+        repeatsThrough={lastDate}
         expectedRevision={revision}
         origin={origin}
         originDate={requestedDate}

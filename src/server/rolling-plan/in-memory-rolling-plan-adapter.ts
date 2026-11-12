@@ -323,6 +323,62 @@ export class InMemoryRollingPlanAdapter implements RollingPlanAdapter {
         continue;
       }
       const current = next.get(change.sessionId);
+      // R2: the one-off becomes the first occurrence of a series made from
+      // it, in the order `apply_rolling_plan_change_set` checks: the series
+      // id, the session, its date, then the rule against that date. A log
+      // does not refuse it; the log stays where it is.
+      if (change.operation === "repeat_session") {
+        if (nextSeries.has(change.seriesId))
+          throw new RollingPlanValidationError();
+        if (!current || current.status !== "active")
+          throw new RollingPlanValidationError();
+        const startDate = requirePlannable(current.localDate);
+        const series: RollingPlanSeriesInput = {
+          ...change.rule,
+          startDate,
+          title: current.title,
+          sport: current.sport,
+          ...(current.intent === undefined ? {} : { intent: current.intent }),
+          ...(current.expectedDurationMinutes === undefined
+            ? {}
+            : { expectedDurationMinutes: current.expectedDurationMinutes }),
+          ...(current.startTime === undefined
+            ? {}
+            : { startTime: current.startTime }),
+          ...(current.note === undefined ? {} : { note: current.note }),
+          ...(current.coachNote === undefined
+            ? {}
+            : { coachNote: current.coachNote }),
+          // Copies, as the database copies them: the template's own rows.
+          activities: current.activities.map((activity) => {
+            const copy: Partial<RollingPlanActivity> = { ...activity };
+            delete copy.id;
+            return copy as RollingPlanSeriesInput["activities"][number];
+          }),
+        };
+        if (
+          current.seriesId !== null ||
+          startDate > shiftIsoDate(today, ROLLING_PLAN_WINDOW_DAYS - 1) ||
+          (change.rule.endDate !== undefined &&
+            change.rule.endDate < startDate) ||
+          seriesDates(series, startDate, startDate).length === 0
+        ) {
+          throw new RollingPlanValidationError();
+        }
+        sequence += 1;
+        nextSeries.set(change.seriesId, {
+          ...series,
+          id: change.seriesId,
+          predecessorSeriesId: null,
+          sequence,
+        });
+        Object.assign(current, {
+          seriesId: change.seriesId,
+          occurrenceDate: startDate,
+          hasDiverged: false,
+        });
+        continue;
+      }
       if (change.operation === "add") {
         if (current) throw new RollingPlanValidationError();
         touchedDates.add(requirePlannable(change.session.localDate));

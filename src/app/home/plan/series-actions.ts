@@ -44,6 +44,7 @@ const OPERATIONS: readonly SeriesOperation[] = [
   "add_series",
   "edit_series",
   "end_series",
+  "repeat_session",
 ];
 
 export async function changeSeriesAction(
@@ -135,7 +136,9 @@ export async function changeSeriesAction(
       planChangeCopy(
         operation === "add_series"
           ? "Recurring series created. The Plan now shows every occurrence that fit in the current window."
-          : "This and future sessions changed. Earlier occurrences and completed training are unchanged.",
+          : operation === "repeat_session"
+            ? "This session now repeats. The Plan shows every session that fit in the current window; this one and anything logged on it are unchanged."
+            : "This and future sessions changed. Earlier occurrences and completed training are unchanged.",
         topUp,
       ) + (accepted ? "" : ACCEPTANCE_NOT_RECORDED),
       {
@@ -279,6 +282,29 @@ async function buildSeriesChange(
       activities: readSubmittedTemplateActivities(formData),
     };
     return { operation, seriesId: randomUUID(), series: input };
+  }
+
+  // R2: the session itself becomes the series' first occurrence, so its own
+  // date is the start and the rule must fall on it. The database reads the
+  // template from the session; only the rule is sent.
+  if (operation === "repeat_session") {
+    const session = requireSession(slice, formData.get("sessionId"));
+    if (
+      session.seriesId !== null ||
+      session.localDate < today ||
+      session.localDate > lastDate
+    ) {
+      throw new RollingPlanValidationError();
+    }
+    const { startDate, ...rule } = readRule(formData, session.localDate);
+    assertRuleHasOccurrence({ ...rule, startDate });
+    if (
+      seriesOccurrenceDates({ ...rule, startDate }, startDate, startDate, 1)
+        .length === 0
+    ) {
+      throw new RollingPlanValidationError();
+    }
+    return { operation, sessionId: session.id, seriesId: randomUUID(), rule };
   }
 
   // Ending a series from a date is offered on a cancelled occurrence's Delete

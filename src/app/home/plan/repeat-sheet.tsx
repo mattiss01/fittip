@@ -28,23 +28,27 @@ export function ruleOf(series: PlanSeriesView): RecurrenceFieldsValue {
 /**
  * A recurring session's repeat, read in one line (owner, 5 Nov 2026). With
  * `onOpen` it is the way into the repeat sheet; without, the repeat can no
- * longer change from this date and the row only says what it is.
+ * longer change from this date and the row only says what it is. A one-off
+ * has no rule and reads "Doesn't repeat" (R2).
  */
 export function RepeatRow({
   rule,
   onOpen,
   disabled = false,
 }: {
-  rule: RecurrenceFieldsValue;
+  rule: RecurrenceFieldsValue | null;
   onOpen?: () => void;
   disabled?: boolean;
 }) {
-  const content = (
-    <>
-      <span className={repeatStyles.rowLabel}>Repeats</span>{" "}
-      <span className={repeatStyles.rowValue}>{describeRule(rule)}</span>
-    </>
-  );
+  const content =
+    rule === null ? (
+      <span className={repeatStyles.rowValue}>Doesn&apos;t repeat</span>
+    ) : (
+      <>
+        <span className={repeatStyles.rowLabel}>Repeats</span>{" "}
+        <span className={repeatStyles.rowValue}>{describeRule(rule)}</span>
+      </>
+    );
   return onOpen ? (
     <button
       className={repeatStyles.row}
@@ -75,6 +79,10 @@ export function RepeatRow({
  * of its own and hands the rule to `onSave` under the names the series
  * actions read; the caller adds what else the save sends. `withEdits` is the
  * edit form's sheet, whose save carries the form's other changes too.
+ *
+ * Without `series` it is a one-off's (R2): the session itself becomes the
+ * first of a new series from its own date, so the rule must fall on that date
+ * and there is always something to save.
  */
 export function RepeatSheet({
   idPrefix,
@@ -88,7 +96,8 @@ export function RepeatSheet({
   onClose,
 }: {
   idPrefix: string;
-  series: PlanSeriesView;
+  /** Absent for a one-off, which this sheet makes repeat. */
+  series?: PlanSeriesView;
   occurrenceDate: string;
   /** From `seriesEditScope`: the save reaches every session of the series. */
   canEditWhole: boolean;
@@ -102,22 +111,28 @@ export function RepeatSheet({
   const [changed, setChanged] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const titleId = `${idPrefix}-title`;
-  const startDate = canEditWhole ? series.startDate : occurrenceDate;
+  const oneOff = series === undefined;
+  const startDate =
+    canEditWhole && series !== undefined ? series.startDate : occurrenceDate;
   const from = shortDate(occurrenceDate);
   const lead = withEdits ? "Saves your other changes with it, to" : "Changes";
-  const scope = canEditWhole
-    ? `${lead} every session of the series. Logged training stays as it is.`
-    : `${lead} ${from} and every session after it. Earlier sessions and logged training stay as they are.`;
-  const saveLabel = `${withEdits ? "Save all changes" : "Save"} ${
-    canEditWhole ? "to the whole series" : `from ${from} on`
-  }`;
+  const scope = oneOff
+    ? `This session becomes the first of the repeat, on ${from}, and stays as it is with anything logged on it. The rest are added to your plan.`
+    : canEditWhole
+      ? `${lead} every session of the series. Logged training stays as it is.`
+      : `${lead} ${from} and every session after it. Earlier sessions and logged training stay as they are.`;
+  const saveLabel = oneOff
+    ? `Repeat from ${from}`
+    : `${withEdits ? "Save all changes" : "Save"} ${
+        canEditWhole ? "to the whole series" : `from ${from} on`
+      }`;
 
   return (
     <SheetLayer view="repeat" labelledBy={titleId} onClose={onClose}>
       <header className={w.sheetHead}>
         <span />
         {/* Unchanged, the sheet's own Close below is the only way out. */}
-        {changed ? (
+        {changed || oneOff ? (
           <SheetCloseButton className={w.sheetClose}>Cancel</SheetCloseButton>
         ) : null}
       </header>
@@ -132,7 +147,11 @@ export function RepeatSheet({
           event.stopPropagation();
           const problem =
             checkBefore?.() ??
-            recurrenceProblem(new FormData(event.currentTarget), startDate);
+            recurrenceProblem(
+              new FormData(event.currentTarget),
+              startDate,
+              oneOff,
+            );
           setError(problem);
           if (problem !== null) event.preventDefault();
         }}
@@ -140,7 +159,7 @@ export function RepeatSheet({
         <RecurrenceFields
           idPrefix={idPrefix}
           startDate={startDate}
-          initial={ruleOf(series)}
+          initial={series === undefined ? undefined : ruleOf(series)}
           onRuleChange={(differs) => {
             setChanged(differs);
             setError(null);
@@ -151,7 +170,7 @@ export function RepeatSheet({
             {error}
           </p>
         )}
-        {changed ? (
+        {changed || oneOff ? (
           <button className={styles.primary} type="submit" disabled={pending}>
             {saveLabel}
           </button>

@@ -1,4 +1,8 @@
-export type SeriesOperation = "add_series" | "edit_series" | "end_series";
+export type SeriesOperation =
+  | "add_series"
+  | "edit_series"
+  | "end_series"
+  | "repeat_session";
 
 export type SeriesSkippedDate = {
   occurrenceDate: string;

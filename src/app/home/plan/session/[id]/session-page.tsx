@@ -8,6 +8,7 @@ import {
   useCallback,
   useEffect,
   useId,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -90,6 +91,7 @@ export function SessionPage({
   series,
   today,
   dateRange,
+  repeatsThrough,
   expectedRevision,
   origin,
   originDate,
@@ -108,6 +110,11 @@ export function SessionPage({
   today: string;
   /** Where a single session may be moved or copied to. */
   dateRange: PlanDateRange;
+  /**
+   * The last date recurring sessions are written through. A one-off on or
+   * before it may be made to repeat (R2); one after it shows no repeat row.
+   */
+  repeatsThrough: string;
   expectedRevision: number;
   origin: SessionPageOrigin;
   originDate: string | null;
@@ -161,6 +168,22 @@ export function SessionPage({
 
   const [panel, setPanel] = useState<Panel | null>(null);
   const [repeating, setRepeating] = useState(false);
+  // The one-off edit form as it opened, so its repeat sheet can tell whether
+  // the form holds changes the repeat would not carry.
+  const editFormRef = useRef<HTMLFormElement>(null);
+  const editOpening = useRef<string | null>(null);
+  useEffect(() => {
+    if (editFormRef.current !== null && editOpening.current === null) {
+      editOpening.current = formSnapshot(editFormRef.current);
+    }
+  });
+  const editFormChanged = useCallback(
+    () =>
+      editFormRef.current !== null &&
+      editOpening.current !== null &&
+      formSnapshot(editFormRef.current) !== editOpening.current,
+    [],
+  );
   const closePanel = useCallback(() => setPanel(null), []);
   // A save closes the panel it came from, during render against the
   // submission it answered, as the Plan's edit disclosure did: an effect would
@@ -315,6 +338,42 @@ export function SessionPage({
           ...seriesEditScope(session.occurrenceDate, series, today),
         }
       : null;
+  // R2: a one-off still ahead may become the first session of a series. A log
+  // on it does not stop that (owner, 5 Nov 2026); it stays with the session.
+  const canRepeat =
+    session.seriesId === null &&
+    session.status === "active" &&
+    !past &&
+    session.localDate <= repeatsThrough;
+  const repeatOneOff = (formData: FormData) => {
+    formData.set("operation", "repeat_session");
+    formData.set("sessionId", session.id);
+    formData.set("expectedRevision", String(expectedRevision));
+    setRepeating(false);
+    trackedSeriesAction(formData);
+  };
+  // From the edit form the repeat starts from the session as saved, so
+  // edits not yet saved stop it rather than being silently left behind.
+  const oneOffSheet = (fromEditForm: boolean) =>
+    repeating && canRepeat ? (
+      <RepeatSheet
+        idPrefix={`repeat-${session.id}`}
+        occurrenceDate={session.localDate}
+        canEditWhole={false}
+        pending={busy}
+        checkBefore={
+          fromEditForm
+            ? () =>
+                editFormChanged()
+                  ? "The repeat starts from this session as it is saved. Cancel, save your changes first, then make it repeat."
+                  : null
+            : undefined
+        }
+        onSave={repeatOneOff}
+        onClose={() => setRepeating(false)}
+      />
+    ) : null;
+  const loggedOutcome = session.log?.outcome;
   const logHref = session.log
     ? // Opened from here, a delete comes back here (owner, 16 Oct 2026).
       `/home/log?completion=${session.log.completionId}&from=session`
@@ -397,6 +456,7 @@ export function SessionPage({
           <h1 className={page.editTitle}>Edit session</h1>
           {recurring === null ? (
             <form
+              ref={editFormRef}
               className={styles.form}
               action={planAction}
               key={`edit-${state.submission}`}
@@ -425,6 +485,13 @@ export function SessionPage({
                   />
                 }
               />
+              {canRepeat ? (
+                <RepeatRow
+                  rule={null}
+                  disabled={busy}
+                  onOpen={() => setRepeating(true)}
+                />
+              ) : null}
               <button className={styles.primary} type="submit" disabled={busy}>
                 Save session
               </button>
@@ -444,6 +511,7 @@ export function SessionPage({
             />
           )}
         </section>
+        {recurring === null ? oneOffSheet(true) : null}
       </>
     );
   }
@@ -520,6 +588,15 @@ export function SessionPage({
             </span>
           ) : null}
         </div>
+        {plannable && canRepeat ? (
+          <div className={page.repeat}>
+            <RepeatRow
+              rule={null}
+              disabled={busy}
+              onOpen={() => setRepeating(true)}
+            />
+          </div>
+        ) : null}
         {plannable && recurring !== null ? (
           <div className={page.repeat}>
             <RepeatRow
@@ -653,6 +730,16 @@ export function SessionPage({
                   >
                     Duplicate
                   </MenuItem>
+                  {canRepeat ? (
+                    <MenuItem
+                      onSelect={() => {
+                        close();
+                        setRepeating(true);
+                      }}
+                    >
+                      Repeat…
+                    </MenuItem>
+                  ) : null}
                   <MenuItem
                     onSelect={() => {
                       close();
@@ -686,17 +773,33 @@ export function SessionPage({
             // happened can be saved to the library; a skip or a replacement
             // records none, so it offers nothing. Nothing here changes the
             // session itself.
-            recordsTraining(session.log.outcome) ? (
+            // A logged one-off still ahead may also be made to repeat (R2).
+            recordsTraining(session.log.outcome) || canRepeat ? (
               <MoreMenu>
                 {(close) => (
-                  <MenuItem
-                    onSelect={() => {
-                      close();
-                      setPanel("save");
-                    }}
-                  >
-                    Save to library
-                  </MenuItem>
+                  <>
+                    {loggedOutcome !== undefined &&
+                    recordsTraining(loggedOutcome) ? (
+                      <MenuItem
+                        onSelect={() => {
+                          close();
+                          setPanel("save");
+                        }}
+                      >
+                        Save to library
+                      </MenuItem>
+                    ) : null}
+                    {canRepeat ? (
+                      <MenuItem
+                        onSelect={() => {
+                          close();
+                          setRepeating(true);
+                        }}
+                      >
+                        Repeat…
+                      </MenuItem>
+                    ) : null}
+                  </>
                 )}
               </MoreMenu>
             ) : null
@@ -735,6 +838,7 @@ export function SessionPage({
         </div>
       </article>
 
+      {recurring === null ? oneOffSheet(false) : null}
       {repeating && recurring !== null ? (
         <RepeatSheet
           idPrefix={`repeat-${session.id}`}
@@ -982,4 +1086,14 @@ function SavedLeave({ saved, href }: { saved: boolean; href: string }) {
     if (saved) router.replace(href);
   }, [saved, href, router]);
   return null;
+}
+
+/** A form's fields as one comparable value; files count as their name. */
+function formSnapshot(form: HTMLFormElement) {
+  return JSON.stringify(
+    [...new FormData(form).entries()].map(([key, value]) => [
+      key,
+      typeof value === "string" ? value : value.name,
+    ]),
+  );
 }
