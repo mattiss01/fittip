@@ -168,6 +168,7 @@ describe("coach AI context assembly", () => {
         availabilityNote: "Late on Thursdays.",
         trainingPlaces: ["Home", "Gym"],
         homeEquipment: ["Kettlebell"],
+        pushLevel: "ambitious",
       },
     };
     const roadmap = build({ profile });
@@ -190,6 +191,7 @@ describe("coach AI context assembly", () => {
         availabilityNote: "Late on Thursdays.",
         trainingPlaces: ["Home", "Gym"],
         homeEquipment: ["Kettlebell"],
+        pushLevel: "ambitious",
       });
       // An age, not the day it is counted from.
       expect(assembled.serialized).not.toContain("1992-03-14");
@@ -225,6 +227,7 @@ describe("coach AI context assembly", () => {
         homeEquipment: Array.from({ length: 40 }, (_, index) =>
           `${index}`.padEnd(60, "\u6f22"),
         ),
+        pushLevel: "balanced",
       },
     };
 
@@ -1978,6 +1981,7 @@ describe("fill_session_activities assembly", () => {
           availabilityNote: null,
           trainingPlaces: ["Home"],
           homeEquipment: ["Kettlebell", "Pull-up bar"],
+          pushLevel: "balanced",
         },
       },
     });

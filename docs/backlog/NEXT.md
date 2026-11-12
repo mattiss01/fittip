@@ -82,6 +82,17 @@ Ordered by dependency. A lane is named where it is not the build lane.
 
 **Coach and records.**
 
+- [~] **How hard the coach pushes.** Owner, 12 Nov 2026: the coach is always timid ("make
+      it chill"), because the prompt has no stance on effort and several cautious defaults.
+      One setting, five levels in words (Easy does it, Steady, Balanced, Ambitious, All in),
+      a slider from 1 left to 5 right; asked in setup right after Goals and changed on its
+      own Settings row ("Coaching style"); `balanced` for an account that never chose.
+      Each level sends the coach its own paragraph per operation, never just a number;
+      safety rules, a recorded signal and the planning note all outrank it. The static
+      prompt prefix stays byte-identical (a second system message carries the paragraph).
+      Careful lane: a `profiles` column (column-scoped grant, owner-only) and a new field
+      crossing to the provider (ADR-023 amended).
+
 - [ ] **A fill's sources are recorded and never checked.** A suggestion names the
       logs, library entries and saved sessions it was built from, and since ADR-023
       the logs whose flags it was sent. Nothing compares them, so a flag corrected

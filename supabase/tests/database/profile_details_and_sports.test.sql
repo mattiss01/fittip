@@ -36,6 +36,7 @@ select is(
   array[
     'availability_note',
     'birth_date',
+    'coach_push_level',
     'display_name',
     'gender',
     'height_cm',

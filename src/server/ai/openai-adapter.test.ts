@@ -94,6 +94,7 @@ function context(overrides: Partial<CoachAIContext> = {}): CoachAIContext {
       availabilityNote: null,
       trainingPlaces: [],
       homeEquipment: [],
+      pushLevel: "balanced",
     },
     targetableGoals: [],
     historicalGoals: [],
@@ -215,7 +216,8 @@ describe("OpenAI coaching adapter", () => {
     // after it or caching cannot fire at all.
     expect(prefixes[0]).toBe(coachAIStaticPrefix("create_seven_day_plan"));
     expect(prefixes[1]).toBe(prefixes[0]);
-    expect(JSON.parse(received[1].body).messages[1].content).toContain(
+    // How hard to push comes next, then the context.
+    expect(JSON.parse(received[1].body).messages[2].content).toContain(
       "No gym Tuesdays.",
     );
   });

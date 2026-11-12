@@ -70,6 +70,7 @@ const HEADINGS: Record<SetupStep, { heading: string; caption?: string }> = {
     caption: "Select the sports you do or are interested in",
   },
   goals: { heading: "Goals", caption: "What you want to train for" },
+  push: TRAINING_QUESTIONS.push,
   frequency: TRAINING_QUESTIONS.frequency,
   days: TRAINING_QUESTIONS.days,
   places: TRAINING_QUESTIONS.places,
@@ -329,7 +330,8 @@ export function OnboardingManager({
           <GoalsStep goals={goals} onSaved={next} sports={profile.sports} />
         ) : null}
 
-        {current === "frequency" ||
+        {current === "push" ||
+        current === "frequency" ||
         current === "days" ||
         current === "places" ||
         current === "equipment" ? (

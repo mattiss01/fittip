@@ -28,6 +28,7 @@ function records(
       availabilityNote: "  Late on Thursdays.  ",
       trainingPlaces: ["Home", "Gym"],
       homeEquipment: ["Kettlebell", "Pull-up bar"],
+      pushLevel: "all_in",
     },
     ...overrides,
   };
@@ -111,7 +112,20 @@ describe("what the coach reads of the profile (ADR-023)", () => {
       availabilityNote: "Late on Thursdays.",
       trainingPlaces: ["Home", "Gym"],
       homeEquipment: ["Kettlebell", "Pull-up bar"],
+      pushLevel: "all_in",
     });
+  });
+
+  it("sends a level it does not know as balanced", () => {
+    const { trainingSetup } = selectCoachProfileContext(
+      records({
+        training: { ...records().training, pushLevel: "extreme" },
+      }),
+      TODAY,
+    );
+
+    expect(trainingSetup.pushLevel).toBe("balanced");
+    expect(emptyCoachProfile().trainingSetup.pushLevel).toBe("balanced");
   });
 
   it("is empty for an owner who has entered nothing", () => {
@@ -141,6 +155,8 @@ describe("what the coach reads of the profile (ADR-023)", () => {
           availabilityNote: "a".repeat(AVAILABILITY_NOTE_MAX_LENGTH),
           trainingPlaces: longest(TRAINING_PLACES_MAX_COUNT),
           homeEquipment: longest(HOME_EQUIPMENT_MAX_COUNT),
+          // The longest of the five keys.
+          pushLevel: "ambitious",
         },
       }),
       TODAY,

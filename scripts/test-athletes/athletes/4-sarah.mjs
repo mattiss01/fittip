@@ -38,6 +38,8 @@ const athlete = {
     units: "metric",
     sports: ["Strength", "Running", "Yoga"],
     sessionsPerWeek: 3,
+    // Thirty minutes before the kids wake: no pressure (12 Nov 2026).
+    pushLevel: "gentle",
     unavailableDays: ["tuesday", "wednesday"],
     availabilityNote:
       "Weekdays only 5:45–6:15 before the kids wake. Sunday afternoon about an hour while my partner has the kids.",

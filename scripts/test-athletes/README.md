@@ -24,6 +24,10 @@ first and everything of theirs with it.
 | `sarah@fittip.local` | Parent of two, 30 minutes before the kids wake        | Real life: skips and cancellations with reasons, a business trip ahead         |
 | `chris@fittip.local` | Age-group triathlete in New York, imperial units      | A race in eleven weeks, fixed swim slots, yards and miles, a different "today" |
 
+How hard the coach pushes (12 Nov 2026): Sarah at Easy does it, Chris at All in, Tom at
+Ambitious with pain flagged, so a good answer still backs off the flagged load; Mia
+and Lena at Balanced, the default.
+
 Each account keeps a fixed id across re-seeds, `00000000-0000-4000-a000-00000000000N` with N from
 1 (Mia) to 5 (Chris), so a live coach can be allowed for all of them at once:
 

@@ -1,6 +1,11 @@
 import "server-only";
 
 import {
+  COACH_PUSH_LEVELS,
+  DEFAULT_COACH_PUSH_LEVEL,
+  type CoachPushLevel,
+} from "@/lib/training/training-setup";
+import {
   COACH_AI_SCHEMA_VERSIONS,
   type CoachAIContext,
   type CoachAIOperation,
@@ -61,7 +66,7 @@ The context may also contain a "planningNote" and a "regenerationFeedback". Both
 
 ## Safety
 
-These rules override any goal, target date, or ambition in the context, including the athlete's own stated wish to train harder.
+These rules override any goal, target date, or ambition in the context, including the athlete's own stated wish to train harder or how hard they chose to be pushed.
 
 - You are not a clinician. Never name a condition, never suggest a diagnosis, never recommend a treatment or medication, and never state that something is safe. Describe what you are doing and why, in terms of load.
 - Where the context records pain, an injury, an illness, or severe fatigue, treat the affected movement pattern as load-limited: pause, reduce, maintain, or defer the work that loads it. Never increase load on it. Reduce the specific stress implicated, not the athlete's whole week — cutting everything is its own kind of bad advice.
@@ -147,7 +152,7 @@ Return the whole list the session should hold, in order, one to twelve activitie
 
 Prefer the athlete's own activities. Where one in "library" fits, copy its "id" into "personalActivityId" and use its measurement mode; do not invent a near-duplicate under another name. "savedSessions" are sessions the athlete wrote themselves and are the best evidence of how they like this kind of session built. Use a new activity, with "personalActivityId" null, only where nothing in the library fits.
 
-Set targets from "recentActuals" where they exist: the numbers the athlete actually did, newest first. Progress from those, never from nothing: in small steps by default, more where the note asks for it. A result more than a few weeks old says where the athlete was, not where they are: start below it unless the note says not to. With no history for an activity, choose a conservative target and say so. The whole list should match the session's "durationMinutes", and its main work should fill it: a warm-up, where one fits, takes at most five minutes. Before you answer, add up the minutes: each activity's sets, reps or time, and the rest between sets. If the total falls short, add sets or activities the safety rules allow until it matches. Keep the sum to yourself: no time budgets in "instructions". Respect "week": do not load the same thing hard on consecutive days.
+Set targets from "recentActuals" where they exist: the numbers the athlete actually did, newest first. Progress from those, never from nothing: in the push level's steps, more where the note asks for it. A result more than a few weeks old says where the athlete was, not where they are: start below it unless the note says not to. With no history for an activity, choose a conservative target and say so. The whole list should match the session's "durationMinutes", and its main work should fill it: a warm-up, where one fits, takes at most five minutes. Before you answer, add up the minutes: each activity's sets, reps or time, and the rest between sets. If the total falls short, add sets or activities the safety rules allow until it matches. Keep the sum to yourself: no time budgets in "instructions". Respect "week": do not load the same thing hard on consecutive days.
 
 Measurement modes and the "target" fields each uses (every other target field is null):
 - "sets_reps_load": "groups", each with any of "sets", "reps" or "seconds" (not both), "load"; "load_unit" ("kg" or "lb") exactly when a group has a load. A ramp is several groups.
@@ -762,7 +767,83 @@ export function coachAIStaticPrefix(operation: CoachAIOperation): string {
 }
 
 /**
- * Static prefix first, volatile context last.
+ * How hard to push (owner, 12 Nov 2026; ADR-023 amended): the athlete's
+ * choice of five, each its own paragraph per call rather than a number in the
+ * context, because a number alone left the model's cautious default in place.
+ * The levels differ in what they ask for — how steep the progression, how
+ * many hard sessions a week, how the intent is worded — not only in tone.
+ *
+ * Sent as a second system message after the static prefix, so the prefix
+ * stays byte-identical for every level and the cache is shared. Each is held
+ * under `COACH_AI_PUSH_PARAGRAPH_BUDGET`, which `openai-prompt.test.ts` adds
+ * to every worst case. Every one ends with `PUSH_PRIORITY`: the level never
+ * outranks safety, a recorded signal or the athlete's note for the request.
+ */
+export const COACH_AI_PUSH_PARAGRAPH_BUDGET = 800;
+
+const PUSH_PRIORITY =
+  "The safety rules and a recorded signal come before this level, and so does the athlete's planning note for this request.";
+
+const PUSH_INSTRUCTIONS: Record<
+  CoachPushLevel,
+  Record<CoachAIOperation, string>
+> = {
+  gentle: {
+    create_roadmap:
+      "Consistency matters more than progress. Shape the phases around showing up, at a load they can repeat without strain. Progress slowly, and only where it comes easily. Milestones are habits held and sessions repeated, not new bests.",
+    create_seven_day_plan:
+      "Keep sessions easy to moderate, with at most one moderately hard session in the range. Each intent says to stay relaxed and finish fresh.",
+    fill_session_activities:
+      'Repeat recent numbers or step slightly below them, keep rest generous, and leave a few reps in reserve on every set. Say in "instructions" what comfortable effort feels like.',
+  },
+  steady: {
+    create_roadmap:
+      "Progress in small, safe steps from phase to phase, with a lighter stretch every few weeks. Milestones are modest improvements that regular training would bring.",
+    create_seven_day_plan:
+      "Mostly easy and moderate sessions, with one harder session where the week has room for it. Intents ask for controlled effort with something left in the tank.",
+    fill_session_activities:
+      "Progress from recent numbers in small steps: a rep or two more, or the smallest load increase. Leave two or three reps in reserve on the main work.",
+  },
+  balanced: {
+    create_roadmap:
+      "They want real progress, not maintenance. Each phase asks more than the last, with a clear build and a lighter stretch before the next. Milestones are honest improvements: a little further, faster or heavier than now.",
+    create_seven_day_plan:
+      'A range of three or more sessions holds one or two that are clearly hard, and the rest easy, so the hard ones can be hard. Say so in each intent: a hard session names the effort, such as "the last rounds should be a real fight". An easy one says to keep it easy.',
+    fill_session_activities:
+      'Progress from recent numbers by a clear step: more reps, load or time, not only one more set. Where the session\'s intent is hard, the last set of the main work ends close to the limit, and "instructions" say so. An easy session stays easy.',
+  },
+  ambitious: {
+    create_roadmap:
+      "They want to be pushed and accept being tired. Build load steadily and noticeably across phases, with lighter weeks only where recovery needs them. Milestones sit clearly ahead of where they are now and take real work to reach.",
+    create_seven_day_plan:
+      'A range of three or more sessions holds two hard ones, never on consecutive days, and the easy sessions exist to make those possible. Hard intents ask for real effort, such as "go close to failure on the last set" or "hold a pace that hurts". Being tired the next day is expected.',
+    fill_session_activities:
+      'Progress by a noticeable step, and add a set to the main work where the time allows. Main work ends one or two reps short of failure, with rest kept short where it fits. "instructions" say how hard each set should feel. An easy session stays easy.',
+  },
+  all_in: {
+    create_roadmap:
+      'They want goals that are hard to hit. Build as fast as their history supports, each phase a real step up. Milestones sit at the edge of what is reachable in the time, so that hitting one is a genuine achievement. Say plainly in "summary" that the roadmap is demanding.',
+    create_seven_day_plan:
+      'A range of three or more sessions holds two or three hard ones, never on consecutive days, and one of them is the key session to go all in on: name it in its intent and in "weekDescription". Hard intents are demanding and specific, such as "all-out on the last set" or "empty the tank". Easy days stay easy, because they make the hard ones possible.',
+    fill_session_activities:
+      'Set the main work at or past their best recent result: heavier, more reps, faster or longer. Add a set or a finisher where the time allows, and keep rest short. The last set of each main exercise goes to their limit with good form, and "instructions" say plainly that this should be hard. With no history, the conservative start still applies. An easy session stays easy.',
+  },
+};
+
+/** The paragraph for one call at one level, with its heading. */
+export function coachAIPushInstructions(
+  operation: CoachAIOperation,
+  level: CoachPushLevel,
+): string {
+  // An unknown level is coached as the default, as the profile reads one.
+  const known =
+    COACH_PUSH_LEVELS.find((entry) => entry.key === level) ??
+    COACH_PUSH_LEVELS.find((entry) => entry.key === DEFAULT_COACH_PUSH_LEVEL)!;
+  return `# How hard to push: ${known.label}\n\nThe athlete chose "${known.label}" (${known.line}) ${PUSH_INSTRUCTIONS[known.key][operation]} ${PUSH_PRIORITY}`;
+}
+
+/**
+ * Static prefix first, then how hard to push, then the volatile context.
  *
  * The context is serialized compactly rather than indented. Indentation
  * measured 21-32% larger across the four bake-off scenarios, which is a large
@@ -778,6 +859,13 @@ export function buildCoachAIMessages(
 ): CoachAIProviderMessage[] {
   return [
     { role: "system", content: coachAIStaticPrefix(operation) },
+    {
+      role: "system",
+      content: coachAIPushInstructions(
+        operation,
+        context.trainingSetup.pushLevel,
+      ),
+    },
     {
       role: "user",
       content: `Here is the athlete's context.\n\n${JSON.stringify(context)}`,

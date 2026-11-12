@@ -3,7 +3,9 @@ import "server-only";
 import { HEIGHT_CM_RANGE, WEIGHT_KG_RANGE } from "@/lib/profile/body-measures";
 import { GENDERS } from "@/lib/profile/profile-contract";
 import {
+  DEFAULT_COACH_PUSH_LEVEL,
   SESSIONS_PER_WEEK_RANGE,
+  toCoachPushLevel,
   WEEKDAY_LABELS,
   WEEKDAYS,
 } from "@/lib/training/training-setup";
@@ -29,7 +31,9 @@ import type {
  *   which day. The name is never read by this module at all.
  * - **The training setup**: how often, when not, where and with what. It left
  *   the coach's sight on 6 October 2026, when setup stopped writing these as
- *   memory notes, and nothing had put it back.
+ *   memory notes, and nothing had put it back. Since 12 November 2026 also
+ *   how hard the owner wants to be pushed, which selects the paragraph of
+ *   instructions `openai-prompt.ts` sends (ADR-023 amended).
  *
  * It lives outside `src/server/ai` for the reason the other data-shaping
  * modules do: `server-boundary.test.ts` keeps repositories out of that module,
@@ -48,6 +52,7 @@ export type CoachProfileRecords = {
     availabilityNote: string | null;
     trainingPlaces: readonly string[];
     homeEquipment: readonly string[];
+    pushLevel: string;
   };
 };
 
@@ -69,6 +74,7 @@ export function emptyCoachProfile(): CoachProfileSelection {
       availabilityNote: null,
       trainingPlaces: [],
       homeEquipment: [],
+      pushLevel: DEFAULT_COACH_PUSH_LEVEL,
     },
   };
 }
@@ -106,6 +112,10 @@ export function selectCoachProfileContext(
       availabilityNote: text(training.availabilityNote),
       trainingPlaces: names(training.trainingPlaces),
       homeEquipment: names(training.homeEquipment),
+      // One of the five, or the default: a value the app does not know is
+      // never passed on as though the owner had chosen it.
+      pushLevel:
+        toCoachPushLevel(training.pushLevel) ?? DEFAULT_COACH_PUSH_LEVEL,
     },
   };
 }

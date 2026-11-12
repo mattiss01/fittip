@@ -452,6 +452,7 @@ function toCoachProfileRecords(
       availabilityNote: details.training.availabilityNote,
       trainingPlaces: [...details.training.trainingPlaces],
       homeEquipment: [...details.training.homeEquipment],
+      pushLevel: details.training.pushLevel,
     },
   };
 }

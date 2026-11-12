@@ -10,18 +10,23 @@ import {
   SESSIONS_PER_WEEK_RANGE,
   TRAINING_NAME_MAX_LENGTH,
   TRAINING_PLACES_MAX_COUNT,
+  toCoachPushLevel,
   WEEKDAYS,
   type TrainingSetupView,
   type Weekday,
 } from "@/lib/training/training-setup";
 import { ProfileDetailsValidationError } from "@/server/profile/profile-records";
 
-/** The four questions of the training setup, each saved on its own screen. */
+/**
+ * The questions of the training setup, each saved on its own screen: the
+ * four of 6 Oct 2026 and how hard the coach pushes (12 Nov 2026).
+ */
 export const TRAINING_SETUP_PARTS = [
   "frequency",
   "days",
   "places",
   "equipment",
+  "push",
 ] as const;
 export type TrainingSetupPart = (typeof TRAINING_SETUP_PARTS)[number];
 
@@ -65,6 +70,11 @@ export function parseTrainingSetup(
       "homeEquipment",
       HOME_EQUIPMENT_MAX_COUNT,
     );
+  }
+  if (parts.includes("push")) {
+    const level = toCoachPushLevel(text(formData, "pushLevel"));
+    if (level === null) throw new ProfileDetailsValidationError();
+    change.pushLevel = level;
   }
   return change;
 }

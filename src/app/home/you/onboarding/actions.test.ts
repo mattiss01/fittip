@@ -346,7 +346,8 @@ describe("guided setup actions", () => {
     expect(profiles.saveSetupStep).toHaveBeenCalledExactlyOnceWith(9);
 
     profiles.saveSetupStep.mockClear();
-    await recordSetupStepAction(13);
+    // Thirteen screens since 12 Nov 2026: the fourteenth is none.
+    await recordSetupStepAction(14);
     await recordSetupStepAction(0);
     expect(profiles.saveSetupStep).not.toHaveBeenCalled();
   });

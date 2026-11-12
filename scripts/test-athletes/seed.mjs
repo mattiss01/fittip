@@ -64,6 +64,8 @@ async function seedAthlete(athlete) {
     availability_note: p.availabilityNote ?? null,
     training_places: p.trainingPlaces ?? [],
     home_equipment: p.homeEquipment ?? [],
+    // How hard the coach pushes (12 Nov 2026); the default where not set.
+    coach_push_level: p.pushLevel ?? "balanced",
     setup_finished_at: new Date().toISOString(),
   });
   // Their own list since 6 Nov 2026, each sport taking the next colour.

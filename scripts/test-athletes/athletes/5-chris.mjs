@@ -20,6 +20,8 @@ const athlete = {
     units: "imperial",
     sports: ["Swimming", "Cycling", "Running", "Strength"],
     sessionsPerWeek: 7,
+    // A race in eleven weeks, and wants to be stretched (12 Nov 2026).
+    pushLevel: "all_in",
     unavailableDays: ["friday"],
     availabilityNote:
       "Masters swim Tue/Thu 6:00–7:00. Weekday rides indoors only (before work). Long ride Saturday, long run Sunday.",

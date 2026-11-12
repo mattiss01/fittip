@@ -81,6 +81,7 @@ export const COACH_AI_FIXTURE_CONTEXT: CoachAIContext = {
     availabilityNote: null,
     trainingPlaces: ["Home", "Outdoors"],
     homeEquipment: ["Kettlebell"],
+    pushLevel: "balanced",
   },
   targetableGoals: [
     {

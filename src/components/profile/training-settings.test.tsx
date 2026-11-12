@@ -21,6 +21,7 @@ const TRAINING = {
   availabilityNote: null,
   trainingPlaces: ["Gym"],
   homeEquipment: ["Mat"],
+  pushLevel: "balanced" as const,
 };
 
 /** What the last save sent, as part and fields. */

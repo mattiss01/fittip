@@ -412,8 +412,21 @@ async function completeGuidedSetup(
   await expect(page.getByLabel("Goal title")).toHaveValue(goalTitle);
   await next();
 
-  // After goals, four taps that are saved as settings of the profile (owner,
-  // 6 Oct 2026): how often, which days are out, where, and what is at home.
+  // Right after goals, how hard the coach pushes (owner, 12 Nov 2026): a
+  // slider from 1 on the left to 5 on the right, at Balanced until moved.
+  await expect(heading("How hard should your coach push you?")).toBeVisible();
+  const push = page.getByRole("slider", {
+    name: "How hard your coach pushes you",
+  });
+  await expect(push).toHaveValue("3");
+  await push.fill("5");
+  await expect(
+    page.getByText("Make it hard to hit. Stretch me."),
+  ).toBeVisible();
+  await next();
+
+  // Then four taps that are saved as settings of the profile (owner, 6 Oct
+  // 2026): how often, which days are out, where, and what is at home.
   await expect(heading("How often do you want to train?")).toBeVisible();
   await page.getByRole("button", { name: "More: Sessions a week" }).click();
   await expect(page.getByLabel("Sessions a week", { exact: true })).toHaveValue(
@@ -497,10 +510,17 @@ async function completeGuidedSetup(
     "About you",
     "Your sports",
     "Training setup",
+    "Coaching style",
     "Units and time zone",
   ]) {
     await expect(settings.getByRole("link", { name })).toBeVisible();
   }
+  // How hard the coach pushes is where setup left it.
+  await settings.getByRole("link", { name: "Coaching style" }).click();
+  await expect(
+    page.getByRole("slider", { name: "How hard your coach pushes you" }),
+  ).toHaveValue("5");
+  await page.goto("/home/you/settings");
   await expect(
     page.getByRole("link", { name: "Delete account" }),
   ).toBeVisible();
