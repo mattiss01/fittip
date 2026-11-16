@@ -23,6 +23,8 @@
  * must show them (owner, 16 Nov 2026). Without them the pages show
  * placeholders; nothing refuses to run.
  */
+import "server-only";
+
 export const TERMS_VERSION = "2026-11-17";
 
 /** A labelled fact, drawn as a card: a service, a retention period. */
@@ -358,7 +360,7 @@ export function terms({
         heading: "Liability",
         lead: "As far as Austrian law allows for a free service, and no further.",
         paragraphs: [
-          "I am liable without limit for intent and gross negligence, and for injury to life, body or health. For other damage caused by slight negligence I am not liable (§6(1) Z 9 KSchG). Liability under the Austrian Product Liability Act (PHG) is unaffected.",
+          "I am liable without limit for intent and gross negligence, and for injury to life, body or health. For other damage caused by slight negligence I am not liable, which is as far as §6(1) Z 9 KSchG lets liability be excluded. Liability under the Austrian Product Liability Act (PHG) is unaffected.",
         ],
       },
       {

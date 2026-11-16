@@ -10,7 +10,7 @@ import { privacyNotice, readOperator, terms } from "@/lib/legal";
 describe("the operator in the legal documents", () => {
   const operator = {
     name: "Alex Example",
-    address: "Examplegasse 1, 1070 Vienna, Austria",
+    address: "Examplestraße 1, 1234 Example Town, Austria",
     email: "alex@example.test",
   };
 
