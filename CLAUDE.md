@@ -205,7 +205,8 @@ a shard in `ci.yml` names it.
 - **Friends' data survives** (ADR-043 decision 6). A migration carries existing rows forward;
   the founder project holds real people's data, so "nothing stored needs to survive" no
   longer applies. `npm.cmd run backup:restore -- <file>` restores a backup into the local
-  stack only, and replaces the local accounts as a reset does.
+  stack only, and replaces the local accounts as a reset does. Those are real people's data:
+  once the row counts match, run `db reset --local` before anything else queries the stack.
 - Never run `db reset --linked`, `migration repair`, `db remote`, `secrets`, `projects`, or
   `branches`. `supabase/config.toml` is local-only development configuration.
 - Docker-backed local runs are slow; run them in the background rather than blocking.
