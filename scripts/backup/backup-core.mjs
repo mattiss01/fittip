@@ -45,7 +45,10 @@ export function backupTakenAt(name) {
  * are ever chosen, so nothing else in the folder can be deleted by it.
  */
 export function expiredBackups(names, now, days = RETENTION_DAYS) {
-  const cutoff = now.getTime() - days * 24 * 60 * 60 * 1000;
+  // Half a day early, so the weekly run four weeks on deletes the copy the
+  // run four weeks before took, even if that one started a few seconds later
+  // in the day; otherwise it would survive a fifth week.
+  const cutoff = now.getTime() - (days - 0.5) * 24 * 60 * 60 * 1000;
   return names.filter((name) => {
     const taken = backupTakenAt(name);
     return taken !== null && taken.getTime() < cutoff;
@@ -216,6 +219,7 @@ export function readReason(argv) {
 export function redact(text) {
   return String(text)
     .replace(/(PGPASSWORD=)"?[^"\s]+"?/g, "$1[redacted]")
+    .replace(/(password=)'?[^'\s]+'?/gi, "$1[redacted]")
     .replace(/postgres(ql)?:\/\/[^\s]+/g, "[connection redacted]")
     .replace(/\s+/g, " ")
     .trim()

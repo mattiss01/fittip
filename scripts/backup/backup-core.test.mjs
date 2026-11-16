@@ -42,17 +42,26 @@ describe("backup names", () => {
 describe("deleting old backups", () => {
   const now = new Date("2026-12-20T12:00:00Z");
 
-  it("chooses only backups older than four weeks", () => {
+  it("chooses the backups four weeks old, a little early", () => {
     expect(
       expiredBackups(
         [
           "fittip-20261121T115959Z-weekly-9e5776b.sql.gpg",
-          "fittip-20261122T120001Z-pre-migration-9e5776b.sql.gpg",
+          "fittip-20261123T000001Z-pre-migration-9e5776b.sql.gpg",
           "fittip-20261201T090000Z-weekly-abcdef0.sql.gpg",
         ],
         now,
       ),
     ).toEqual(["fittip-20261121T115959Z-weekly-9e5776b.sql.gpg"]);
+  });
+
+  it("deletes last month's Monday copy on this Monday, though it ran later", () => {
+    expect(
+      expiredBackups(
+        ["fittip-20261123T090030Z-weekly-9e5776b.sql.gpg"],
+        new Date("2026-12-21T09:00:25Z"),
+      ),
+    ).toHaveLength(1);
   });
 
   it("never chooses a file it did not write", () => {
@@ -161,8 +170,9 @@ describe("arguments and logging", () => {
 
   it("keeps the CLI's temporary password out of the log", () => {
     const line = redact(
-      'export PGPASSWORD="s3cret-Value"\npostgresql://user:pw@host:5432/db failed',
+      'export PGPASSWORD="s3cret-Value"\npostgresql://user:pw@host:5432/db host=x password=libpq-pw failed',
     );
+    expect(line).not.toContain("libpq-pw");
     expect(line).not.toContain("s3cret-Value");
     expect(line).not.toContain("user:pw");
   });

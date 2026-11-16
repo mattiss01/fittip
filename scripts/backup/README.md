@@ -41,8 +41,12 @@ writes its console output to `%LOCALAPPDATA%\FitTip\task-output.txt`.
 `backup:restore` resets the local database to the migrations, then loads the data as the local
 superuser. It checks each table's row count against the backup. Hosted Auth is newer than the
 local stack, so tables and columns the local schema lacks are left out and listed. The local
-accounts are replaced by the backup's: afterwards, run `npm.cmd run athletes:seed` and recreate
-`owner@fittip.local` as after any reset.
+accounts are replaced by the backup's, which are real people's. Once the counts match, run
+`npx.cmd supabase db reset --local` so their data does not stay in the local stack, then
+`npm.cmd run athletes:seed` and recreate `owner@fittip.local` as after any reset.
+
+The scheduled task runs whatever is checked out in the repository folder, so a branch that
+changes the backup script runs its own version.
 
 Restoring to the hosted project is not scripted. If it is ever needed, it is the owner's
 decision, made at the time.

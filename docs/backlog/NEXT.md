@@ -133,7 +133,7 @@ Not worth their own slot; do them when work lands nearby.
   consent by someone bypassing the app. A shared server-side check before every write would
   close it (B2's review, 16 Nov 2026).
 - **A failed weekly backup is silent.** The scheduled task logs to
-  `%LOCALAPPDATA%FitTipackup.log` and exits non-zero when Docker is off, and nothing
+  `%LOCALAPPDATA%\FitTip\backup.log` and exits non-zero when Docker is off, and nothing
   retries until the next Monday. A check of the newest copy's age (at sign-in, or in the
   founder apply) would surface weeks without one (B3's review, 16 Nov 2026).
 

@@ -54,7 +54,7 @@ export const COACH_NOTICE_SECTIONS: readonly CoachNoticeSection[] = [
     heading: "Changing your mind",
     paragraphs: [
       "You can decline now, or agree and withdraw later, in Settings › Coach and your data. Withdrawing stops new coach requests at once; plans and notes the coach already made stay yours.",
-      "Deleting your account removes your data from FitTip at once. Backups keep it for up to 4 weeks, and OneDrive's recycle bin up to 30 days more. Ask for a copy of your data at any time.",
+      "Deleting your account removes your data from FitTip at once. Backups keep it for about 4 weeks, and OneDrive's recycle bin up to 30 days more. Ask for a copy of your data at any time.",
     ],
   },
 ];

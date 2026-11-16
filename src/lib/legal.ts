@@ -57,7 +57,7 @@ export const PRIVACY_NOTICE: LegalDocument = {
     "It keeps your account, your training and what you tell it about yourself, so it can plan with you.",
     "What you write about your health (pain, illness, injury) is kept only with your separate consent.",
     "The AI coach is optional. Only if you agree to it is what it needs sent to OpenAI in the USA.",
-    "The operator runs the database and can technically read it. An encrypted backup is kept for 4 weeks.",
+    "The operator runs the database and can technically read it. Encrypted backups are kept for about 4 weeks.",
     "No ads, no analytics, no tracking. Delete your account and everything in it at any time.",
     `Questions: ${EMAIL}.`,
   ],
