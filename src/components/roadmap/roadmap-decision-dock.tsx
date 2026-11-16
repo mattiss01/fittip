@@ -1,5 +1,9 @@
 "use client";
 
+import {
+  CoachOffNotice,
+  useCoachAgreed,
+} from "@/components/consent/coach-agreed";
 import { useId, useRef, useState, type ReactNode } from "react";
 
 import { RoadmapWatchNotice } from "./roadmap-watch-notice";
@@ -120,6 +124,8 @@ export function RoadmapDecisionDock({
     suggestions: readonly GoalSuggestion[];
   };
 }) {
+  // Grey while the coach is off, with the way to turn it on (owner, 15 Nov 2026).
+  const coachAgreed = useCoachAgreed();
   const accept = useRoadmapWrite(acceptRoadmapAction);
   // Open memory suggestions are put in front of the owner once before the
   // proposal is accepted or declined (owner, 19 Oct 2026). A ref, not state:
@@ -244,11 +250,12 @@ export function RoadmapDecisionDock({
                 )}
               </span>
             </div>
+            {coachAgreed ? null : <CoachOffNotice />}
             <div className={styles.actions}>
               <button
                 className={styles.primaryAction}
                 type="submit"
-                disabled={busy}
+                disabled={busy || !coachAgreed}
               >
                 <CoachSpark size={16} />
                 {ROADMAP_CONTROL_COPY.askAgainConfirm}

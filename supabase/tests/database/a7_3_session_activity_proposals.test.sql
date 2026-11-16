@@ -33,6 +33,11 @@ where id in (
   'a7300000-0000-4000-8000-000000000002'
 );
 
+-- B2 (ADR-043 decision 5): spend is reserved only for someone who has agreed
+-- to the coach, so every person here has.
+insert into public.consent_decisions (user_id, kind, decision, version)
+select user_id, 'coach', 'agreed', '2026-11-12' from public.profiles;
+
 insert into public.rolling_plans (user_id)
 values
   ('a7300000-0000-4000-8000-000000000001'),

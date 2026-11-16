@@ -17,12 +17,19 @@ before any code is written.
 [ADR-043](../decisions/ADR-043-A-FRIENDS-BETA.md). Planned only; the owner says when to build.
 No friend is admitted until B2 and B3 have merged. All careful lane.
 
-- [ ] **B2 — Consent before the coach.** ADR-043 decision 5: a privacy notice and a separate,
-      recorded yes before a person's first coach call; without it the coach is not offered,
-      withdrawing stops calls, account delete (ADR-039) removes the record. The notice states
-      the AI provider's data-use and retention terms as they are, checked when it is
-      written, and that the owner can read the database. A migration and the AI data
-      boundary. Covers the owner too, who consents like anyone else.
+- [~] **B2 — Terms first, then consent before the coach.** ADR-043 decision 5: a privacy
+      notice and a separate, recorded yes before a person's first coach call; without it the
+      coach is not offered, withdrawing stops calls and keeps what the coach made, account
+      delete (ADR-039) removes the record. Owner, 12 Nov 2026: asked in a dialog after
+      sign-in with Agree, Decline and ✕ (✕ asks again at the next sign-in), changed after in
+      Settings › Coach and your data. Owner, 15 Nov 2026 (ADR-043 amendment): a required
+      step before it, at first sign-in, with two separate boxes, "I agree to the Terms" and an
+      explicit consent to storing health information, both required; the privacy notice is
+      linked and read, not accepted. Public `/privacy` and `/terms` pages in English. Terms,
+      health and coach are rows of one append-only table with a `kind` and a version. The
+      FitTip logo replaces the eyebrow text, heads the main pages and loading screens, and is
+      the tab icon. A
+      migration and the AI data boundary. Covers the owner too.
 - [ ] **B3 — Friends' data survives.** ADR-043 decisions 6 and 7: a weekly dump of the
       founder project to the owner's laptop and one before each hosted migration, one
       restored into the local stack to prove it, the laptop's disk encryption checked, and
@@ -31,8 +38,11 @@ No friend is admitted until B2 and B3 have merged. All careful lane.
       task).
 - [ ] **B4 — First invitations.** The owner creates each account by hand with a one-time
       password and passes it on privately (ADR-043 decision 3); the invitation says a
-      forgotten password is reset by the owner. `CLAUDE.md` stops calling FitTip an app
-      "for one athlete" in the same step. Each friend's id goes into
+      forgotten password is reset by the owner. The `[bracketed]` values in `src/lib/legal.ts`
+      are filled in: the operator's name, address and email, the supervisory authority of
+      their Land, and Vercel's log retention; the Supabase and Vercel data processing
+      agreements are confirmed, and OpenAI's EU–US Data Privacy Framework entry checked.
+      `CLAUDE.md` stops calling FitTip an app "for one athlete" in the same step. Each friend's id goes into
       `FITTIP_ALLOWED_USER_IDS`, and into `FITTIP_AI_OWNER_ALLOWLIST` once they have
       consented. A Vercel variable changes only the next deployment, so adding or removing
       someone takes a redeploy; until then a removed friend can still reach their own rows.

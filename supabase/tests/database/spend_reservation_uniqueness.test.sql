@@ -135,6 +135,11 @@ values ('7b000000-0000-4000-8000-000000000001', 'spend-owner@example.test', '{}'
 insert into public.profiles (user_id, timezone_name)
 values ('7b000000-0000-4000-8000-000000000001', 'UTC');
 
+-- B2 (ADR-043 decision 5): spend is reserved only for someone who has agreed
+-- to the coach, so every person here has.
+insert into public.consent_decisions (user_id, kind, decision, version)
+select user_id, 'coach', 'agreed', '2026-11-12' from public.profiles;
+
 set local role authenticated;
 select set_config(
   'request.jwt.claims',

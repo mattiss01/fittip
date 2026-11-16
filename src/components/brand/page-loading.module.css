@@ -1,0 +1,44 @@
+.screen {
+  min-height: calc(100dvh - 6rem);
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+}
+
+.center {
+  display: grid;
+  justify-items: center;
+  gap: 1rem;
+}
+
+.pulse > p[role="img"] {
+  margin: 0;
+}
+
+.pulse {
+  animation: breathe 1.8s ease-in-out infinite;
+}
+
+.label {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+@keyframes breathe {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(0.97);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse {
+    animation: none;
+  }
+}

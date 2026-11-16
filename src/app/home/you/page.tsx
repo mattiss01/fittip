@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { PageTitle } from "@/components/brand/page-title";
 import Link from "next/link";
 
 import { SignOutButton } from "@/components/sign-out-button";
@@ -60,14 +61,19 @@ export default async function YouPage({
   return (
     <main className={homeStyles.shell} id="main-content">
       <header className={styles.header}>
-        <h1>You</h1>
-        <Link
-          aria-label="Settings"
-          className={styles.settings}
-          href="/home/you/settings"
+        <PageTitle
+          end={
+            <Link
+              aria-label="Settings"
+              className={styles.settings}
+              href="/home/you/settings"
+            >
+              <Gear />
+            </Link>
+          }
         >
-          <Gear />
-        </Link>
+          You
+        </PageTitle>
       </header>
       {setupNote === null ? null : (
         <p className={styles.kept} role="status">

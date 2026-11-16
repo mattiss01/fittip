@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { Logo } from "@/components/brand/logo";
 
 import { PasswordField } from "@/components/password-field";
 
@@ -23,7 +24,7 @@ export default async function ResetPasswordPage({
   return (
     <main>
       <section className="auth-card" aria-labelledby="auth-title">
-        <p className="eyebrow">FitTip</p>
+        <Logo />
         <h1 id="auth-title">Set a new password</h1>
         <form action="/auth/reset" className="auth-form" method="post">
           <input name="token_hash" type="hidden" value={tokenHash} />

@@ -9,6 +9,7 @@ import {
   planDay,
   toggleRecoveryDay,
 } from "./support/plan-week";
+import { passConsents } from "./support/consents";
 
 const evidenceDirectory = path.join(
   process.cwd(),
@@ -444,6 +445,7 @@ async function signIn(page: Page, email: string, password: string) {
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Sign in" }).click();
+  await passConsents(page);
   await expect(page).toHaveURL(/\/home\/today$/);
 }
 

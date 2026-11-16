@@ -89,6 +89,14 @@ main {
   padding: 1.5rem;
 }
 
+/* Sign-in and sign-up: the card centred, the privacy and terms links at the
+   foot of the screen (owner, 15 Nov 2026). */
+main.auth-page {
+  min-height: 100dvh;
+  grid-template-rows: 1fr auto;
+  padding-bottom: 0;
+}
+
 .auth-card,
 .home-card {
   width: min(100%, 29rem);
@@ -131,6 +139,18 @@ h1 {
   font-size: 2rem;
   letter-spacing: -0.03em;
   line-height: 1.1;
+}
+
+/* The wordmark beside the greeting (owner, 15 Nov 2026). */
+.auth-heading {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.auth-heading > p[role="img"] {
+  margin: 0;
+  flex: none;
 }
 
 .auth-form {

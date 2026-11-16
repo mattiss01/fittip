@@ -270,6 +270,24 @@ $$;
 ALTER FUNCTION "private"."clear_memory_confidence_after_owner_edit"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "private"."coach_consent_agreed"("p_user_id" "uuid") RETURNS boolean
+    LANGUAGE "sql" STABLE
+    SET "search_path" TO ''
+    AS $$
+  select coalesce((
+    select d.decision = 'agreed'
+    from public.consent_decisions d
+    where d.user_id = p_user_id
+      and d.kind = 'coach'
+    order by d.decided_at desc, d.id desc
+    limit 1
+  ), false);
+$$;
+
+
+ALTER FUNCTION "private"."coach_consent_agreed"("p_user_id" "uuid") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "private"."plan_change_add"("p_user_id" "uuid", "p_plan_id" "uuid", "p_today" "date", "p_now" timestamp with time zone, "p_change" "jsonb", "p_session_id" "uuid") RETURNS "private"."plan_change_outcome"
     LANGUAGE "plpgsql"
     SET "search_path" TO ''
@@ -8061,6 +8079,13 @@ begin
       message = 'A FitTip profile is required.';
   end if;
 
+  -- B2 (ADR-043 decision 5): no coach call without a yes in force.
+  if not private.coach_consent_agreed(v_user_id) then
+    raise exception using
+      errcode = 'PT403',
+      message = 'The coach needs your agreement first.';
+  end if;
+
   if p_operation is null
     or p_operation not in (
       'create_roadmap', 'create_seven_day_plan', 'fill_session_activities'
@@ -9708,6 +9733,37 @@ CREATE TABLE IF NOT EXISTS "public"."completions" (
 ALTER TABLE "public"."completions" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."consent_decisions" (
+    "id" bigint NOT NULL,
+    "user_id" "uuid" DEFAULT "auth"."uid"() NOT NULL,
+    "kind" "text" NOT NULL,
+    "decision" "text" NOT NULL,
+    "version" "text" NOT NULL,
+    "decided_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "consent_decisions_decision_check" CHECK ((("decision" = 'agreed'::"text") OR (("kind" = 'coach'::"text") AND ("decision" = 'declined'::"text")))),
+    CONSTRAINT "consent_decisions_kind_check" CHECK (("kind" = ANY (ARRAY['terms'::"text", 'health'::"text", 'coach'::"text"]))),
+    CONSTRAINT "consent_decisions_version_check" CHECK (("version" ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'::"text"))
+);
+
+
+ALTER TABLE "public"."consent_decisions" OWNER TO "postgres";
+
+
+COMMENT ON TABLE "public"."consent_decisions" IS 'ADR-043 decision 5: each person''s decisions about the terms, their health information and the coach, append-only; per kind, the latest is in force.';
+
+
+
+ALTER TABLE "public"."consent_decisions" ALTER COLUMN "id" ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME "public"."consent_decisions_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+
 CREATE TABLE IF NOT EXISTS "public"."goal_collections" (
     "user_id" "uuid" NOT NULL,
     "revision" bigint DEFAULT 0 NOT NULL,
@@ -10613,6 +10669,11 @@ ALTER TABLE ONLY "public"."completions"
 
 
 
+ALTER TABLE ONLY "public"."consent_decisions"
+    ADD CONSTRAINT "consent_decisions_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."goal_collections"
     ADD CONSTRAINT "goal_collections_pkey" PRIMARY KEY ("user_id");
 
@@ -11134,6 +11195,10 @@ CREATE INDEX "completions_replaced_by_idx" ON "public"."completions" USING "btre
 
 
 
+CREATE INDEX "consent_decisions_latest_idx" ON "public"."consent_decisions" USING "btree" ("user_id", "kind", "decided_at" DESC, "id" DESC);
+
+
+
 CREATE INDEX "goal_lifecycle_events_goal_owner_idx" ON "public"."goal_lifecycle_events" USING "btree" ("goal_id", "user_id");
 
 
@@ -11497,6 +11562,11 @@ ALTER TABLE ONLY "public"."completions"
 
 ALTER TABLE ONLY "public"."completions"
     ADD CONSTRAINT "completions_replaced_by_fkey" FOREIGN KEY ("replaced_by_completion_id", "user_id") REFERENCES "public"."completions"("id", "user_id");
+
+
+
+ALTER TABLE ONLY "public"."consent_decisions"
+    ADD CONSTRAINT "consent_decisions_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."profiles"("user_id") ON DELETE CASCADE;
 
 
 
@@ -11961,6 +12031,17 @@ CREATE POLICY "completions_owner_select" ON "public"."completions" FOR SELECT TO
 
 
 
+ALTER TABLE "public"."consent_decisions" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "consent_decisions_owner_insert" ON "public"."consent_decisions" FOR INSERT TO "authenticated" WITH CHECK ((( SELECT "auth"."uid"() AS "uid") = "user_id"));
+
+
+
+CREATE POLICY "consent_decisions_owner_select" ON "public"."consent_decisions" FOR SELECT TO "authenticated" USING ((( SELECT "auth"."uid"() AS "uid") = "user_id"));
+
+
+
 ALTER TABLE "public"."goal_collections" ENABLE ROW LEVEL SECURITY;
 
 
@@ -12337,6 +12418,10 @@ REVOKE ALL ON TYPE "private"."plan_change_outcome" FROM PUBLIC;
 
 
 REVOKE ALL ON FUNCTION "private"."clear_memory_confidence_after_owner_edit"() FROM PUBLIC;
+
+
+
+REVOKE ALL ON FUNCTION "private"."coach_consent_agreed"("p_user_id" "uuid") FROM PUBLIC;
 
 
 
@@ -12790,6 +12875,32 @@ GRANT SELECT ON TABLE "public"."completion_activities" TO "authenticated";
 
 
 GRANT SELECT ON TABLE "public"."completions" TO "authenticated";
+
+
+
+GRANT SELECT ON TABLE "public"."consent_decisions" TO "authenticated";
+
+
+
+GRANT INSERT("user_id") ON TABLE "public"."consent_decisions" TO "authenticated";
+
+
+
+GRANT INSERT("kind") ON TABLE "public"."consent_decisions" TO "authenticated";
+
+
+
+GRANT INSERT("decision") ON TABLE "public"."consent_decisions" TO "authenticated";
+
+
+
+GRANT INSERT("version") ON TABLE "public"."consent_decisions" TO "authenticated";
+
+
+
+GRANT UPDATE ON SEQUENCE "public"."consent_decisions_id_seq" TO "anon";
+GRANT UPDATE ON SEQUENCE "public"."consent_decisions_id_seq" TO "authenticated";
+GRANT UPDATE ON SEQUENCE "public"."consent_decisions_id_seq" TO "service_role";
 
 
 

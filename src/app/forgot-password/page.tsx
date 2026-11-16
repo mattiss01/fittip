@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Logo } from "@/components/brand/logo";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +30,7 @@ export default async function ForgotPasswordPage({
           aria-labelledby="auth-title"
           role="status"
         >
-          <p className="eyebrow">FitTip</p>
+          <Logo />
           <h1 id="auth-title">Check your email</h1>
           <p className="auth-intro">
             If that address has an account, a link to set a new password is on
@@ -46,7 +47,7 @@ export default async function ForgotPasswordPage({
   return (
     <main>
       <section className="auth-card" aria-labelledby="auth-title">
-        <p className="eyebrow">FitTip</p>
+        <Logo />
         <h1 id="auth-title">Forgot your password?</h1>
         <p className="auth-intro">
           Enter the email you sign in with and we send you a link to set a new

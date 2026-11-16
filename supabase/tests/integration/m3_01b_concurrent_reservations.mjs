@@ -313,6 +313,16 @@ async function createOwner(label) {
     `Could not create local test profile: ${profileError?.message}`,
   );
 
+  // B2 (ADR-043 decision 5): spend is reserved only for someone who has agreed
+  // to the coach, and the person records that themselves.
+  const { error: consentError } = await client
+    .from("consent_decisions")
+    .insert({ kind: "coach", decision: "agreed", version: "2026-11-12" });
+  assert(
+    !consentError,
+    `Could not record local test consent: ${consentError?.message}`,
+  );
+
   return owner;
 }
 

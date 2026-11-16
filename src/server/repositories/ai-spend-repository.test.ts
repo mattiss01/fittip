@@ -66,6 +66,8 @@ describe("reserving durable spend", () => {
     ["a ceiling refusal", "PT402", "budget_exhausted"],
     ["a busy owner lock", "PT409", "concurrency_limited"],
     ["a malformed reservation", "22023", "invalid_input"],
+    // B2 (ADR-043 decision 5): the database's own coach-consent check.
+    ["no coach agreement in force", "PT403", "consent_required"],
     ["an unauthenticated session", "42501", "owner_denied"],
     ["a missing profile", "23503", "owner_denied"],
     ["something nobody has diagnosed", "XX000", "budget_unavailable"],

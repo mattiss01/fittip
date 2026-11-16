@@ -8,6 +8,7 @@ import {
 import { requireAllowedVerifiedUser } from "@/lib/auth/verified-user";
 import { ProfileRepository } from "@/server/repositories/profile-repository";
 import { safeAuthReturn } from "@/lib/auth/safe-return";
+import { COACH_CONSENT_LATER_COOKIE } from "@/lib/coach-consent-cookie";
 
 export async function POST(request: Request) {
   const formData = await request.formData();
@@ -64,6 +65,20 @@ export async function POST(request: Request) {
       }
     } catch {
       // Setup is optional and reached from You.
+    }
+
+    // A ✕ on the coach dialog lasts until the next sign-in, which is this
+    // one (owner, 12 Nov 2026; ADR-043 decision 5). Cleared only when sent,
+    // so an ordinary sign-in carries no extra cookie.
+    const sent = request.headers.get("cookie") ?? "";
+    if (
+      sent
+        .split(";")
+        .some((part) =>
+          part.trim().startsWith(`${COACH_CONSENT_LATER_COOKIE}=`),
+        )
+    ) {
+      pending.cookies.delete(COACH_CONSENT_LATER_COOKIE);
     }
   }
 

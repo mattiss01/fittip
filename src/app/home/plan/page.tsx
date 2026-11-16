@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageTitle } from "@/components/brand/page-title";
 
 import {
   saveActivityToLibraryAction,
@@ -80,15 +81,7 @@ export default async function PlanPage({ searchParams }: Props) {
   return (
     <main className={`${homeStyles.shell} ${styles.page}`} id="main-content">
       <header className={w.header}>
-        <div className={w.headerRow}>
-          <h1>Plan</h1>
-          {/* Planning with the coach is an action, not a place, so it stands
-              apart from the chips and says what it does (owner, 1 Oct 2026). */}
-          <Link className={w.coach} href="/home/plan/proposal">
-            <CoachSpark />
-            Plan with Coach
-          </Link>
-        </div>
+        <PageTitle>Plan</PageTitle>
         <nav className={w.chips} aria-label="Plan surfaces">
           <Link
             aria-describedby={
@@ -112,6 +105,14 @@ export default async function PlanPage({ searchParams }: Props) {
           <Link href="/home/plan/saved">Session Library</Link>
           <Link href="/home/plan/activities">Activity Library</Link>
         </nav>
+        {/* Planning with the coach is an action, not a place, so it stands
+            apart from the chips and says what it does (owner, 1 Oct 2026),
+            full width under them and out of the heading row (owner, 15 Nov
+            2026). */}
+        <Link className={w.coach} href="/home/plan/proposal">
+          <CoachSpark />
+          Plan with Coach
+        </Link>
         {/* Said as well as shown, as a description: the link is still named
             "Roadmap", which is what it is looked for by. */}
         {attention === null ? null : (

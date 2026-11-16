@@ -152,6 +152,10 @@ function reserveError(code: string | undefined): CoachAIError {
       return new CoachAIError("concurrency_limited");
     case "22023":
       return new CoachAIError("invalid_input");
+    case "PT403":
+      // B2 (ADR-043 decision 5): the database's own check that the person's
+      // decision in force agrees to the coach.
+      return new CoachAIError("consent_required");
     case "42501":
     case "23503":
       return new CoachAIError("owner_denied");

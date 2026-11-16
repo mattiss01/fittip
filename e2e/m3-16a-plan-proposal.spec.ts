@@ -3,6 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { watchConsoleErrors } from "./support/console-errors";
 import { openNewSession } from "./support/plan-week";
 import { openAddGoalForm } from "./support/goal-form";
+import { passConsents } from "./support/consents";
 
 /**
  * M3-16A: asking for a coach proposal and applying part of it.
@@ -433,6 +434,7 @@ async function signIn(
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Sign in" }).click();
+  await passConsents(page);
   await expect(page).toHaveURL(/\/home\/today$/);
 }
 

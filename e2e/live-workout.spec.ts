@@ -6,6 +6,7 @@ import {
 } from "@playwright/test";
 
 import { logInSteps } from "./support/log-steps";
+import { passConsents } from "./support/consents";
 
 /**
  * Logging a session live (ADR-037), at 390x844: a planned session is started
@@ -259,6 +260,7 @@ async function signIn(page: Page, email: string, password: string) {
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Sign in" }).click();
+  await passConsents(page);
   await expect(page).toHaveURL(/\/home\/today$/);
 }
 

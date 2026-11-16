@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import path from "node:path";
 
 import { addGoalForm, openAddGoalForm } from "./support/goal-form";
+import { passConsents } from "./support/consents";
 
 const evidenceDirectory = path.join(
   process.cwd(),
@@ -466,6 +467,7 @@ async function signIn(
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Sign in" }).click();
+  await passConsents(page);
   await expect(page).toHaveURL(/\/home\/today$/);
 }
 
