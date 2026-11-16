@@ -15,14 +15,8 @@ before any code is written.
 
 **Friends beta.** Owner, 12 Nov 2026: three to five friends, decided in
 [ADR-043](../decisions/ADR-043-A-FRIENDS-BETA.md). Planned only; the owner says when to build.
-No friend is admitted until B3 has merged. All careful lane.
+B2 and B3 have merged; B4 is the last step. All careful lane.
 
-- [ ] **B3 — Friends' data survives.** ADR-043 decisions 6 and 7: a weekly dump of the
-      founder project to the owner's laptop and one before each hosted migration, one
-      restored into the local stack to prove it, the laptop's disk encryption checked, and
-      the retention period the notice states. The agent's rules and memory drop "no stored
-      data needs to survive". Open: who runs the weekly dump (the owner, or a scheduled
-      task).
 - [ ] **B4 — First invitations.** The owner creates each account by hand with a one-time
       password and passes it on privately (ADR-043 decision 3); the invitation says a
       forgotten password is reset by the owner. The `[bracketed]` values in `src/lib/legal.ts`
@@ -31,6 +25,10 @@ No friend is admitted until B3 has merged. All careful lane.
       agreements are confirmed, and OpenAI's EU–US Data Privacy Framework entry checked.
       OneDrive holds the encrypted backups (B3) under a personal account, which has no Art. 28
       agreement; whether encryption with the owner's key is enough footing is the owner's call.
+      The owner lives in Vienna and also has an address in Baden-Württemberg (16 Nov
+      2026): the seat is where FitTip is really run from, the owner's call. If Vienna,
+      the texts move from German to Austrian law: the Datenschutzbehörde, §165 TKG 2021,
+      Austrian governing law, a liability clause under KSchG and ABGB, §25 MedienG.
       `CLAUDE.md` stops calling FitTip an app "for one athlete" in the same step. Each friend's id goes into
       `FITTIP_ALLOWED_USER_IDS`, and into `FITTIP_AI_OWNER_ALLOWLIST` once they have
       consented. A Vercel variable changes only the next deployment, so adding or removing
