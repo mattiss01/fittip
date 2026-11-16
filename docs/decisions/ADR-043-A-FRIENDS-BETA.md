@@ -61,6 +61,17 @@ tickets.
 
    This is the part of M0-04 the beta needs. It is not legal advice; whether anyone checks the
    notice is the owner's call.
+
+   **Amended 15 November 2026 (owner).** Before the coach question, at the first sign-in, the
+   app does not open until two separate boxes are ticked: "I agree to the Terms", and an
+   explicit consent to FitTip storing the health information a person enters (Art. 9(2)(a)
+   GDPR). The second is required, chosen knowingly over an optional one: FitTip reads those
+   notes to plan conservatively, and withdrawing it means deleting the account. It may not ride
+   on the Terms (EDPB 05/2020, para. 81), so the boxes stay apart. The privacy notice and the
+   Terms are public pages, `/privacy` and `/terms`, linked from that step and from sign-in. The
+   notice is read, not accepted. Terms, health and coach decisions are rows of one append-only
+   table, each tied to the version of what was agreed; a new version asks again. The coach
+   stays optional and separate, as above.
 6. **Friends' data must survive** (B3). From the first admission, ADR-007's "no durability
    promise" and the owner's 13 October 2026 rule that no stored data needs to survive both end:
    a migration carries existing rows forward, and destructive DDL is asked about with the
