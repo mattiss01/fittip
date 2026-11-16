@@ -15,21 +15,8 @@ before any code is written.
 
 **Friends beta.** Owner, 12 Nov 2026: three to five friends, decided in
 [ADR-043](../decisions/ADR-043-A-FRIENDS-BETA.md). Planned only; the owner says when to build.
-No friend is admitted until B2 and B3 have merged. All careful lane.
+No friend is admitted until B3 has merged. All careful lane.
 
-- [~] **B2 — Terms first, then consent before the coach.** ADR-043 decision 5: a privacy
-      notice and a separate, recorded yes before a person's first coach call; without it the
-      coach is not offered, withdrawing stops calls and keeps what the coach made, account
-      delete (ADR-039) removes the record. Owner, 12 Nov 2026: asked in a dialog after
-      sign-in with Agree, Decline and ✕ (✕ asks again at the next sign-in), changed after in
-      Settings › Coach and your data. Owner, 15 Nov 2026 (ADR-043 amendment): a required
-      step before it, at first sign-in, with two separate boxes, "I agree to the Terms" and an
-      explicit consent to storing health information, both required; the privacy notice is
-      linked and read, not accepted. Public `/privacy` and `/terms` pages in English. Terms,
-      health and coach are rows of one append-only table with a `kind` and a version. The
-      FitTip logo replaces the eyebrow text, heads the main pages and loading screens, and is
-      the tab icon. A
-      migration and the AI data boundary. Covers the owner too.
 - [ ] **B3 — Friends' data survives.** ADR-043 decisions 6 and 7: a weekly dump of the
       founder project to the owner's laptop and one before each hosted migration, one
       restored into the local stack to prove it, the laptop's disk encryption checked, and
@@ -138,6 +125,11 @@ Not worth their own slot; do them when work lands nearby.
 - **Two ADRs name the retired `FITTIP_OWNER_USER_ID`.** ADR-007's runtime table and
   ADR-039 decision 5 (deleting the admitted account no longer locks everyone out, only
   that person). A dated note on each, in a commit of its own.
+- **The Terms step holds only where a page renders.** The `/home` layout sends anyone
+  without the Terms and health consent to `/welcome`, but a server action posted directly
+  is not checked, so a log with pain notes could be saved without a recorded health
+  consent by someone bypassing the app. A shared server-side check before every write would
+  close it (B2's review, 16 Nov 2026).
 
 - **For the owner to look at.** The date fields' width fix (13 Oct 2026) has not been seen
   on a phone or in a desktop browser's calendar mark. And with this week at the week
