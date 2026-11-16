@@ -247,6 +247,41 @@ export type Database = {
           },
         ];
       };
+      consent_decisions: {
+        Row: {
+          decided_at: string;
+          decision: string;
+          id: number;
+          kind: string;
+          user_id: string;
+          version: string;
+        };
+        Insert: {
+          decided_at?: string;
+          decision: string;
+          id?: never;
+          kind: string;
+          user_id?: string;
+          version: string;
+        };
+        Update: {
+          decided_at?: string;
+          decision?: string;
+          id?: never;
+          kind?: string;
+          user_id?: string;
+          version?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "consent_decisions_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+        ];
+      };
       goal_collections: {
         Row: {
           revision: number;

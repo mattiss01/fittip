@@ -27,10 +27,10 @@
 }
 
 .coach {
-  flex: none;
-  min-height: 2.75rem;
-  display: inline-flex;
+  min-height: 3rem;
+  display: flex;
   align-items: center;
+  justify-content: center;
   gap: 0.45rem;
   padding: 0 1rem 0 0.85rem;
   border-radius: var(--radius-pill);

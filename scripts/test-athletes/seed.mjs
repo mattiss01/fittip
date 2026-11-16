@@ -24,6 +24,11 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { addDays, sql, todayIn, weekdayOf } from "./lib.mjs";
 
 const PASSWORD = "fittip-local";
+// `TERMS_VERSION` in `src/lib/legal.ts` and `COACH_NOTICE_VERSION` in
+// `src/lib/coach-notice.ts`, which a script cannot import. If they drift, the
+// athletes are simply asked again after sign-in.
+const TERMS_VERSION = "2026-11-15";
+const COACH_NOTICE_VERSION = "2026-11-12";
 const DB_CONTAINER = "supabase_db_fittip";
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -67,6 +72,24 @@ async function seedAthlete(athlete) {
     // How hard the coach pushes (12 Nov 2026); the default where not set.
     coach_push_level: p.pushLevel ?? "balanced",
     setup_finished_at: new Date().toISOString(),
+  });
+  // The athletes exist to judge the app and the coach, so each has accepted
+  // the terms and agreed to the coach as they read today (ADR-043 decision 5;
+  // `src/lib/legal.ts`, `src/lib/coach-notice.ts`).
+  await api.insert("consent_decisions", {
+    kind: "terms",
+    decision: "agreed",
+    version: TERMS_VERSION,
+  });
+  await api.insert("consent_decisions", {
+    kind: "health",
+    decision: "agreed",
+    version: TERMS_VERSION,
+  });
+  await api.insert("consent_decisions", {
+    kind: "coach",
+    decision: "agreed",
+    version: COACH_NOTICE_VERSION,
   });
   // Their own list since 6 Nov 2026, each sport taking the next colour.
   await api.rpc("keep_sports", { p_names: p.sports });

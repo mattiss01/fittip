@@ -47,7 +47,9 @@ export async function proxy(request: NextRequest) {
     },
   );
 
-  if (pathname.startsWith("/home")) {
+  // /welcome is the step before /home (owner, 15 Nov 2026) and is guarded the
+  // same way, so a session the runtime does not admit never reaches it.
+  if (pathname.startsWith("/home") || pathname === "/welcome") {
     try {
       await requireAllowedVerifiedUser(client, policy);
     } catch {
@@ -61,5 +63,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/home/:path*", "/signup"],
+  matcher: ["/home/:path*", "/welcome", "/signup"],
 };

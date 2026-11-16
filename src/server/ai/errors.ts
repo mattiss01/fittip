@@ -8,6 +8,7 @@ import "server-only";
 export const COACH_AI_ERROR_CODES = [
   "invalid_input",
   "owner_denied",
+  "consent_required",
   "not_enabled",
   "operation_disabled",
   "provider_unconfigured",
@@ -36,6 +37,10 @@ export type CoachAIErrorCode = (typeof COACH_AI_ERROR_CODES)[number];
 const SAFE_MESSAGES: Record<CoachAIErrorCode, string> = {
   invalid_input: "That coaching request could not be understood.",
   owner_denied: "Coaching suggestions are not available for this account.",
+  // ADR-043 decision 5: says where the decision is made, and nothing about
+  // what the person decided before.
+  consent_required:
+    "The coach is off until you agree in Settings › Coach and your data.",
   not_enabled: "Coaching suggestions are turned off.",
   operation_disabled: "That coaching suggestion is turned off.",
   provider_unconfigured: "Coaching suggestions are unavailable.",

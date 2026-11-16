@@ -1,0 +1,26 @@
+.logo {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  margin: 0 0 1rem;
+  color: var(--pine);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 0.82;
+}
+
+.medium {
+  font-size: 2.6rem;
+}
+
+.small {
+  font-size: 1.8rem;
+}
+
+.mini {
+  font-size: 1.35rem;
+}
+
+.tip {
+  color: var(--ember);
+}

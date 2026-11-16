@@ -1,5 +1,9 @@
 "use client";
 
+import {
+  CoachOffNotice,
+  useCoachAgreed,
+} from "@/components/consent/coach-agreed";
 import Link from "next/link";
 import { useActionState, useEffect, useId, useRef, useState } from "react";
 
@@ -75,6 +79,8 @@ export function ComposeProposal({
    */
   planned: readonly ComposablePlannedSession[];
 }) {
+  // Grey while the coach is off, with the way to turn it on (owner, 15 Nov 2026).
+  const coachAgreed = useCoachAgreed();
   const [state, action, pending] = useActionState(
     generatePlanProposalAction,
     INITIAL_PLAN_PROPOSAL_ACTION_STATE,
@@ -244,10 +250,17 @@ export function ComposeProposal({
 
         <p className={styles.consequence}>{COPY.generateSupport}</p>
         {hasGoals ? (
-          <button className={styles.primary} type="submit" disabled={pending}>
-            <CoachSpark size={16} />
-            {COPY.generateAction}
-          </button>
+          <>
+            <button
+              className={styles.primary}
+              type="submit"
+              disabled={pending || !coachAgreed}
+            >
+              <CoachSpark size={16} />
+              {COPY.generateAction}
+            </button>
+            {coachAgreed ? null : <CoachOffNotice />}
+          </>
         ) : (
           // The action refuses without an active goal, and its refusal used
           // to land under the fold, so the button looked dead (owner, 2 Oct

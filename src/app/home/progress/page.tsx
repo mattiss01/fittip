@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageTitle } from "@/components/brand/page-title";
 import { redirect } from "next/navigation";
 
 import { monthOf, monthWindow, readRequestedMonth } from "./month";
@@ -74,7 +75,7 @@ export default async function ProgressPage({ searchParams }: Props) {
   return (
     <main className={`${homeStyles.shell} ${styles.page}`} id="main-content">
       <header className={styles.header}>
-        <h1>Progress</h1>
+        <PageTitle>Progress</PageTitle>
       </header>
       <LogDeletedNote flag={query.log} />
       {timezoneName === null ||

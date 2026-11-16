@@ -24,6 +24,8 @@ const SETTINGS = [
   { href: "/home/you/settings/training", name: "Training setup" },
   // How hard the coach pushes (owner, 12 Nov 2026).
   { href: "/home/you/settings/coaching", name: "Coaching style" },
+  // What the coach is sent, and the decision about it (ADR-043 decision 5).
+  { href: "/home/you/settings/coach-data", name: "Coach and your data" },
   { href: "/home/you/settings/units", name: "Units and time zone" },
 ] as const;
 
@@ -67,6 +69,19 @@ export default async function SettingsPage({
         ))}
       </ul>
       <ul className={styles.places} aria-label="Account">
+        {/* What was accepted before the app opened (owner, 15 Nov 2026). */}
+        <li>
+          <Link className={styles.place} href="/privacy?from=settings">
+            <strong>Privacy notice</strong>
+            <Chevron />
+          </Link>
+        </li>
+        <li>
+          <Link className={styles.place} href="/terms?from=settings">
+            <strong>Terms</strong>
+            <Chevron />
+          </Link>
+        </li>
         <li>
           <Link className={styles.place} href="/home/you/settings/password">
             <strong>Change password</strong>

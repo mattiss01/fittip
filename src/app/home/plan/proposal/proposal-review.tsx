@@ -1,6 +1,10 @@
 "use client";
 
 import {
+  CoachOffNotice,
+  useCoachAgreed,
+} from "@/components/consent/coach-agreed";
+import {
   useActionState,
   useEffect,
   useId,
@@ -119,6 +123,8 @@ export function ProposalReview({
     suggestions: readonly GoalSuggestion[];
   };
 }) {
+  // Grey while the coach is off, with the way to turn it on (owner, 15 Nov 2026).
+  const coachAgreed = useCoachAgreed();
   const [state, action, pending] = useActionState(
     finishPlanReviewAction,
     INITIAL_PLAN_PROPOSAL_ACTION_STATE,
@@ -507,6 +513,7 @@ export function ProposalReview({
           // here (owner, 17 Oct 2026), and so is what the owner typed.
           <form className={styles.regenerate} action={regenerateAction}>
             <h3>{COPY.regenerateHeading}</h3>
+            {coachAgreed ? null : <CoachOffNotice />}
             <input type="hidden" name="proposalId" value={proposalId} />
             <input type="hidden" name="idempotencyKey" value={askKey} />
             <label htmlFor="regenerationFeedback">{COPY.regenerateLabel}</label>
@@ -530,7 +537,11 @@ export function ProposalReview({
               )}
             </p>
             <div className={styles.dockActions}>
-              <button className={styles.primary} type="submit" disabled={busy}>
+              <button
+                className={styles.primary}
+                type="submit"
+                disabled={busy || !coachAgreed}
+              >
                 <CoachSpark size={16} />
                 {COPY.regenerateSubmit}
               </button>

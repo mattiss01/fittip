@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Logo } from "@/components/brand/logo";
 
 import { PasswordField } from "@/components/password-field";
 import { safeAuthReturn } from "@/lib/auth/safe-return";
@@ -34,7 +35,7 @@ export function AuthForm({
   if (isSignUp && searchParams?.checkEmail) {
     return (
       <section className="auth-card" aria-labelledby="auth-title" role="status">
-        <p className="eyebrow">FitTip</p>
+        <Logo />
         <h1 id="auth-title">Check your email</h1>
         <p className="auth-intro">
           We sent you a link to confirm your account. Open it in this browser,
@@ -49,8 +50,11 @@ export function AuthForm({
 
   return (
     <section className="auth-card" aria-labelledby="auth-title">
-      <p className="eyebrow">FitTip</p>
-      <h1 id="auth-title">{isSignUp ? "Join FitTip" : "Welcome back"}</h1>
+      {/* The wordmark and the greeting side by side (owner, 15 Nov 2026). */}
+      <div className="auth-heading">
+        <Logo />
+        <h1 id="auth-title">{isSignUp ? "Join FitTip" : "Welcome back"}</h1>
+      </div>
 
       <form
         action={isSignUp ? "/auth/signup" : "/auth/signin"}

@@ -1,5 +1,9 @@
 "use client";
 
+import {
+  CoachOffNotice,
+  useCoachAgreed,
+} from "@/components/consent/coach-agreed";
 import { useContext, useEffect, useId, useRef, useState } from "react";
 
 import { RoadmapComposeSessionContext } from "./roadmap-compose-session";
@@ -63,6 +67,8 @@ export function RoadmapComposer({
   minDays: number;
   maxDays: number;
 }) {
+  // Grey while the coach is off, with the way to turn it on (owner, 15 Nov 2026).
+  const coachAgreed = useCoachAgreed();
   const {
     state,
     submit: write,
@@ -235,13 +241,14 @@ export function RoadmapComposer({
           <button
             className={styles.primaryAction}
             type="submit"
-            disabled={pending}
+            disabled={pending || !coachAgreed}
           >
             <CoachSpark size={16} />
             {isChange
               ? ROADMAP_CONTROL_COPY.changeConfirm
               : ROADMAP_CONTROL_COPY.generateAction}
           </button>
+          {coachAgreed ? null : <CoachOffNotice />}
           {/* A change says what it sends, which is more than a new roadmap
               does; the sentence ends as the other one does. */}
           <p className={styles.helper}>

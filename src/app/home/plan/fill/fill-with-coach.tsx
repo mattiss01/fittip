@@ -1,6 +1,10 @@
 "use client";
 
 import {
+  CoachOffNotice,
+  useCoachAgreed,
+} from "@/components/consent/coach-agreed";
+import {
   useEffect,
   useRef,
   useState,
@@ -112,6 +116,8 @@ export function FillWithCoach({
   onAccepted: (summary: string) => void;
   children: React.ReactNode;
 }) {
+  // Grey while the coach is off, with the way to turn it on (owner, 15 Nov 2026).
+  const coachAgreed = useCoachAgreed();
   const [note, setNote] = useState("");
   const [open, setOpen] = useState<Open | null>(() => fromPlan(initiallyOpen));
   /** Suggestions accepted into the list, recorded when Save lands. */
@@ -382,12 +388,13 @@ export function FillWithCoach({
           <button
             className={styles.askButton}
             type="button"
-            disabled={asking || dismissing}
+            disabled={asking || dismissing || !coachAgreed}
             onClick={() => void ask()}
           >
             <CoachSpark size={16} />
             {asking ? COPY.asking : COPY.ask}
           </button>
+          {coachAgreed ? null : <CoachOffNotice />}
           {asking ? <CoachWait kind="fill" /> : null}
         </section>
       ) : (

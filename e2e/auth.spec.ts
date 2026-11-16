@@ -1,6 +1,13 @@
 import { expect, test } from "@playwright/test";
 import path from "node:path";
 
+import {
+  acceptTerms,
+  answerCoachQuestion,
+  coachQuestion,
+  passConsents,
+} from "./support/consents";
+
 const m2EvidenceDirectory = path.join(
   process.cwd(),
   "test-results",
@@ -74,12 +81,16 @@ test.describe("public account authentication", () => {
       "Your account is confirmed",
     );
 
-    // Signing in then opens guided setup, already started: the first step
-    // is there without a "Start setup" press.
+    // Signing in asks for the Terms and the health consent first, then
+    // opens guided setup, already started: the first step is there without
+    // a "Start setup" press. The coach question waits over it; its ✕ puts
+    // it off until the next sign-in.
     await page.getByLabel("Email").fill(email);
     await page.getByLabel("Password", { exact: true }).fill(password);
     await page.getByRole("button", { name: "Sign in" }).click();
+    await acceptTerms(page);
     await expect(page).toHaveURL(/\/home\/you\/onboarding$/);
+    await answerCoachQuestion(page, "later");
     await expect(
       page.getByRole("heading", { name: "What's your name?" }),
     ).toBeVisible();
@@ -103,6 +114,83 @@ test.describe("public account authentication", () => {
     // so its 390px flow does not require a .github workflow change or an
     // uninvoked ticket config.
     await completeGuidedSetup(page, testInfo, { email, password });
+  });
+
+  test("asks for the Terms and health consent before the app, then the coach, which Settings changes", async ({
+    page,
+    request,
+  }) => {
+    const email = `fittip-consent-${Date.now()}@example.test`;
+    createdEmails.push(email);
+    const password = `Local-${crypto.randomUUID()}-9`;
+    await page.setViewportSize({ width: 390, height: 844 });
+
+    await page.goto("/signup");
+    await page.getByLabel("Email").fill(email);
+    await page.getByLabel("Password", { exact: true }).fill(password);
+    await page.getByLabel("Confirm password", { exact: true }).fill(password);
+    await page.getByRole("button", { name: "Create account" }).click();
+    await expect(page.getByRole("status")).toContainText("Check your email");
+    await page.goto(await pollForMailUrl(request, email, CONFIRMATION_LINK));
+    await expect(page).toHaveURL(/\/\?auth=confirmed$/);
+    const signIn = async () => {
+      await page.getByLabel("Email").fill(email);
+      await page.getByLabel("Password", { exact: true }).fill(password);
+      await page.getByRole("button", { name: "Sign in" }).click();
+    };
+    await signIn();
+
+    // Nothing under Home opens before both are given (owner, 15 Nov 2026).
+    await expect(page).toHaveURL(/\/welcome$/);
+    await page.goto("/home/plan");
+    await expect(page).toHaveURL(/\/welcome$/);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth > window.innerWidth,
+      ),
+    ).toBe(false);
+    // Both documents open beside the step, readable as they are.
+    for (const [name, href] of [
+      ["Terms", "/terms"],
+      ["What this means", "/privacy#health"],
+      ["privacy notice", "/privacy"],
+    ] as const) {
+      const link = page.getByRole("link", { name, exact: true });
+      await expect(link).toHaveAttribute("href", href);
+      await expect(link).toHaveAttribute("target", "_blank");
+    }
+    // Setup that sign-up began still comes first once they are given.
+    await acceptTerms(page);
+    await expect(page).toHaveURL(/\/home\/you\/onboarding$/);
+    await answerCoachQuestion(page, "decline");
+
+    // The decision is shown and changed in Settings: Agree, then Withdraw.
+    await page.goto("/home/you/settings");
+    await page.getByRole("link", { name: "Coach and your data" }).click();
+    const status = page.locator("[data-coach-consent-status]");
+    await expect(status).toContainText("Declined on");
+    await expect(status).toContainText("The coach is off.");
+    await page.getByRole("button", { name: "Agree", exact: true }).click();
+    await expect(status).toContainText("Agreed on");
+    await page.getByRole("button", { name: "Withdraw", exact: true }).click();
+    await expect(status).toContainText("Declined on");
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth > window.innerWidth,
+      ),
+    ).toBe(false);
+
+    // A decision made is not asked again at the next sign-in, and the
+    // Terms are not asked again either.
+    await page.goto("/home/you");
+    await page.getByRole("button", { name: "Sign out" }).click();
+    await expect(page).toHaveURL(/\/(\?.*)?$/);
+    await signIn();
+    await expect(page).toHaveURL(/\/home\/you\/onboarding$/);
+    await expect(
+      page.getByRole("heading", { name: "What's your name?" }),
+    ).toBeVisible();
+    await expect(coachQuestion(page)).toHaveCount(0);
   });
 
   test("resets a forgotten password through a mailed link that works in another browser", async ({
@@ -198,7 +286,8 @@ test.describe("public account authentication", () => {
         "We could not sign you in",
       );
       await signIn(newPassword);
-      await expect(other).toHaveURL(/\/home\//);
+      // Signed in: this account has not yet accepted the Terms.
+      await expect(other).toHaveURL(/\/welcome$/);
 
       // The link worked once. The page still opens, since opening spends
       // nothing, and the reset is refused.
@@ -237,7 +326,7 @@ test.describe("public account authentication", () => {
       await page.getByRole("button", { name: "Sign in" }).click();
     };
     await signIn(password);
-    await expect(page).toHaveURL(/\/home\//);
+    await passConsents(page, "decline");
 
     // A row of Settings' own, above Delete account (owner, 6 Nov 2026).
     await page.goto("/home/you/settings");
@@ -404,6 +493,8 @@ async function completeGuidedSetup(
   await page.getByLabel("Password", { exact: true }).fill(account.password);
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page).toHaveURL(/\/home\/you\/onboarding\?remind=1$/);
+  // The coach question put off at the first sign-in is back.
+  await answerCoachQuestion(page, "agree");
   await expect(heading("Your setup is not finished")).toBeVisible();
   await expect(page.getByRole("link", { name: "Skip for now" })).toBeVisible();
   // Going on resumes where it was left, with what was saved.

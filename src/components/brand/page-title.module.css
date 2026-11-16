@@ -1,0 +1,25 @@
+/* Logo | centred heading | the page's own control, with the heading truly
+   centred however wide the two sides are. */
+.row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.row > p[role="img"] {
+  justify-self: start;
+  margin: 0;
+}
+
+.title {
+  margin: 0;
+  text-align: center;
+}
+
+.end {
+  display: flex;
+  justify-content: flex-end;
+  min-width: 0;
+}

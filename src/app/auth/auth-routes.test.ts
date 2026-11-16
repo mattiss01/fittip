@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { NextResponse } from "next/server";
 
 const {
   client,
@@ -294,6 +295,44 @@ describe("production authentication route handlers", () => {
       }),
     );
     expectPrivate303(response, "/home/today");
+  });
+
+  // B2: a ✕ on the coach dialog lasts until the next sign-in (owner, 12 Nov
+  // 2026), so a sign-in that carries it clears it, and one that does not
+  // sends no extra cookie (the cases above).
+  it("clears a postponed coach question at sign-in", async () => {
+    getSetupStateMock.mockResolvedValue({
+      step: 12,
+      finished: true,
+      skipped: false,
+    });
+    const request = post("/auth/signin", {
+      email: "member@example.com",
+      password: "password",
+    });
+    request.headers.set("cookie", "other=1; fittip-coach-consent-later=1");
+    // As the real client writes them (`server-user-client.ts`): through the
+    // response's cookie store, which a raw header would not survive.
+    createServerUserClientMock.mockImplementationOnce(
+      async (pending?: Response) => {
+        (pending as NextResponse | undefined)?.cookies.set(
+          "sb-refresh",
+          "updated",
+          { path: "/" },
+        );
+        return client;
+      },
+    );
+    const response = await signin(request);
+    const cookies = response.headers.getSetCookie();
+    expect(cookies).toContain("sb-refresh=updated; Path=/");
+    expect(
+      cookies.some((cookie) =>
+        /^fittip-coach-consent-later=;.*(Max-Age=0|Expires=Thu, 01 Jan 1970)/i.test(
+          cookie,
+        ),
+      ),
+    ).toBe(true);
   });
 
   it("does not let unreadable setup state cost a sign-in", async () => {

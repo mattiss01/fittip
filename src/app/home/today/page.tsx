@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageTitle } from "@/components/brand/page-title";
 import { redirect } from "next/navigation";
 
 import {
@@ -77,7 +78,7 @@ export default async function TodayPage({ searchParams }: Props) {
   return (
     <main className={`${homeStyles.shell} ${styles.page}`} id="main-content">
       <header className={styles.header}>
-        <h1>Today</h1>
+        <PageTitle>Today</PageTitle>
       </header>
       <LogDeletedNote flag={query.log} />
       {timezoneName === null ? (

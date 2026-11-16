@@ -166,6 +166,11 @@ values
   ('60000000-0000-4000-8000-000000000004'),
   ('60000000-0000-4000-8000-000000000005');
 
+-- B2 (ADR-043 decision 5): spend is reserved only for someone who has agreed
+-- to the coach, so every person here has.
+insert into public.consent_decisions (user_id, kind, decision, version)
+select user_id, 'coach', 'agreed', '2026-11-12' from public.profiles;
+
 -- Owner C sits just under the daily ceiling: one live reservation and one
 -- settled charge, 1,995,000 of 2,000,000 micro-USD.
 insert into public.ai_spend_reservations (

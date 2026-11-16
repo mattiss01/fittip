@@ -1,6 +1,12 @@
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 
+import { CoachAgreedProvider } from "@/components/consent/coach-agreed";
+import { CoachConsentDialog } from "@/components/consent/coach-consent-dialog";
 import { ConnectionNotice } from "@/components/home/connection-notice";
+import { COACH_CONSENT_LATER_COOKIE } from "@/lib/coach-consent-cookie";
+import { createConsents } from "@/server/repositories/consent-repository";
 import { LiveWorkoutPill } from "@/components/home/live-workout-clock";
 import { MobileNavigation } from "@/components/home/mobile-navigation";
 import { OwnedSportsProvider } from "@/components/sports/owned-sports";
@@ -32,6 +38,10 @@ export default async function HomeLayout({
   // error no earlier run had logged. One run proves nothing either way, so
   // the plainer form stays: every page under here already waits for the
   // same claims check and a read of its own.
+  //
+  // The Terms and the health consent come first (owner, 15 Nov 2026): until
+  // both are given, nothing under /home opens.
+  if ((await readTermsState()) === "undecided") redirect("/welcome");
   const {
     setupOpen,
     decisionsOpen,
@@ -41,13 +51,16 @@ export default async function HomeLayout({
     sports,
     liveWorkout,
   } = await readShell();
+  const coach = await readCoachConsent();
   return (
     <div className={styles.appShell}>
       <a className={styles.skipLink} href="#main-content">
         Skip to content
       </a>
       <ConnectionNotice />
-      <OwnedSportsProvider sports={sports}>{children}</OwnedSportsProvider>
+      <CoachAgreedProvider agreed={coach.agreed}>
+        <OwnedSportsProvider sports={sports}>{children}</OwnedSportsProvider>
+      </CoachAgreedProvider>
       {/* After the page, so its room is below the content (owner, 21 Oct
           2026: the clock sits at the bottom, above the navigation). */}
       {liveWorkout === null ? null : <LiveWorkoutPill workout={liveWorkout} />}
@@ -58,8 +71,50 @@ export default async function HomeLayout({
         roadmapAttention={roadmapAttention}
         unloggedOpen={unloggedOpen}
       />
+      {coach.ask ? <CoachConsentDialog /> : null}
     </div>
   );
+}
+
+/**
+ * Whether the Terms and the health consent both stand, or "unknown" when
+ * they cannot be read: signed out, not admitted, or a database that does not
+ * answer. Those are the page's to explain, so the layout does not send them
+ * to /welcome.
+ */
+async function readTermsState(): Promise<"agreed" | "undecided" | "unknown"> {
+  try {
+    const consents = await createConsents();
+    const [terms, health] = await Promise.all([
+      consents.current("terms"),
+      consents.current("health"),
+    ]);
+    return terms.status === "agreed" && health.status === "agreed"
+      ? "agreed"
+      : "undecided";
+  } catch {
+    return "unknown";
+  }
+}
+
+/**
+ * The coach decision, for two things only (ADR-043 decision 5): whether to
+ * ask about it, when no decision stands for the notice as it reads today and
+ * ✕ was not pressed since the last sign-in (owner, 12 Nov 2026); and whether
+ * its buttons are grey (owner, 15 Nov 2026). A failed read asks nothing and
+ * leaves the buttons as they were: every coach call checks for itself.
+ */
+async function readCoachConsent(): Promise<{ ask: boolean; agreed: boolean }> {
+  try {
+    const consent = await (await createConsents()).current("coach");
+    const postponed = (await cookies()).has(COACH_CONSENT_LATER_COOKIE);
+    return {
+      ask: consent.status === "undecided" && !postponed,
+      agreed: consent.status === "agreed",
+    };
+  } catch {
+    return { ask: false, agreed: true };
+  }
 }
 
 /**
