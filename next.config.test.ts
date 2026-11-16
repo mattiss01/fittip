@@ -18,6 +18,11 @@ describe("Next response safety headers", () => {
       key: "Cache-Control",
       value: "private, no-cache, no-store, must-revalidate, max-age=0",
     });
+    const welcome = headers?.find((rule) => rule.source === "/welcome");
+    expect(welcome?.headers).toContainEqual({
+      key: "Cache-Control",
+      value: "private, no-cache, no-store, must-revalidate, max-age=0",
+    });
   });
 
   it("keeps the reset pages out of caches and referrers", async () => {

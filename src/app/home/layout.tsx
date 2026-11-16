@@ -6,7 +6,10 @@ import { CoachAgreedProvider } from "@/components/consent/coach-agreed";
 import { CoachConsentDialog } from "@/components/consent/coach-consent-dialog";
 import { ConnectionNotice } from "@/components/home/connection-notice";
 import { COACH_CONSENT_LATER_COOKIE } from "@/lib/coach-consent-cookie";
-import { createConsents } from "@/server/repositories/consent-repository";
+import {
+  ConsentAuthenticationError,
+  createConsents,
+} from "@/server/repositories/consent-repository";
 import { LiveWorkoutPill } from "@/components/home/live-workout-clock";
 import { MobileNavigation } from "@/components/home/mobile-navigation";
 import { OwnedSportsProvider } from "@/components/sports/owned-sports";
@@ -77,23 +80,20 @@ export default async function HomeLayout({
 }
 
 /**
- * Whether the Terms and the health consent both stand, or "unknown" when
- * they cannot be read: signed out, not admitted, or a database that does not
- * answer. Those are the page's to explain, so the layout does not send them
- * to /welcome.
+ * Whether the Terms and the health consent both stand. Signed out or not
+ * admitted is "unknown": those are the page's to explain. A database that
+ * does not answer counts as not given, so the app never opens without them;
+ * /welcome then says it could not check and offers to try again.
  */
 async function readTermsState(): Promise<"agreed" | "undecided" | "unknown"> {
   try {
-    const consents = await createConsents();
-    const [terms, health] = await Promise.all([
-      consents.current("terms"),
-      consents.current("health"),
-    ]);
-    return terms.status === "agreed" && health.status === "agreed"
+    return (await (await createConsents()).termsAccepted())
       ? "agreed"
       : "undecided";
-  } catch {
-    return "unknown";
+  } catch (error) {
+    return error instanceof ConsentAuthenticationError
+      ? "unknown"
+      : "undecided";
   }
 }
 

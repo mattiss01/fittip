@@ -27,6 +27,11 @@ const nextConfig: NextConfig = {
         source: "/home/:path*",
         headers: privateSessionHeaders(),
       },
+      // The step before Home (B2): a signed-in page, so private as well.
+      {
+        source: "/welcome",
+        headers: privateSessionHeaders(),
+      },
       // A reset link's one-time code is in the address of the page it opens
       // (ADR-022): never stored, and never sent on as a referrer.
       ...["/forgot-password", "/reset-password"].map((source) => ({

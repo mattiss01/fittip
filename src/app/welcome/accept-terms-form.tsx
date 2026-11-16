@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useActionState } from "react";
 
-import { acceptTermsAction } from "@/app/home/coach-consent-actions";
+import { acceptTermsAction } from "./actions";
 import { INITIAL_COACH_CONSENT_STATE } from "@/app/home/coach-consent-state";
 import styles from "@/components/legal/legal.module.css";
 

@@ -61,6 +61,26 @@ describe("Consents", () => {
     });
   });
 
+  it("records the Terms and the health consent together, in one insert", async () => {
+    const { client, insert } = clientWith(null);
+    await new Consents(client).acceptTerms();
+    expect(insert).toHaveBeenCalledTimes(1);
+    expect(insert).toHaveBeenCalledWith([
+      {
+        user_id: USER_ID,
+        kind: "terms",
+        decision: "agreed",
+        version: TERMS_VERSION,
+      },
+      {
+        user_id: USER_ID,
+        kind: "health",
+        decision: "agreed",
+        version: TERMS_VERSION,
+      },
+    ]);
+  });
+
   it("never records the terms as declined", async () => {
     const { client, insert } = clientWith(null);
     await expect(

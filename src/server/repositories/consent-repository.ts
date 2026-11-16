@@ -81,6 +81,35 @@ export class Consents {
     return { status: data.decision, decidedAt: data.decided_at };
   }
 
+  /**
+   * Whether both decisions the app needs before it opens stand for the
+   * text as it reads today: the Terms and the health consent.
+   */
+  async termsAccepted(): Promise<boolean> {
+    const [terms, health] = await Promise.all([
+      this.current("terms"),
+      this.current("health"),
+    ]);
+    return terms.status === "agreed" && health.status === "agreed";
+  }
+
+  /**
+   * The Terms and the health consent, agreed together from the step before
+   * the app, in one insert so neither is ever saved without the other.
+   */
+  async acceptTerms(): Promise<void> {
+    const userId = await this.getVerifiedUserId();
+    const { error } = await this.client.from("consent_decisions").insert(
+      (["terms", "health"] as const).map((kind) => ({
+        user_id: userId,
+        kind,
+        decision: "agreed" as const,
+        version: CURRENT_VERSION[kind],
+      })),
+    );
+    if (error) throw new ConsentPersistenceError();
+  }
+
   /** Records a decision against the text as it reads today. */
   async record(kind: ConsentKind, decision: ConsentDecision): Promise<void> {
     if (
