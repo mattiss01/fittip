@@ -7,6 +7,7 @@ import {
   expiredBackups,
   fitToLocalSchema,
   isInside,
+  isLeftoverDump,
   msysPath,
   readBackupConfig,
   readReason,
@@ -130,6 +131,19 @@ describe("paths", () => {
   });
 });
 
+describe("leftovers of an interrupted run", () => {
+  it("are the readable dumps, and nothing else", () => {
+    expect(isLeftoverDump("fittip-20261116T091500Z-weekly-9e5776b.sql")).toBe(
+      true,
+    );
+    expect(isLeftoverDump("restore.sql")).toBe(true);
+    expect(
+      isLeftoverDump("fittip-20261116T091500Z-weekly-9e5776b.sql.gpg"),
+    ).toBe(false);
+    expect(isLeftoverDump("notes.sql")).toBe(false);
+  });
+});
+
 describe("paths for Git's gpg", () => {
   it("turn a drive path into Git's form", () => {
     expect(msysPath(String.raw`C:\Users\owner\.gnupg`)).toBe(
@@ -192,6 +206,10 @@ describe("fitting a dump to the local schema", () => {
     expect(fit.skipped).toEqual({
       "auth.users.newer_column": 1,
       "auth.scim_users": 1,
+    });
+    expect(fit.rows).toEqual({
+      '"auth"."users"': 2,
+      '"public"."profiles"': 1,
     });
   });
 

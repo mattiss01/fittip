@@ -126,10 +126,13 @@ const NULL_VALUE = "\\N";
  *
  * `columns` maps `schema.table` to the set of its local column names. COPY's
  * text format escapes a tab inside a value, so a row splits on tabs exactly.
+ * `rows` counts the rows kept per table, as quoted SQL names, so a restore
+ * can check each table against the backup.
  */
 export function fitToLocalSchema(sql, columns) {
   const kept = [];
   const skipped = {};
+  const rows = {};
   let block = null;
   for (const line of sql.replace(/\r\n/g, "\n").split("\n")) {
     if (block !== null) {
@@ -150,6 +153,7 @@ export function fitToLocalSchema(sql, columns) {
         }
       }
       kept.push(values.filter((_, i) => !block.dropped.has(i)).join("\t"));
+      rows[block.quoted] += 1;
       continue;
     }
     const start = COPY_START.exec(line);
@@ -170,10 +174,12 @@ export function fitToLocalSchema(sql, columns) {
     const dropped = new Set(
       names.flatMap((name, i) => (local.has(name) ? [] : [i])),
     );
-    block = { table, skipTable: false, names, dropped };
+    const quoted = `"${start[1]}"."${start[2]}"`;
+    block = { table, quoted, skipTable: false, names, dropped };
+    rows[quoted] = 0;
     const keptNames = names.filter((_, i) => !dropped.has(i));
     kept.push(
-      `COPY "${start[1]}"."${start[2]}" (${keptNames
+      `COPY ${quoted} (${keptNames
         .map((name) => `"${name}"`)
         .join(", ")}) FROM stdin;`,
     );
@@ -181,7 +187,15 @@ export function fitToLocalSchema(sql, columns) {
   if (block !== null) {
     throw new BackupError(`The dump ends inside the data of ${block.table}.`);
   }
-  return { sql: kept.join("\n"), skipped };
+  return { sql: kept.join("\n"), skipped, rows };
+}
+
+/**
+ * A readable dump left in the working folder by an interrupted run (sleep,
+ * shutdown, a killed task): the next run deletes it before anything else.
+ */
+export function isLeftoverDump(name) {
+  return /^fittip-[0-9A-Za-z-]+\.sql$/.test(name) || name === "restore.sql";
 }
 
 /** Reads `--reason <weekly|pre-migration>`; weekly when absent. */

@@ -208,7 +208,7 @@ export const PRIVACY_NOTICE: LegalDocument = {
         {
           label: "Backups",
           lines: [
-            "A weekly copy, and one before each change to the database, encrypted with a key only the operator holds, kept in their OneDrive for 4 weeks, then deleted.",
+            "A weekly copy, and one before each change to the database, encrypted with a key only the operator holds, kept in their OneDrive for 4 weeks and deleted at the next backup after that. OneDrive's recycle bin can keep a deleted copy for up to 30 more days.",
           ],
         },
         {

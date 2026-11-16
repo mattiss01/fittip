@@ -7,11 +7,14 @@
  *   npm.cmd run backup
  *   npm.cmd run backup -- --reason pre-migration
  *
- * The readable dump exists only in a working folder outside OneDrive and is
- * deleted whatever happens. Encrypting needs only the public key; restoring
- * (`restore.mjs`) needs the private key and its passphrase, which the owner
- * keeps. Only data is dumped: the schema is the migrations at the commit the
- * file is named after.
+ * The readable dump exists only in a working folder outside OneDrive. It is
+ * deleted on every way out, and one left by an interrupted run (sleep,
+ * shutdown) is deleted when the next run starts. Encrypting needs only the
+ * public key; restoring (`restore.mjs`) needs the private key and its
+ * passphrase, which the owner keeps. Only data is dumped: the schema is the
+ * migrations applied to the hosted project then. The commit in the name is
+ * the checkout's, for orientation; a restore fits the data to the local
+ * schema and lists anything it could not place.
  */
 
 import { spawnSync } from "node:child_process";
@@ -32,10 +35,12 @@ import {
   BackupError,
   backupFileName,
   expiredBackups,
+  isLeftoverDump,
   msysPath,
   readBackupConfig,
   readReason,
   redact,
+  RETENTION_DAYS,
 } from "./backup-core.mjs";
 
 export function loadConfig() {
@@ -51,6 +56,14 @@ export function loadConfig() {
 
 export function gpgEnv(config) {
   return { ...process.env, GNUPGHOME: msysPath(config.gnupgHome) };
+}
+
+/** The working folder, emptied of any readable dump an earlier run left. */
+export function prepareWorkDir(config) {
+  mkdirSync(config.workDir, { recursive: true });
+  for (const name of readdirSync(config.workDir).filter(isLeftoverDump)) {
+    rmSync(path.win32.join(config.workDir, name), { force: true });
+  }
 }
 
 function run(command, args, options = {}) {
@@ -76,7 +89,7 @@ function backup(config, reason) {
   const commit = run("git", ["rev-parse", "--short", "HEAD"]).stdout?.trim();
   const name = backupFileName(new Date(), reason, commit ?? "");
 
-  mkdirSync(config.workDir, { recursive: true });
+  prepareWorkDir(config);
   mkdirSync(config.folder, { recursive: true });
   const plain = path.win32.join(config.workDir, name.replace(/\.gpg$/, ""));
   const target = path.win32.join(config.folder, name);
@@ -141,7 +154,7 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
     config = loadConfig();
     const reason = readReason(process.argv.slice(2));
     const result = backup(config, reason);
-    const line = `OK ${result.name} (${result.bytes} bytes), ${result.pruned} older than 4 weeks deleted`;
+    const line = `OK ${result.name} (${result.bytes} bytes), ${result.pruned} older than ${RETENTION_DAYS} days deleted`;
     log(config, line);
     console.log(line);
   } catch (error) {

@@ -16,7 +16,7 @@ writes its console output to `%LOCALAPPDATA%\FitTip\task-output.txt`.
 
 ## Setting it up again
 
-1. **The key.** The owner's "FitTip backups" key lives in Git's keyring, `C:\Users\msche\.gnupg`.
+1. **The key.** The owner's "FitTip backups" key lives in Git's keyring, `C:\Users\<user>\.gnupg`.
    Its private half is in the owner's password manager. On a new machine, run this in Git Bash:
    `gpg --import <that key>`. Never put the private key in OneDrive.
 2. **The configuration**, `%USERPROFILE%\.fittip-backup.json`. Nothing in it is secret:

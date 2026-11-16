@@ -132,6 +132,10 @@ Not worth their own slot; do them when work lands nearby.
   is not checked, so a log with pain notes could be saved without a recorded health
   consent by someone bypassing the app. A shared server-side check before every write would
   close it (B2's review, 16 Nov 2026).
+- **A failed weekly backup is silent.** The scheduled task logs to
+  `%LOCALAPPDATA%FitTipackup.log` and exits non-zero when Docker is off, and nothing
+  retries until the next Monday. A check of the newest copy's age (at sign-in, or in the
+  founder apply) would surface weeks without one (B3's review, 16 Nov 2026).
 
 - **For the owner to look at.** The date fields' width fix (13 Oct 2026) has not been seen
   on a phone or in a desktop browser's calendar mark. And with this week at the week
