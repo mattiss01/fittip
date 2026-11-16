@@ -18,7 +18,7 @@
  * with standard contractual clauses because its Data Privacy Framework entry
  * could not be confirmed.
  */
-export const TERMS_VERSION = "2026-11-15";
+export const TERMS_VERSION = "2026-11-16";
 
 /** A labelled fact, drawn as a card: a service, a retention period. */
 export type LegalItem = {
@@ -51,13 +51,13 @@ const AUTHORITY = "[data protection authority of your Land]";
 
 export const PRIVACY_NOTICE: LegalDocument = {
   title: "Privacy notice",
-  updated: "15 November 2026",
+  updated: "16 November 2026",
   summary: [
     `FitTip is a free, invitation-only training app run by one person, ${OPERATOR}.`,
     "It keeps your account, your training and what you tell it about yourself, so it can plan with you.",
     "What you write about your health (pain, illness, injury) is kept only with your separate consent.",
     "The AI coach is optional. Only if you agree to it is what it needs sent to OpenAI in the USA.",
-    "The operator runs the database and can technically read it. Backups are kept for 4 weeks.",
+    "The operator runs the database and can technically read it. An encrypted backup is kept for 4 weeks.",
     "No ads, no analytics, no tracking. Delete your account and everything in it at any time.",
     `Questions: ${EMAIL}.`,
   ],
@@ -161,7 +161,7 @@ export const PRIVACY_NOTICE: LegalDocument = {
     {
       id: "services",
       heading: "Who else handles your data",
-      lead: "Three services, each acting only on FitTip's instructions under a data processing agreement (Art. 28 GDPR).",
+      lead: "Three services run FitTip, each acting only on its instructions under a data processing agreement (Art. 28 GDPR); a fourth holds only encrypted backups.",
       items: [
         {
           label: "Supabase",
@@ -184,6 +184,13 @@ export const PRIVACY_NOTICE: LegalDocument = {
             "USA. Covered by the European Commission's standard contractual clauses in OpenAI's data processing addendum.",
           ],
         },
+        {
+          label: "Microsoft OneDrive",
+          lines: [
+            "Keeps the weekly backup, encrypted on the operator's computer before it is uploaded, so Microsoft cannot read it.",
+            "EU and USA. Certified under the EU–US Data Privacy Framework.",
+          ],
+        },
       ],
       paragraphs: [
         "Nobody else is given your data. Ask me for a copy of the safeguards.",
@@ -201,7 +208,7 @@ export const PRIVACY_NOTICE: LegalDocument = {
         {
           label: "Backups",
           lines: [
-            "A weekly copy on the operator's computer, kept for 4 weeks, then deleted.",
+            "A weekly copy, and one before each change to the database, encrypted with a key only the operator holds, kept in their OneDrive for 4 weeks, then deleted.",
           ],
         },
         {

@@ -14,7 +14,7 @@
  * (the adapter's default host) with no stored application state. Data sharing is off on
  * the owner's OpenAI organization (owner, 12 Nov 2026).
  */
-export const COACH_NOTICE_VERSION = "2026-11-12";
+export const COACH_NOTICE_VERSION = "2026-11-16";
 
 export type CoachNoticeSection = {
   readonly heading: string;
@@ -40,7 +40,7 @@ export const COACH_NOTICE_SECTIONS: readonly CoachNoticeSection[] = [
   {
     heading: "Where FitTip keeps your data",
     paragraphs: [
-      "Your account and training records are stored by Supabase in Frankfurt, and the app runs on Vercel.",
+      "Your account and training records are stored by Supabase in Frankfurt, and the app runs on Vercel. A weekly backup, encrypted so only the operator can open it, is kept in their Microsoft OneDrive.",
       "FitTip is run by one person, who manages the database and can technically read what is in it. FitTip has no screen for looking at other people's data.",
     ],
   },

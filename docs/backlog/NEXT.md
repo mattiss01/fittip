@@ -29,6 +29,8 @@ No friend is admitted until B3 has merged. All careful lane.
       are filled in: the operator's name, address and email, the supervisory authority of
       their Land, and Vercel's log retention; the Supabase and Vercel data processing
       agreements are confirmed, and OpenAI's EU–US Data Privacy Framework entry checked.
+      OneDrive holds the encrypted backups (B3) under a personal account, which has no Art. 28
+      agreement; whether encryption with the owner's key is enough footing is the owner's call.
       `CLAUDE.md` stops calling FitTip an app "for one athlete" in the same step. Each friend's id goes into
       `FITTIP_ALLOWED_USER_IDS`, and into `FITTIP_AI_OWNER_ALLOWLIST` once they have
       consented. A Vercel variable changes only the next deployment, so adding or removing
