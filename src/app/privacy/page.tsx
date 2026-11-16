@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 import { LegalPage, readLegalReturn } from "@/components/legal/legal-page";
-import { PRIVACY_NOTICE } from "@/lib/legal";
+import { privacyNotice, readOperator } from "@/lib/legal";
 
 export const metadata: Metadata = { title: "Privacy notice · FitTip" };
 
@@ -12,5 +12,10 @@ export default async function PrivacyPage({
   searchParams: Promise<{ from?: string }>;
 }) {
   const { from } = await searchParams;
-  return <LegalPage document={PRIVACY_NOTICE} from={readLegalReturn(from)} />;
+  return (
+    <LegalPage
+      document={privacyNotice(readOperator())}
+      from={readLegalReturn(from)}
+    />
+  );
 }

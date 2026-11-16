@@ -1,8 +1,8 @@
 # FitTip working agreement
 
-FitTip is a mobile-first training app for one athlete: the product owner. A Coach AI
-proposes plans; the athlete accepts, edits, and logs what actually happened. Next.js 16
-on Vercel, Supabase Postgres with Row Level Security.
+FitTip is a mobile-first training app for the product owner and up to five invited friends
+(ADR-043). A Coach AI proposes plans; each athlete accepts, edits, and logs what actually
+happened. Next.js 16 on Vercel, Supabase Postgres with Row Level Security.
 
 Background when you need it: `CONTEXT.md` for the domain, `docs/decisions/` for ADRs,
 `docs/product/` for feature briefs. `README.md` is the human setup guide.
