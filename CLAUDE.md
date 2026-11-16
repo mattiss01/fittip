@@ -197,8 +197,16 @@ a shard in `ci.yml` names it.
   conditions: a green CI run for that exact commit first; `migration list --linked` and
   `db advisors --linked --type security` afterwards, reported to the owner; and destructive
   DDL (`drop table`, `drop column`, `truncate`, unfiltered `delete`) asked about first.
+  Before the push, `npm.cmd run backup -- --reason pre-migration` takes a copy; if it fails,
+  the push waits.
   `db dump`, `db diff` and `inspect` are available for diagnosis, and what they return stays
-  on this machine.
+  on this machine. The one exception is `npm.cmd run backup`, which encrypts the dump to the
+  owner's key before it reaches OneDrive (ADR-043 decision 7).
+- **Friends' data survives** (ADR-043 decision 6). A migration carries existing rows forward;
+  the founder project holds real people's data, so "nothing stored needs to survive" no
+  longer applies. `npm.cmd run backup:restore -- <file>` restores a backup into the local
+  stack only, and replaces the local accounts as a reset does. Those are real people's data:
+  once the row counts match, run `db reset --local` before anything else queries the stack.
 - Never run `db reset --linked`, `migration repair`, `db remote`, `secrets`, `projects`, or
   `branches`. `supabase/config.toml` is local-only development configuration.
 - Docker-backed local runs are slow; run them in the background rather than blocking.

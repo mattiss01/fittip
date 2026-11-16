@@ -29,6 +29,8 @@ No friend is admitted until B3 has merged. All careful lane.
       are filled in: the operator's name, address and email, the supervisory authority of
       their Land, and Vercel's log retention; the Supabase and Vercel data processing
       agreements are confirmed, and OpenAI's EU–US Data Privacy Framework entry checked.
+      OneDrive holds the encrypted backups (B3) under a personal account, which has no Art. 28
+      agreement; whether encryption with the owner's key is enough footing is the owner's call.
       `CLAUDE.md` stops calling FitTip an app "for one athlete" in the same step. Each friend's id goes into
       `FITTIP_ALLOWED_USER_IDS`, and into `FITTIP_AI_OWNER_ALLOWLIST` once they have
       consented. A Vercel variable changes only the next deployment, so adding or removing
@@ -130,6 +132,10 @@ Not worth their own slot; do them when work lands nearby.
   is not checked, so a log with pain notes could be saved without a recorded health
   consent by someone bypassing the app. A shared server-side check before every write would
   close it (B2's review, 16 Nov 2026).
+- **A failed weekly backup is silent.** The scheduled task logs to
+  `%LOCALAPPDATA%\FitTip\backup.log` and exits non-zero when Docker is off, and nothing
+  retries until the next Monday. A check of the newest copy's age (at sign-in, or in the
+  founder apply) would surface weeks without one (B3's review, 16 Nov 2026).
 
 - **For the owner to look at.** The date fields' width fix (13 Oct 2026) has not been seen
   on a phone or in a desktop browser's calendar mark. And with this week at the week

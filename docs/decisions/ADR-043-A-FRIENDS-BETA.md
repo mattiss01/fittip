@@ -79,6 +79,16 @@ tickets.
 7. **Backups are a free weekly dump to the owner's laptop**, plus one before each hosted
    migration, not a paid plan. One dump is restored into the local stack before the first
    invitation, to prove it restores. Old dumps are deleted after the period the notice states.
+
+   **Amended 16 November 2026 (owner).** The copies go to the owner's Microsoft OneDrive, not
+   only the laptop, so they survive the laptop. Each is encrypted on the laptop first, to a GPG
+   key pair of the owner's: backing up needs only the public key, restoring needs the private
+   key and its passphrase, which the owner keeps a copy of off the laptop. The readable dump
+   never sits in a synced folder. A Windows scheduled task takes the weekly copy, catching up
+   at the next start when the laptop was off; the founder apply (ADR-018) takes one first.
+   Copies are deleted after 4 weeks. The privacy notice names OneDrive as holding only
+   encrypted backups. `npm run backup` and `npm run backup:restore` (local stack only) are
+   the two commands.
 8. **Every green merge reaches friends at once**, as it reaches the owner today. CI stays the
    gate; there is no separate beta release.
 9. **English only for now.** The language switch in `NEXT.md` follows separately.

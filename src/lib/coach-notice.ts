@@ -14,7 +14,7 @@
  * (the adapter's default host) with no stored application state. Data sharing is off on
  * the owner's OpenAI organization (owner, 12 Nov 2026).
  */
-export const COACH_NOTICE_VERSION = "2026-11-12";
+export const COACH_NOTICE_VERSION = "2026-11-16";
 
 export type CoachNoticeSection = {
   readonly heading: string;
@@ -40,7 +40,7 @@ export const COACH_NOTICE_SECTIONS: readonly CoachNoticeSection[] = [
   {
     heading: "Where FitTip keeps your data",
     paragraphs: [
-      "Your account and training records are stored by Supabase in Frankfurt, and the app runs on Vercel.",
+      "Your account and training records are stored by Supabase in Frankfurt, and the app runs on Vercel. Backups, taken weekly and before each change to the database and encrypted so only the operator can open them, are kept in their Microsoft OneDrive.",
       "FitTip is run by one person, who manages the database and can technically read what is in it. FitTip has no screen for looking at other people's data.",
     ],
   },
@@ -54,7 +54,7 @@ export const COACH_NOTICE_SECTIONS: readonly CoachNoticeSection[] = [
     heading: "Changing your mind",
     paragraphs: [
       "You can decline now, or agree and withdraw later, in Settings › Coach and your data. Withdrawing stops new coach requests at once; plans and notes the coach already made stay yours.",
-      "Deleting your account removes your data from FitTip at once. Backups keep it for up to 4 weeks. Ask for a copy of your data at any time.",
+      "Deleting your account removes your data from FitTip at once. Backups keep it for about 4 weeks, and OneDrive's recycle bin up to 30 days more. Ask for a copy of your data at any time.",
     ],
   },
 ];
