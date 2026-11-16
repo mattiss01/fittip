@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 import { LegalPage, readLegalReturn } from "@/components/legal/legal-page";
-import { TERMS } from "@/lib/legal";
+import { readOperator, terms } from "@/lib/legal";
 
 export const metadata: Metadata = { title: "Terms · FitTip" };
 
@@ -12,5 +12,7 @@ export default async function TermsPage({
   searchParams: Promise<{ from?: string }>;
 }) {
   const { from } = await searchParams;
-  return <LegalPage document={TERMS} from={readLegalReturn(from)} />;
+  return (
+    <LegalPage document={terms(readOperator())} from={readLegalReturn(from)} />
+  );
 }

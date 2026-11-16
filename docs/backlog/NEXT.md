@@ -17,22 +17,19 @@ before any code is written.
 [ADR-043](../decisions/ADR-043-A-FRIENDS-BETA.md). Planned only; the owner says when to build.
 B2 and B3 have merged; B4 is the last step. All careful lane.
 
-- [ ] **B4 — First invitations.** The owner creates each account by hand with a one-time
-      password and passes it on privately (ADR-043 decision 3); the invitation says a
-      forgotten password is reset by the owner. The `[bracketed]` values in `src/lib/legal.ts`
-      are filled in: the operator's name, address and email, the supervisory authority of
-      their Land, and Vercel's log retention; the Supabase and Vercel data processing
-      agreements are confirmed, and OpenAI's EU–US Data Privacy Framework entry checked.
-      OneDrive holds the encrypted backups (B3) under a personal account, which has no Art. 28
-      agreement; whether encryption with the owner's key is enough footing is the owner's call.
-      The owner lives in Vienna and also has an address in Baden-Württemberg (16 Nov
-      2026): the seat is where FitTip is really run from, the owner's call. If Vienna,
-      the texts move from German to Austrian law: the Datenschutzbehörde, §165 TKG 2021,
-      Austrian governing law, a liability clause under KSchG and ABGB, §25 MedienG.
-      `CLAUDE.md` stops calling FitTip an app "for one athlete" in the same step. Each friend's id goes into
-      `FITTIP_ALLOWED_USER_IDS`, and into `FITTIP_AI_OWNER_ALLOWLIST` once they have
-      consented. A Vercel variable changes only the next deployment, so adding or removing
-      someone takes a redeploy; until then a removed friend can still reach their own rows.
+- [~] **B4 — First invitations.** The notice and Terms follow Austrian law, Vienna being the
+      owner's seat, and read the operator's name, address and email from
+      `FITTIP_OPERATOR_NAME`, `_ADDRESS` and `_EMAIL` (owner, 16 Nov 2026: never in the public
+      repository; unset shows a placeholder). Owner's decisions the same day: Vercel stays on
+      Hobby, which has no data processing agreement, and a personal OneDrive holds the
+      encrypted backups without one; the notice says both. Before the first invitation the
+      owner sets the three variables in production and redeploys, opts out of AI training in
+      Vercel's Team Settings › Data Preferences, and confirms or executes OpenAI's data
+      processing agreement. Then, per friend: an account made by hand with a one-time
+      password passed on privately, an invitation saying a forgotten password is reset by
+      the owner, and the id in `FITTIP_ALLOWED_USER_IDS` and `FITTIP_AI_OWNER_ALLOWLIST`
+      (the app asks for the coach consent itself), then a redeploy. A removed friend can
+      reach their own rows until the next deployment.
 
 - [ ] **Language switch.** Owner, 12 Nov 2026: soon, after the beta starts in English. The
       app's text in English and German, chosen in Settings. To settle with the owner
