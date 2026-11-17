@@ -23,9 +23,12 @@ B2 and B3 have merged; B4 is the last step. All careful lane.
       repository; unset shows a placeholder). Owner's decisions the same day: Vercel stays on
       Hobby, which has no data processing agreement, and a personal OneDrive holds the
       encrypted backups without one; the notice says both. Before the first invitation the
-      owner sets the three variables in production and redeploys, opts out of AI training in
-      Vercel's Team Settings › Data Preferences, and confirms or executes OpenAI's data
-      processing agreement. Then, per friend: an account made by hand with a one-time
+      owner sets the three variables in production and redeploys, and opts out of AI training in
+      Vercel's Team Settings › Data Preferences. Owner, 17 Nov 2026: OpenAI's data
+      processing agreement applies through API use, and its signed copy (a form asking for an
+      organisation's details) waits for a real launch, when all of this is looked at again.
+      Its annex assumes no health data is sent, while the coach sends health notes with
+      explicit consent; accepted knowingly, no query to OpenAI. Then, per friend: an account made by hand with a one-time
       password passed on privately, an invitation saying a forgotten password is reset by
       the owner, and the id in `FITTIP_ALLOWED_USER_IDS` and `FITTIP_AI_OWNER_ALLOWLIST`
       (the app asks for the coach consent itself), then a redeploy. A removed friend can

@@ -27,8 +27,8 @@ const PASSWORD = "fittip-local";
 // `TERMS_VERSION` in `src/lib/legal.ts` and `COACH_NOTICE_VERSION` in
 // `src/lib/coach-notice.ts`, which a script cannot import. If they drift, the
 // athletes are simply asked again after sign-in.
-const TERMS_VERSION = "2026-11-17";
-const COACH_NOTICE_VERSION = "2026-11-16";
+const TERMS_VERSION = "2026-11-18";
+const COACH_NOTICE_VERSION = "2026-11-17";
 const DB_CONTAINER = "supabase_db_fittip";
 const here = dirname(fileURLToPath(import.meta.url));
 

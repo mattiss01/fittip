@@ -14,7 +14,7 @@
  * (the adapter's default host) with no stored application state. Data sharing is off on
  * the owner's OpenAI organization (owner, 12 Nov 2026).
  */
-export const COACH_NOTICE_VERSION = "2026-11-16";
+export const COACH_NOTICE_VERSION = "2026-11-17";
 
 export type CoachNoticeSection = {
   readonly heading: string;
@@ -34,7 +34,7 @@ export const COACH_NOTICE_SECTIONS: readonly CoachNoticeSection[] = [
   {
     heading: "Where it goes",
     paragraphs: [
-      "The coach is an AI model run by OpenAI in the USA. Under OpenAI's terms for its API, what FitTip sends is not used to train their models, and OpenAI keeps it for up to 30 days to watch for abuse.",
+      "The coach is an AI model run by OpenAI. OpenAI Ireland handles what FitTip sends and may pass it to OpenAI in the USA, under the European Commission's standard contractual clauses. Under OpenAI's terms for its API, what FitTip sends is not used to train their models, and OpenAI keeps it for up to 30 days to watch for abuse.",
     ],
   },
   {

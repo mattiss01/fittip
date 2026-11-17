@@ -15,7 +15,12 @@
  * disclosure. A draft for a private, invitation-only beta, not legal advice;
  * the owner decides whether anyone checks it. The providers' terms are as
  * they stated them on those dates: Vercel's free plan offers no data
- * processing agreement, and OpenAI is named with standard contractual
+ * processing agreement, and OpenAI Ireland is the processor for an
+ * EEA-based customer, passing data to the USA under standard contractual
+ * clauses (OpenAI's DPA of 1 Jan 2026, read on 17 Nov 2026). That DPA's own
+ * description assumes no health data is sent; FitTip sends health notes to
+ * the coach with explicit consent, which the owner accepted knowingly
+ * (17 Nov 2026). OpenAI is named with standard contractual
  * clauses because its Data Privacy Framework entry could not be confirmed.
  *
  * The operator's name, address and email are read from Vercel variables
@@ -25,7 +30,7 @@
  */
 import "server-only";
 
-export const TERMS_VERSION = "2026-11-17";
+export const TERMS_VERSION = "2026-11-18";
 
 /** A labelled fact, drawn as a card: a service, a retention period. */
 export type LegalItem = {
@@ -90,12 +95,12 @@ export function privacyNotice({
 }: Operator): LegalDocument {
   return {
     title: "Privacy notice",
-    updated: "17 November 2026",
+    updated: "18 November 2026",
     summary: [
       `FitTip is a free, invitation-only training app run by one person, ${OPERATOR}.`,
       "It keeps your account, your training and what you tell it about yourself, so it can plan with you.",
       "What you write about your health (pain, illness, injury) is kept only with your separate consent.",
-      "The AI coach is optional. Only if you agree to it is what it needs sent to OpenAI in the USA.",
+      "The AI coach is optional. Only if you agree to it is what it needs sent to OpenAI, through OpenAI Ireland and possibly on to the USA.",
       "The operator runs the database and can technically read it. Encrypted backups are kept for about 4 weeks.",
       "No ads, no analytics, no tracking. Delete your account and everything in it at any time.",
       `Questions: ${EMAIL}.`,
@@ -223,7 +228,7 @@ export function privacyNotice({
             label: "OpenAI",
             lines: [
               "The AI coach, only with your consent.",
-              "USA. Covered by the European Commission's standard contractual clauses in OpenAI's data processing addendum.",
+              "OpenAI Ireland Ltd. handles it under OpenAI's data processing agreement and may pass it to OpenAI in the USA under the European Commission's standard contractual clauses.",
             ],
           },
           {
@@ -304,7 +309,7 @@ export function terms({
 }: Operator): LegalDocument {
   return {
     title: "Terms",
-    updated: "17 November 2026",
+    updated: "18 November 2026",
     summary: [
       `FitTip is a free private beta, run by ${OPERATOR}, for people they invite.`,
       "It may change, break or end; you get notice and your data first.",
