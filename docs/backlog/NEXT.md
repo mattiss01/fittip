@@ -22,9 +22,8 @@ B2 and B3 have merged; B4 is the last step. All careful lane.
       `FITTIP_OPERATOR_NAME`, `_ADDRESS` and `_EMAIL` (owner, 16 Nov 2026: never in the public
       repository; unset shows a placeholder). Owner's decisions the same day: Vercel stays on
       Hobby, which has no data processing agreement, and a personal OneDrive holds the
-      encrypted backups without one; the notice says both. Before the first invitation the
-      owner sets the three variables in production and redeploys, and opts out of AI training in
-      Vercel's Team Settings › Data Preferences. Owner, 17 Nov 2026: OpenAI's data
+      encrypted backups without one; the notice says both. The owner set the three variables in production and opted out of AI training in
+      Vercel's Data Preferences (17 Nov 2026); `/privacy` shows them from the next deploy. Owner, 17 Nov 2026: OpenAI's data
       processing agreement applies through API use, and its signed copy (a form asking for an
       organisation's details) waits for a real launch, when all of this is looked at again.
       Its annex assumes no health data is sent, while the coach sends health notes with
