@@ -13,7 +13,12 @@ export function LogDeletedNote({
 }) {
   if (flag !== "deleted") return null;
   return (
-    <p className={styles.note} role="status" data-log-deleted-note>
+    <p
+      className={styles.note}
+      role="status"
+      data-log-deleted-note
+      data-toast="saved"
+    >
       Log deleted.
     </p>
   );

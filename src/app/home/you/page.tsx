@@ -76,7 +76,7 @@ export default async function YouPage({
         </PageTitle>
       </header>
       {setupNote === null ? null : (
-        <p className={styles.kept} role="status">
+        <p className={styles.kept} role="status" data-toast="saved">
           {setupNote}
         </p>
       )}

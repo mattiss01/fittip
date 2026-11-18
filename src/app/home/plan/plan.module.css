@@ -42,61 +42,6 @@
   background: #fff0e1;
 }
 
-/* A change saving or just saved is said over the top of the screen, not in
-   the page, and a saved one fades after three seconds (owner, 18 Nov 2026).
-   A refusal or a lost response stays in the page as a .notice, beside its
-   Reload link, until the owner acts on it. The element is the page's one
-   live region throughout, so the change of class is never re-announced. */
-.toast {
-  position: fixed;
-  z-index: 70;
-  top: calc(env(safe-area-inset-top) + 0.75rem);
-  left: 50%;
-  width: min(calc(100% - 2rem), 26rem);
-  translate: -50% 0;
-  margin: 0;
-  padding: 0.8rem 1rem;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-card);
-  background: #e7f0dc;
-  box-shadow: var(--shadow-card);
-  line-height: 1.4;
-  pointer-events: none;
-}
-
-.toast[data-toast="saved"] {
-  animation: toast-saved 3s ease forwards;
-}
-
-/* It starts shown: "Saving…" was already in its place. */
-@keyframes toast-saved {
-  0%,
-  85% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-    visibility: hidden;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .toast[data-toast="saved"] {
-    animation-name: toast-saved-still;
-  }
-}
-
-@keyframes toast-saved-still {
-  0%,
-  90% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-    visibility: hidden;
-  }
-}
-
 .reload {
   width: fit-content;
   min-height: 2.75rem;

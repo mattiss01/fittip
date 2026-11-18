@@ -1219,3 +1219,70 @@ textarea {
     scale: none;
   }
 }
+
+/*
+ * A change saving or just saved is said over the top of the screen, not in
+ * the page, and a saved one fades after three seconds (owner, 18 Nov 2026).
+ * Any status line opts in with `data-toast` ("saving" | "saved", see
+ * src/lib/ui/toast.ts); a refusal, a conflict or a lost response never does,
+ * and stays in its page beside whatever the owner has to do about it.
+ *
+ * It overrides each page's own notice or screen-reader-only class, so a line
+ * keeps one element, and one live region, from "Saving…" to "Saved". The fade
+ * ends transparent rather than hidden: nothing is shown, and the sentence is
+ * still there for anyone who looks for it.
+ */
+html [role="status"][data-toast] {
+  position: fixed;
+  z-index: 70;
+  inset: calc(env(safe-area-inset-top) + 0.75rem) auto auto 50%;
+  width: min(calc(100% - 2rem), 26rem);
+  height: auto;
+  translate: -50% 0;
+  margin: 0;
+  padding: 0.8rem 1rem;
+  overflow: visible;
+  clip: auto;
+  clip-path: none;
+  white-space: normal;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: #e7f0dc;
+  box-shadow: var(--shadow-card);
+  color: var(--foreground);
+  font: 400 0.95rem/1.4 var(--font-sans);
+  letter-spacing: 0;
+  text-align: left;
+  text-transform: none;
+  pointer-events: none;
+}
+
+html [role="status"][data-toast="saved"] {
+  animation: toast-saved 3s ease forwards;
+}
+
+@keyframes toast-saved {
+  0%,
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html [role="status"][data-toast="saved"] {
+    animation-name: toast-saved-still;
+  }
+}
+
+@keyframes toast-saved-still {
+  0%,
+  99% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}

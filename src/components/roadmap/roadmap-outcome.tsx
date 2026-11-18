@@ -1,5 +1,7 @@
 "use client";
 
+import { toastOf } from "@/lib/ui/toast";
+
 import { useEffect, useSyncExternalStore } from "react";
 
 import type { RoadmapActionState } from "@/app/home/plan/roadmap/action-state";
@@ -69,6 +71,11 @@ export function RoadmapOutcomeNotice() {
       className={styles.notice}
       data-roadmap-notice={state.status}
       data-roadmap-outcome
+      data-toast={toastOf({
+        saving: false,
+        landed: true,
+        text: state.message,
+      })}
       role="status"
     >
       {state.message}

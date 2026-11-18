@@ -63,6 +63,7 @@ import {
 } from "../../../log/log-action-state";
 import { ActivityList } from "@/components/training/activity-list";
 import { describeMeasurement } from "@/lib/training/describe-measurement";
+import { toastOf } from "@/lib/ui/toast";
 
 export type SessionPageOrigin = "plan" | "today";
 
@@ -417,19 +418,21 @@ export function SessionPage({
   // The page's one status line. While a pop-up is open it is said there,
   // where the owner is looking; the page behind is inert.
   const inDialog = panel !== null;
-  // Saving and saved float over the top of the screen (see .toast); inside a
-  // pop-up, and for anything that needs the owner's action, it stays put.
-  const toast =
-    !inDialog && !quiet && (noticeState === "saving" || noticeState === "saved")
-      ? noticeState
-      : null;
+  // Saving and saved float over the top of the screen (see globals.css);
+  // inside a pop-up, and for anything that needs the owner's action, it stays
+  // put.
+  const toast = inDialog
+    ? undefined
+    : toastOf({
+        saving: noticeState === "saving",
+        landed: noticeState === "saved",
+        text: quiet ? "" : notice,
+      });
   const status = (
     <p
-      className={
-        toast !== null ? styles.toast : quiet ? styles.srOnly : styles.notice
-      }
+      className={quiet ? styles.srOnly : styles.notice}
       data-state={noticeState}
-      data-toast={toast ?? undefined}
+      data-toast={toast}
       role="status"
       aria-live="polite"
     >
