@@ -417,10 +417,19 @@ export function SessionPage({
   // The page's one status line. While a pop-up is open it is said there,
   // where the owner is looking; the page behind is inert.
   const inDialog = panel !== null;
+  // Saving and saved float over the top of the screen (see .toast); inside a
+  // pop-up, and for anything that needs the owner's action, it stays put.
+  const toast =
+    !inDialog && !quiet && (noticeState === "saving" || noticeState === "saved")
+      ? noticeState
+      : null;
   const status = (
     <p
-      className={quiet ? styles.srOnly : styles.notice}
+      className={
+        toast !== null ? styles.toast : quiet ? styles.srOnly : styles.notice
+      }
       data-state={noticeState}
+      data-toast={toast ?? undefined}
       role="status"
       aria-live="polite"
     >
