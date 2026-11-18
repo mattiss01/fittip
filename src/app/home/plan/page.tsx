@@ -14,7 +14,7 @@ import {
   type PlanUnplannedLog,
 } from "./plan-manager";
 import { startTimeOf } from "../progress/start-time-of";
-import { planHistoryStart, type PlanPhase } from "./plan-weeks";
+import { planHistoryStart } from "./plan-weeks";
 import { planWindowFor } from "./plan-window";
 import {
   readReplacedByCoach,
@@ -40,7 +40,6 @@ import { createCompletionLog } from "@/server/repositories/completion-log-reposi
 import { createProfileRepository } from "@/server/repositories/profile-repository";
 import { createRollingPlan } from "@/server/repositories/rolling-plan-repository";
 import {
-  readCurrentRoadmapPhases,
   readRoadmapAttention,
   type RoadmapAttention,
 } from "@/server/roadmap/roadmap-phases";
@@ -147,7 +146,6 @@ async function PlanWindow({
   let library: LibraryActivityOption[];
   let modes: ModeBySport;
   let savedSessions: SavedSessionOption[];
-  let phases: PlanPhase[];
   const logged = new Map<string, PlanSessionLog>();
   let replacedByCoach = new Set<string>();
   let unplannedLogs: PlanUnplannedLog[] = [];
@@ -156,7 +154,7 @@ async function PlanWindow({
       createRollingPlan(),
       createCompletionLog(),
     ]);
-    [slice, series, library, modes, savedSessions, phases] = await Promise.all([
+    [slice, series, library, modes, savedSessions] = await Promise.all([
       // Through the last date a single session may sit on (R3b-3). Recurring
       // sessions stop at `lastDate`, so the far weeks hold few rows. Only what
       // the week cards show (owner, 20 Oct 2026): a session's activities,
@@ -166,7 +164,6 @@ async function PlanWindow({
       readLibraryOptions(),
       readMeasurementHistory(),
       readSavedSessionOptions(),
-      readCurrentRoadmapPhases(),
     ]);
     // A logged session reads as logged where it was planned, whatever day
     // the log carries: a Thursday run done on Tuesday is not still ahead on
@@ -229,7 +226,6 @@ async function PlanWindow({
               segment.endDate === undefined || segment.endDate >= today,
           )}
           initialDate={initialDate}
-          phases={phases}
           expectedRevision={slice.revision}
           sessions={slice.sessions
             // A session the coach's replacement stands in for is not shown

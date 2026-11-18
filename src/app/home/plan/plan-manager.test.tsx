@@ -517,31 +517,6 @@ describe("PlanManager", () => {
     expect(day("2026-08-05")).not.toBeNull();
   });
 
-  it("shows the roadmap phase the week sits in", () => {
-    renderManager(INITIAL_PLAN_ACTION_STATE, [], {
-      phases: [
-        {
-          title: "Base",
-          focus: "Easy volume",
-          startDate: "2026-08-01",
-          endDate: "2026-08-23",
-        },
-        {
-          title: "Sharpen",
-          focus: "10k under 48 min",
-          startDate: "2026-08-24",
-          endDate: "2026-09-30",
-        },
-      ],
-    });
-    expect(screen.getByText("Base")).toBeVisible();
-    // The title alone; the focus is on the Roadmap (owner, 6 Nov 2026).
-    expect(screen.queryByText("Easy volume")).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "Next week" }));
-    expect(screen.getByText("Sharpen")).toBeVisible();
-    expect(screen.queryByText("Base")).toBeNull();
-  });
-
   it("reads an empty date as a dash and a labelled one as recovery", () => {
     renderManager();
     const plain = day(DATES[1]);
