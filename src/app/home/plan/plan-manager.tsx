@@ -183,16 +183,6 @@ export function PlanManager({
   const noticeState = showSeriesNotice
     ? seriesFirstNoticeState
     : (stall ?? (recovered ? "recovered" : state.status));
-  // Saving and saved float over the top of the screen; anything that needs
-  // the owner's action stays in the page (see .toast).
-  const stalled = showSeriesNotice ? seriesStall !== null : stall !== null;
-  const toast = stalled
-    ? null
-    : (showSeriesNotice ? seriesPending : pending)
-      ? "saving"
-      : noticeState === "saved"
-        ? "saved"
-        : null;
   const showReload = showSeriesNotice
     ? seriesState.status === "conflict" ||
       seriesState.status === "session" ||
@@ -320,6 +310,21 @@ export function PlanManager({
   }, [weekIndex, thisWeekIndex]);
   const [sheet, setSheet] = useSheetClosedOnSave(state, seriesState);
   const [monthOpen, setMonthOpen] = useState(false);
+  // Saving and saved float over the top of the screen; anything that needs
+  // the owner's action stays in the page (see .toast). Not over an open
+  // sheet, whose head it would cover: there the line is only heard.
+  const noticeText = activeNotice ?? (showSeriesNotice ? "" : state.message);
+  const stalled = showSeriesNotice ? seriesStall !== null : stall !== null;
+  const settling =
+    stalled || noticeText === ""
+      ? null
+      : (showSeriesNotice ? seriesPending : pending)
+        ? "saving"
+        : noticeState === "saved"
+          ? "saved"
+          : null;
+  const overlayOpen = sheet !== null || monthOpen || deleting !== null;
+  const toast = overlayOpen ? null : settling;
   // The plan submission the open sheet started after, so a refusal shown in
   // it is one of its own and not one from before it opened.
   const [sheetSince, setSheetSince] = useState(state.submission);
@@ -343,7 +348,7 @@ export function PlanManager({
         className={
           toast !== null
             ? styles.toast
-            : noticeState === "idle"
+            : settling !== null || noticeState === "idle"
               ? styles.srOnly
               : styles.notice
         }
@@ -352,7 +357,7 @@ export function PlanManager({
         role="status"
         aria-live="polite"
       >
-        {activeNotice ?? (showSeriesNotice ? "" : state.message)}
+        {noticeText}
       </p>
       {showReload ? (
         <a className={styles.reload} href="/home/plan">

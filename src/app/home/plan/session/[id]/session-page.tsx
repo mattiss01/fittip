@@ -420,20 +420,16 @@ export function SessionPage({
   // Saving and saved float over the top of the screen (see .toast); inside a
   // pop-up, and for anything that needs the owner's action, it stays put.
   const toast =
-    !inDialog && (noticeState === "saving" || noticeState === "saved")
+    !inDialog && !quiet && (noticeState === "saving" || noticeState === "saved")
       ? noticeState
       : null;
   const status = (
     <p
       className={
-        toast !== null && !quiet
-          ? styles.toast
-          : quiet
-            ? styles.srOnly
-            : styles.notice
+        toast !== null ? styles.toast : quiet ? styles.srOnly : styles.notice
       }
       data-state={noticeState}
-      data-toast={toast !== null && !quiet ? toast : undefined}
+      data-toast={toast ?? undefined}
       role="status"
       aria-live="polite"
     >

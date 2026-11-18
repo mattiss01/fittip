@@ -819,6 +819,20 @@ describe("PlanManager", () => {
     expect(document.querySelector("[data-toast]")).toBeNull();
   });
 
+  it("floats nothing over an open sheet while it saves", () => {
+    const { rerender } = renderManager();
+    openNewSession(TODAY);
+    useActionStateMock.mockReturnValue([
+      INITIAL_PLAN_ACTION_STATE,
+      action,
+      true,
+    ]);
+    rerender(manager());
+
+    expect(screen.getByRole("dialog")).toBeVisible();
+    expect(document.querySelector("[data-toast]")).toBeNull();
+  });
+
   it("opens a session from a compact card that carries no verbs", () => {
     renderManager(INITIAL_PLAN_ACTION_STATE, [
       session({ seriesId: "7f000000-0000-4000-8000-0000000000b1" }),

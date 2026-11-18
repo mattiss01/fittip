@@ -68,15 +68,9 @@
   animation: toast-saved 3s ease forwards;
 }
 
+/* It starts shown: "Saving…" was already in its place. */
 @keyframes toast-saved {
-  0% {
-    opacity: 0;
-    transform: translateY(-0.5rem);
-  }
-  8% {
-    opacity: 1;
-    transform: none;
-  }
+  0%,
   85% {
     opacity: 1;
   }
