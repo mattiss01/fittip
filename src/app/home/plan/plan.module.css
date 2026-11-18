@@ -233,6 +233,23 @@
   resize: vertical;
 }
 
+/* iOS Safari gives a native time or date control its own minimum width,
+   which ignores `width: 100%`: beside Minutes, on an iPhone wider than
+   400px, Starts at ran over it (owner, 18 Nov 2026). Without the native
+   appearance it takes the column it is given; its value is left-aligned,
+   as typed text is. */
+.field input[type="time"],
+.field input[type="date"] {
+  min-width: 0;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.field input[type="time"]::-webkit-date-and-time-value,
+.field input[type="date"]::-webkit-date-and-time-value {
+  text-align: left;
+}
+
 .fieldPair {
   display: grid;
   grid-template-columns: 1fr 1fr;
