@@ -6,6 +6,8 @@ import { INITIAL_LIBRARY_SAVE_ACTION_STATE } from "./action-state";
 import { saveLogToLibraryAction, saveSessionToLibraryAction } from "./actions";
 import styles from "./saved.module.css";
 
+import { toastOf } from "@/lib/ui/toast";
+
 /**
  * The save entry point, rendered inside a planned session on the Plan, and on
  * a log's receipt and Progress record. It holds its own action state so one
@@ -81,6 +83,17 @@ export function SaveToLibrary({
           state.status === "idle" ? styles.srOnly : styles.inlineNotice
         }
         data-state={pending ? "pending" : state.status}
+        // On a receipt, Today or Progress it floats like any save; in the
+        // session page's pop-up it is the pop-up's one line, so it stays.
+        data-toast={
+          bare
+            ? undefined
+            : toastOf({
+                saving: pending,
+                landed: state.status === "saved",
+                text: pending ? "Saving to your library…" : state.message,
+              })
+        }
         role="status"
         aria-live="polite"
       >

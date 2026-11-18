@@ -574,11 +574,17 @@ export function ProposalReview({
         <p
           className={notice.status === "idle" ? styles.srOnly : styles.notice}
           data-state={busy ? "pending" : notice.status}
-          data-toast={toastOf({
-            saving: busy,
-            landed: LANDED.has(notice.status),
-            text: busy ? "…" : notice.message,
-          })}
+          // Asking the coach again is a wait on the coach, not a save, so it
+          // stays in the dock beside its CoachWait.
+          data-toast={
+            regenerating
+              ? undefined
+              : toastOf({
+                  saving: pending || discarding,
+                  landed: LANDED.has(notice.status),
+                  text: notice.message || (busy ? "…" : ""),
+                })
+          }
           role="status"
           aria-live="polite"
         >
