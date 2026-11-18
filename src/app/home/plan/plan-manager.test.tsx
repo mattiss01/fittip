@@ -787,6 +787,38 @@ describe("PlanManager", () => {
     ).toHaveAttribute("href", "/home/plan");
   });
 
+  // Owner, 18 Nov 2026: a save is said over the top of the screen and fades;
+  // a refusal stays in the page beside its Reload link.
+  it("floats a saved change and keeps a refusal in the page", () => {
+    const { rerender } = renderManager({
+      status: "saved",
+      message: "Session added.",
+      submission: 1,
+      operation: "add",
+      localDate: TODAY,
+    });
+    const toast = document.querySelector('[role="status"][data-toast]');
+    expect(toast).toHaveTextContent("Session added.");
+    expect(toast).toHaveAttribute("data-toast", "saved");
+
+    useActionStateMock.mockReturnValue([
+      {
+        status: "conflict",
+        message: "Your plan changed somewhere else.",
+        submission: 2,
+        operation: "cancel",
+        conflict: "stale",
+      } satisfies PlanActionState,
+      action,
+      false,
+    ]);
+    rerender(manager());
+    expect(screen.getAllByRole("status")[0]).toHaveTextContent(
+      "Your plan changed somewhere else.",
+    );
+    expect(document.querySelector("[data-toast]")).toBeNull();
+  });
+
   it("opens a session from a compact card that carries no verbs", () => {
     renderManager(INITIAL_PLAN_ACTION_STATE, [
       session({ seriesId: "7f000000-0000-4000-8000-0000000000b1" }),

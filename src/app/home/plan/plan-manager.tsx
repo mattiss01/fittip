@@ -183,6 +183,16 @@ export function PlanManager({
   const noticeState = showSeriesNotice
     ? seriesFirstNoticeState
     : (stall ?? (recovered ? "recovered" : state.status));
+  // Saving and saved float over the top of the screen; anything that needs
+  // the owner's action stays in the page (see .toast).
+  const stalled = showSeriesNotice ? seriesStall !== null : stall !== null;
+  const toast = stalled
+    ? null
+    : (showSeriesNotice ? seriesPending : pending)
+      ? "saving"
+      : noticeState === "saved"
+        ? "saved"
+        : null;
   const showReload = showSeriesNotice
     ? seriesState.status === "conflict" ||
       seriesState.status === "session" ||
@@ -330,8 +340,15 @@ export function PlanManager({
   return (
     <div className={styles.manager}>
       <p
-        className={noticeState === "idle" ? styles.srOnly : styles.notice}
+        className={
+          toast !== null
+            ? styles.toast
+            : noticeState === "idle"
+              ? styles.srOnly
+              : styles.notice
+        }
         data-state={noticeState}
+        data-toast={toast ?? undefined}
         role="status"
         aria-live="polite"
       >
