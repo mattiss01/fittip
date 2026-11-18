@@ -1,5 +1,7 @@
 "use client";
 
+import { toastOf } from "@/lib/ui/toast";
+
 import {
   useActionState,
   useEffect,
@@ -61,9 +63,16 @@ export function ProfileNotice({ state }: { state: ProfileActionState }) {
   if (state.status === "idle" || state.message === "") return null;
   return (
     <div
+      // A new save is a new toast, so its fade starts over.
+      key={state.submission}
       className={styles.notice}
       data-profile-notice
       data-state={state.status}
+      data-toast={toastOf({
+        saving: false,
+        landed: state.status === "saved",
+        text: state.message,
+      })}
       role={state.status === "saved" ? "status" : "alert"}
     >
       {state.message}

@@ -54,7 +54,7 @@ export default async function SettingsPage({
         <h1>Settings</h1>
       </header>
       {passwordNote === null ? null : (
-        <p className={styles.kept} role="status">
+        <p className={styles.kept} role="status" data-toast="saved">
           {passwordNote}
         </p>
       )}

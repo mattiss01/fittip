@@ -1,5 +1,7 @@
 "use client";
 
+import { toastOf } from "@/lib/ui/toast";
+
 import { useActionState } from "react";
 
 import styles from "./memory-suggestions.module.css";
@@ -106,6 +108,11 @@ export function MemorySuggestions({
       <p
         className={state.status === "idle" ? styles.srOnly : styles.notice}
         data-state={pending ? "pending" : state.status}
+        data-toast={toastOf({
+          saving: pending,
+          landed: state.status === "saved",
+          text: pending ? "Saving…" : state.message,
+        })}
         role="status"
         aria-live="polite"
       >

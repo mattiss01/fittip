@@ -65,6 +65,7 @@ import {
   type PlanUnplannedLog,
 } from "./session-view";
 import { byStartTime } from "@/lib/training/start-time";
+import { toastOf } from "@/lib/ui/toast";
 import { useSportColour } from "@/components/sports/owned-sports";
 
 import type { SavedSessionOption } from "@/components/training/saved-session-picker";
@@ -311,20 +312,19 @@ export function PlanManager({
   const [sheet, setSheet] = useSheetClosedOnSave(state, seriesState);
   const [monthOpen, setMonthOpen] = useState(false);
   // Saving and saved float over the top of the screen; anything that needs
-  // the owner's action stays in the page (see .toast). Not over an open
+  // the owner's action stays in the page (see globals.css). Not over an open
   // sheet, whose head it would cover: there the line is only heard.
   const noticeText = activeNotice ?? (showSeriesNotice ? "" : state.message);
   const stalled = showSeriesNotice ? seriesStall !== null : stall !== null;
-  const settling =
-    stalled || noticeText === ""
-      ? null
-      : (showSeriesNotice ? seriesPending : pending)
-        ? "saving"
-        : noticeState === "saved"
-          ? "saved"
-          : null;
+  const settling = stalled
+    ? undefined
+    : toastOf({
+        saving: showSeriesNotice ? seriesPending : pending,
+        landed: noticeState === "saved",
+        text: noticeText,
+      });
   const overlayOpen = sheet !== null || monthOpen || deleting !== null;
-  const toast = overlayOpen ? null : settling;
+  const toast = overlayOpen ? undefined : settling;
   // The plan submission the open sheet started after, so a refusal shown in
   // it is one of its own and not one from before it opened.
   const [sheetSince, setSheetSince] = useState(state.submission);
@@ -346,14 +346,12 @@ export function PlanManager({
     <div className={styles.manager}>
       <p
         className={
-          toast !== null
-            ? styles.toast
-            : settling !== null || noticeState === "idle"
-              ? styles.srOnly
-              : styles.notice
+          settling !== undefined || noticeState === "idle"
+            ? styles.srOnly
+            : styles.notice
         }
         data-state={noticeState}
-        data-toast={toast ?? undefined}
+        data-toast={toast}
         role="status"
         aria-live="polite"
       >

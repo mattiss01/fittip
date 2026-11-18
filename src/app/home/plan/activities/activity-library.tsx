@@ -1,5 +1,7 @@
 "use client";
 
+import { toastOf } from "@/lib/ui/toast";
+
 import { useActionState, useState } from "react";
 
 import {
@@ -41,6 +43,11 @@ export function ActivityLibrary({
       <p
         className={noticeState === "idle" ? styles.srOnly : styles.notice}
         data-state={noticeState}
+        data-toast={toastOf({
+          saving: pending,
+          landed: state.status === "saved",
+          text: pending ? "Saving change…" : state.message,
+        })}
         role="status"
         aria-live="polite"
       >

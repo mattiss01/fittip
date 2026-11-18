@@ -1,5 +1,7 @@
 "use client";
 
+import { toastOf } from "@/lib/ui/toast";
+
 import {
   useActionState,
   useEffect,
@@ -148,6 +150,15 @@ export function MemoryManager({ items, expectedRevision, today }: Props) {
       <p
         className={noticeState === "idle" ? styles.srOnly : styles.notice}
         data-state={noticeState}
+        data-toast={
+          stall === null && !recovered
+            ? toastOf({
+                saving: pending,
+                landed: state.status === "saved",
+                text: notice ?? state.message,
+              })
+            : undefined
+        }
         role="status"
         aria-live="polite"
       >

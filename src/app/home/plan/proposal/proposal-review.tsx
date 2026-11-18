@@ -1,5 +1,7 @@
 "use client";
 
+import { toastOf } from "@/lib/ui/toast";
+
 import {
   CoachOffNotice,
   useCoachAgreed,
@@ -60,6 +62,18 @@ import {
 } from "@/components/memory/memory-suggestions";
 
 const COPY = PLAN_PROPOSAL_COPY;
+
+/**
+ * The replies that say a change was stored, and float as a toast: the
+ * proposal's own, and "saved" from the plan action a planned session uses.
+ */
+const LANDED: ReadonlySet<string> = new Set([
+  "saved",
+  "proposal",
+  "decided",
+  "applied",
+  "discarded",
+]);
 
 /**
  * The review.
@@ -560,6 +574,11 @@ export function ProposalReview({
         <p
           className={notice.status === "idle" ? styles.srOnly : styles.notice}
           data-state={busy ? "pending" : notice.status}
+          data-toast={toastOf({
+            saving: busy,
+            landed: LANDED.has(notice.status),
+            text: busy ? "…" : notice.message,
+          })}
           role="status"
           aria-live="polite"
         >
@@ -774,6 +793,11 @@ function PlannedSession({
       <p
         className={state.status === "idle" ? styles.srOnly : styles.notice}
         data-state={pending ? "pending" : state.status}
+        data-toast={toastOf({
+          saving: pending,
+          landed: LANDED.has(state.status),
+          text: pending ? "…" : state.message,
+        })}
         role="status"
         aria-live="polite"
       >
@@ -932,6 +956,11 @@ function ProposedItem({
           state.status === "idle" ? styles.srOnly : styles.inlineNotice
         }
         data-state={pending ? "pending" : state.status}
+        data-toast={toastOf({
+          saving: pending,
+          landed: LANDED.has(state.status),
+          text: pending ? "…" : state.message,
+        })}
         role="status"
         aria-live="polite"
       >
@@ -1026,6 +1055,11 @@ function CancelItem({
           state.status === "idle" ? styles.srOnly : styles.inlineNotice
         }
         data-state={pending ? "pending" : state.status}
+        data-toast={toastOf({
+          saving: pending,
+          landed: LANDED.has(state.status),
+          text: pending ? "…" : state.message,
+        })}
         role="status"
         aria-live="polite"
       >
