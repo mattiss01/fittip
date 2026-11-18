@@ -4,7 +4,6 @@ import {
   dayLoad,
   formatPlannedTime,
   mondayOf,
-  phaseOfWeek,
   planHistoryStart,
   planWeeks,
   weekIndexOf,
@@ -106,23 +105,5 @@ describe("plan weeks", () => {
     expect(dayLoad([30])).toBe(1);
     expect(dayLoad([45])).toBe(2);
     expect(dayLoad([60, 90])).toBe(3);
-  });
-
-  it("places a week in the phase holding its Thursday", () => {
-    const phases = [
-      { title: "A", focus: "", startDate: "2026-09-01", endDate: "2026-09-29" },
-      { title: "B", focus: "", startDate: "2026-09-30", endDate: "2026-10-31" },
-    ];
-    expect(
-      phaseOfWeek(phases, { start: "2026-09-28", end: "2026-10-04" })?.title,
-    ).toBe("B");
-    expect(
-      phaseOfWeek(phases, { start: "2026-11-30", end: "2026-12-06" }),
-    ).toBeNull();
-    // A phase ending mid-week still names the week when none holds Thursday.
-    expect(
-      phaseOfWeek([phases[0]], { start: "2026-09-28", end: "2026-10-04" })
-        ?.title,
-    ).toBe("A");
   });
 });

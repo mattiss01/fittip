@@ -1,6 +1,6 @@
 /*
  * The Plan, week by week (R3a, owner's choice of variant B on 29 Sep 2026):
- * one week at a time with arrows, the roadmap phase above it, a row of week
+ * one week at a time with arrows, a row of week
  * tiles to jump, compact session cards striped by sport, and a "+" on every
  * day from today on, in the same place whether the day is empty or not. The
  * "+" opens a bottom sheet for that date. Totals say "planned", never done;
@@ -106,7 +106,6 @@
 
 .chips a:focus-visible,
 .coach:focus-visible,
-.phase:focus-visible,
 .cardLink:focus-visible,
 .tile:focus-visible,
 .arrow:focus-visible,
@@ -114,47 +113,6 @@
 .sheetChoice:focus-visible {
   outline: 3px solid var(--pine);
   outline-offset: 2px;
-}
-
-/* ---- Phase ---- */
-
-/* One slim row: the label, the title cut to one line, and the way in. */
-.phase {
-  min-height: 2.75rem;
-  display: flex;
-  align-items: center;
-  gap: 0.65rem;
-  padding: 0.5rem 0.85rem 0.5rem 1rem;
-  border-radius: 0.95rem 0.95rem 0.95rem 0.3rem;
-  background: var(--pine);
-  color: var(--paper);
-  text-decoration: none;
-}
-
-.phaseLabel {
-  flex: none;
-  color: #ff9b77;
-  font: 500 0.66rem var(--font-mono);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.phaseTitle {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  font-size: 0.95rem;
-  font-weight: 700;
-  line-height: 1.3;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.phaseGo {
-  flex: none;
-  font-size: 1.35rem;
-  line-height: 1;
-  opacity: 0.75;
 }
 
 /* ---- The week ---- */

@@ -104,35 +104,6 @@ export function dayLoad(durations: (number | null)[]): 0 | 1 | 2 | 3 {
   return Math.min(3, Math.max(1, Math.ceil(minutes / 30))) as 1 | 2 | 3;
 }
 
-/** A roadmap phase as far as the Plan shows it. */
-export type PlanPhase = {
-  title: string;
-  focus: string;
-  startDate: string;
-  endDate: string;
-};
-
-/**
- * The phase a week sits in: the one holding its Thursday, which is the day
- * that decides which week a date-range belongs to, else the first one that
- * touches the week at all.
- */
-export function phaseOfWeek(
-  phases: readonly PlanPhase[],
-  week: Pick<PlanWeek, "start" | "end">,
-): PlanPhase | null {
-  const thursday = shiftIsoDate(week.start, 3);
-  return (
-    phases.find(
-      (phase) => phase.startDate <= thursday && thursday <= phase.endDate,
-    ) ??
-    phases.find(
-      (phase) => phase.startDate <= week.end && week.start <= phase.endDate,
-    ) ??
-    null
-  );
-}
-
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = [
   "Jan",
