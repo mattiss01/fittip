@@ -70,6 +70,16 @@ Ordered by dependency. A lane is named where it is not the build lane.
 
 **Coach and records.**
 
+- [~] **A fill reads every recent result, not only the session's sport.** Careful lane (what
+      the coach is sent). Owner, 19 Nov 2026: a fill did not know about push-ups logged at
+      least five times with results. Results reached the coach only for the session's own
+      activities, its matching saved sessions, and library entries of the same sport, so an
+      entry filed under another sport, or a log row with no library link, never did.
+      Decided: after the session's and saved sessions' activities, same-sport entries most
+      recently done first, then anything else done in the six months, newest first. The
+      cap of twelve, the three results each and the 4,000-byte share stay, so a call costs
+      no more; no migration, no new kind of data. A library entry whose result is sent is
+      kept ahead of untried ones when the library is trimmed, so it can still be linked.
 - [ ] **The plan coach does not see a recovery day.** Live run, 12 Nov 2026: Tom at All in
       was offered hard trainer intervals in place of Tuesday's easy ride, a day marked
       "Already a recovery day" (and his physio appointment). Since 17 Oct 2026 the coach
