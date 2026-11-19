@@ -175,9 +175,10 @@ export type SessionDetailAssembly = {
  *   sport does, at most three.
  * - Recent actuals: for the activities that matter here — the session's own,
  *   the chosen saved sessions', then same-sport library entries most recently
- *   done first, at most twelve with a result — the last three times each was
- *   logged with a recorded actual, newest first. An activity is matched by its
- *   library link when both sides have one, and by its name otherwise.
+ *   done first, then anything else done, most recently first, at most twelve
+ *   with a result — the last three times each was logged with a recorded
+ *   actual, newest first. An activity is matched by its library link when both
+ *   sides have one, and by its name otherwise.
  */
 export function selectSessionDetailRecords(input: {
   sessionId: string;
@@ -271,19 +272,145 @@ export function selectSessionDetailRecords(input: {
     activities: saved.activities.map(toActivityRecord),
   }));
 
+  // The activities worth showing history for, in priority order and once each.
+  // Not capped here: the cap is for activities with a result, and counting
+  // ones never done let a dozen untried library entries, read alphabetically,
+  // crowd out a "Wall handstand" done days before (owner, 9 Nov 2026).
+  //
+  // "own" is the session's and its saved sessions' activities; "sport" the
+  // library's entries of the session's sport; "other" everything else the
+  // athlete has done. Until 19 Nov 2026 there was no "other", and a fill of a
+  // strength session did not know about push-ups logged five times with
+  // results, because the library filed them under another sport (owner).
+  const relevant: RelevantActivity[] = [];
+  const seen = new Set<string>();
+  const coveredNames = new Set<string>();
+  const consider = (activity: RelevantActivity, key: string) => {
+    if (seen.has(key)) return;
+    seen.add(key);
+    relevant.push(activity);
+  };
+  // The session's, the saved sessions' and the library's activities: matched
+  // by link when both sides have one and by name otherwise, so each also
+  // takes the unlinked rows of its name.
+  const considerLinkable = (
+    name: string,
+    personalActivityId: string | null,
+    tier: RelevantActivity["tier"],
+  ) => {
+    coveredNames.add(activityNameKey(name));
+    consider(
+      {
+        name,
+        personalActivityId,
+        tier,
+        matches: matchesByLinkOrName(name, personalActivityId),
+      },
+      personalActivityId ?? `name:${activityNameKey(name)}`,
+    );
+  };
+  for (const activity of sessionActivities) {
+    considerLinkable(activity.name, activity.personalActivityId, "own");
+  }
+  for (const saved of savedRecords) {
+    for (const activity of saved.activities) {
+      considerLinkable(activity.name, activity.personalActivityId, "own");
+    }
+  }
+  // An unlinked "own" activity matches every row of its name, linked or not,
+  // so nothing of that name is read a second time under another activity.
+  const ownUnlinkedNames = new Set(
+    relevant
+      .filter((activity) => activity.personalActivityId === null)
+      .map((activity) => activityNameKey(activity.name)),
+  );
+  for (const entry of input.library) {
+    if (ownUnlinkedNames.has(activityNameKey(entry.name))) continue;
+    considerLinkable(
+      entry.name,
+      entry.id,
+      activityNameKey(entry.sport) === sportKey ? "sport" : "other",
+    );
+  }
+  // What none of those holds: a row linked to an entry since removed, read by
+  // that link alone, and a row logged without a link under a name none of them
+  // has, read by name among the unlinked alone. Matching strictly keeps a row
+  // from being counted under two activities. Both are sent unlinked, because
+  // the coach may only link an entry it was sent in "library".
+  for (const completion of input.completions) {
+    for (const done of completion.activities) {
+      const removedId = done.personalActivityId;
+      if (removedId) {
+        if (seen.has(removedId)) continue;
+        if (ownUnlinkedNames.has(activityNameKey(done.name))) continue;
+        consider(
+          {
+            name: done.name,
+            personalActivityId: null,
+            tier: "other",
+            matches: (row) => row.personalActivityId === removedId,
+          },
+          removedId,
+        );
+        continue;
+      }
+      const nameKey = activityNameKey(done.name);
+      if (coveredNames.has(nameKey)) continue;
+      consider(
+        {
+          name: done.name,
+          personalActivityId: null,
+          tier: "other",
+          matches: (row) =>
+            !row.personalActivityId && activityNameKey(row.name) === nameKey,
+        },
+        `name:${nameKey}`,
+      );
+    }
+  }
+
+  const withResults = relevant
+    .map((activity) => ({
+      activity,
+      entries: actualsFor(activity.matches, input.completions),
+    }))
+    .filter(({ entries }) => entries.length > 0);
+  // "own" keeps its order and comes first; "sport" and then "other" are each
+  // read done most recently first, so the cap keeps what the athlete is
+  // actually training rather than what sorts early.
+  const inTier = (tier: RelevantActivity["tier"]) =>
+    withResults.filter(({ activity }) => activity.tier === tier);
+  const byRecency = (tier: RelevantActivity["tier"]) =>
+    inTier(tier).toSorted((a, b) =>
+      b.entries[0].localDate.localeCompare(a.entries[0].localDate),
+    );
+  const recentActuals = [
+    ...inTier("own"),
+    ...byRecency("sport"),
+    ...byRecency("other"),
+  ]
+    .slice(0, SESSION_DETAIL_MAX_ACTUAL_ACTIVITIES)
+    .map(({ activity, entries }) => ({
+      name: activity.name,
+      personalActivityId: activity.personalActivityId,
+      entries,
+    }));
+
   // Ordered so the trim in `buildSessionDetailContext` loses the least useful
   // entries: those the session or its saved sessions already link come first,
   // because a coach told to keep them needs their definitions to link them;
-  // then the session's sport; then the rest in the repository's order.
-  const referenced = new Set(
-    [...sessionActivities, ...savedRecords.flatMap((saved) => saved.activities)]
-      .map((activity) => activity.personalActivityId)
-      .filter((id): id is string => id !== null),
-  );
+  // then the session's sport and any entry a result above names, so the
+  // coach can link the activity whose numbers it was given; then the rest in
+  // the repository's order.
+  const referenced = linkedIds([
+    ...sessionActivities,
+    ...savedRecords.flatMap((saved) => saved.activities),
+  ]);
+  const withResult = linkedIds(recentActuals);
   const rank = (entry: PersonalActivity) =>
     referenced.has(entry.id)
       ? 0
-      : activityNameKey(entry.sport) === sportKey
+      : activityNameKey(entry.sport) === sportKey || withResult.has(entry.id)
         ? 1
         : 2;
   const library = input.library
@@ -294,63 +421,6 @@ export function selectSessionDetailRecords(input: {
       name: entry.name,
       sport: entry.sport,
       measurementMode: entry.measurementMode,
-    }));
-
-  // The activities worth showing history for, in priority order and once each.
-  // Not capped here: the cap is for activities with a result, and counting
-  // ones never done let a dozen untried library entries, read alphabetically,
-  // crowd out a "Wall handstand" done days before (owner, 9 Nov 2026).
-  const relevant: {
-    name: string;
-    personalActivityId: string | null;
-    fromLibrary: boolean;
-  }[] = [];
-  const seen = new Set<string>();
-  const consider = (
-    name: string,
-    personalActivityId: string | null,
-    fromLibrary = false,
-  ) => {
-    const key = personalActivityId ?? `name:${activityNameKey(name)}`;
-    if (seen.has(key)) return;
-    seen.add(key);
-    relevant.push({ name, personalActivityId, fromLibrary });
-  };
-  for (const activity of sessionActivities) {
-    consider(activity.name, activity.personalActivityId);
-  }
-  for (const saved of savedRecords) {
-    for (const activity of saved.activities) {
-      consider(activity.name, activity.personalActivityId);
-    }
-  }
-  for (const entry of library) {
-    if (activityNameKey(entry.sport) === sportKey) {
-      consider(entry.name, entry.id, true);
-    }
-  }
-
-  const withResults = relevant
-    .map((activity) => ({
-      activity,
-      entries: actualsFor(activity, input.completions),
-    }))
-    .filter(({ entries }) => entries.length > 0);
-  // The session's and saved sessions' own keep their order and come first;
-  // the library's follow, done most recently first, so the cap keeps what
-  // the athlete is actually training rather than what sorts early.
-  const named = withResults.filter(({ activity }) => !activity.fromLibrary);
-  const fromLibrary = withResults
-    .filter(({ activity }) => activity.fromLibrary)
-    .toSorted((a, b) =>
-      b.entries[0].localDate.localeCompare(a.entries[0].localDate),
-    );
-  const recentActuals = [...named, ...fromLibrary]
-    .slice(0, SESSION_DETAIL_MAX_ACTUAL_ACTIVITIES)
-    .map(({ activity, entries }) => ({
-      name: activity.name,
-      personalActivityId: activity.personalActivityId,
-      entries,
     }));
 
   return {
@@ -512,24 +582,52 @@ function toActivityRecord(activity: {
   };
 }
 
+type LoggedActivity = Completion["activities"][number];
+
+/** An activity whose last results a fill may be sent, and how to find them. */
+type RelevantActivity = {
+  name: string;
+  /** What is sent: only ever an entry the coach can find in "library". */
+  personalActivityId: string | null;
+  tier: "own" | "sport" | "other";
+  matches: (row: LoggedActivity) => boolean;
+};
+
+/** By link when both sides have one, and by name otherwise. */
+function matchesByLinkOrName(
+  name: string,
+  personalActivityId: string | null,
+): (row: LoggedActivity) => boolean {
+  const nameKey = activityNameKey(name);
+  return (row) =>
+    personalActivityId !== null && row.personalActivityId
+      ? row.personalActivityId === personalActivityId
+      : activityNameKey(row.name) === nameKey;
+}
+
+function linkedIds(
+  activities: readonly { personalActivityId: string | null }[],
+): Set<string> {
+  return new Set(
+    activities
+      .map((activity) => activity.personalActivityId)
+      .filter((id): id is string => id !== null),
+  );
+}
+
 /**
  * The last recorded actuals for one activity. A log without an actual (a skip,
  * or one written before A4) says nothing about load and is passed over rather
  * than sent as an empty entry.
  */
 function actualsFor(
-  activity: { name: string; personalActivityId: string | null },
+  matches: (row: LoggedActivity) => boolean,
   completions: readonly Completion[],
 ): SessionDetailRecords["recentActuals"][number]["entries"] {
-  const nameKey = activityNameKey(activity.name);
   const entries: SessionDetailRecords["recentActuals"][number]["entries"] = [];
   for (const completion of completions) {
     if (entries.length >= SESSION_DETAIL_MAX_ACTUAL_ENTRIES) break;
-    const match = completion.activities.find((done) =>
-      activity.personalActivityId !== null && done.personalActivityId
-        ? done.personalActivityId === activity.personalActivityId
-        : activityNameKey(done.name) === nameKey,
-    );
+    const match = completion.activities.find(matches);
     if (!match || match.actualMeasurement === undefined) continue;
     entries.push({
       completionId: completion.id,

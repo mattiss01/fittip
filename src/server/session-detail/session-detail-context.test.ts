@@ -21,6 +21,7 @@ import { COACH_AI_CONTEXT_LIMITS } from "@/server/ai/context";
 const SESSION_ID = "5d000000-0000-4000-8000-000000000001";
 const SQUAT_ID = "5d000000-0000-4000-8000-0000000000a1";
 const ROW_ID = "5d000000-0000-4000-8000-0000000000a2";
+const PUSH_UPS_ID = "5d000000-0000-4000-8000-0000000000d1";
 
 function planSession(
   overrides: Partial<RollingPlanSession> = {},
@@ -366,14 +367,15 @@ describe("selectSessionDetailRecords", () => {
     ]);
   });
 
-  it("considers same-sport library entries for actuals, and no others", () => {
+  it("reads same-sport library entries first, then those of any other sport", () => {
     const records = select({
       library: [
         libraryEntry(),
         libraryEntry({ id: ROW_ID, name: "Rowing", sport: "Rowing" }),
       ],
       completions: [
-        completion("2026-10-05", [
+        // Rowing is the more recent, and still comes second.
+        completion("2026-10-06", [
           {
             personalActivityId: ROW_ID,
             position: 0,
@@ -382,9 +384,11 @@ describe("selectSessionDetailRecords", () => {
             measurementMode: "duration_intensity",
             actualMeasurement: { duration_minutes: 20 },
           },
+        ]),
+        completion("2026-10-05", [
           {
             personalActivityId: SQUAT_ID,
-            position: 1,
+            position: 0,
             name: "Back squat",
             sport: "Strength",
             measurementMode: "sets_reps_load",
@@ -397,6 +401,313 @@ describe("selectSessionDetailRecords", () => {
     expect(records.library).toHaveLength(2);
     expect(records.recentActuals.map((entry) => entry.name)).toEqual([
       "Back squat",
+      "Rowing",
+    ]);
+  });
+
+  it("finds push-ups filed under another sport (owner, 19 Nov 2026)", () => {
+    // A fill of a strength session did not know about push-ups done at
+    // least five times with results: the library had them as bodyweight.
+
+    const records = select({
+      planSessions: [planSession({ title: "Upper body" })],
+      library: [
+        libraryEntry({
+          id: PUSH_UPS_ID,
+          name: "Push-ups",
+          sport: "Bodyweight",
+        }),
+      ],
+      completions: [
+        "2026-10-06",
+        "2026-10-04",
+        "2026-10-02",
+        "2026-09-30",
+        "2026-09-28",
+      ].map((date, index) =>
+        completion(date, [
+          {
+            personalActivityId: PUSH_UPS_ID,
+            position: 0,
+            name: "Push-ups",
+            sport: "Bodyweight",
+            measurementMode: "sets_reps_load",
+            actualMeasurement: { groups: [{ sets: 3, reps: 15 - index }] },
+          },
+        ]),
+      ),
+    }) as SessionDetailRecords;
+
+    expect(records.recentActuals).toHaveLength(1);
+    expect(records.recentActuals[0]).toMatchObject({
+      name: "Push-ups",
+      personalActivityId: PUSH_UPS_ID,
+    });
+    expect(
+      records.recentActuals[0].entries.map((entry) => entry.localDate),
+    ).toEqual(["2026-10-06", "2026-10-04", "2026-10-02"]);
+  });
+
+  it("finds a result logged without a library link, by its name", () => {
+    const records = select({
+      completions: [
+        completion("2026-10-05", [
+          {
+            position: 0,
+            name: "Push-ups",
+            sport: "Bodyweight",
+            measurementMode: "sets_reps_load",
+            actualMeasurement: { groups: [{ sets: 3, reps: 12 }] },
+          },
+        ]),
+        completion("2026-10-03", [
+          {
+            position: 0,
+            name: "push-ups ",
+            sport: "Bodyweight",
+            measurementMode: "sets_reps_load",
+            actualMeasurement: { groups: [{ sets: 3, reps: 10 }] },
+          },
+        ]),
+      ],
+    }) as SessionDetailRecords;
+
+    expect(records.recentActuals).toHaveLength(1);
+    expect(records.recentActuals[0].personalActivityId).toBeNull();
+    expect(
+      records.recentActuals[0].entries.map((entry) => entry.localDate),
+    ).toEqual(["2026-10-05", "2026-10-03"]);
+  });
+
+  it("reads an unlinked row with a library entry's name once, under the entry", () => {
+    const records = select({
+      library: [
+        libraryEntry({
+          id: PUSH_UPS_ID,
+          name: "Push-ups",
+          sport: "Bodyweight",
+        }),
+      ],
+      completions: [
+        completion("2026-10-05", [
+          {
+            position: 0,
+            name: "Push-ups",
+            sport: "Bodyweight",
+            measurementMode: "sets_reps_load",
+            actualMeasurement: { groups: [{ sets: 3, reps: 12 }] },
+          },
+        ]),
+        completion("2026-10-03", [
+          {
+            personalActivityId: PUSH_UPS_ID,
+            position: 0,
+            name: "Push-ups",
+            sport: "Bodyweight",
+            measurementMode: "sets_reps_load",
+            actualMeasurement: { groups: [{ sets: 3, reps: 10 }] },
+          },
+        ]),
+      ],
+    }) as SessionDetailRecords;
+
+    expect(records.recentActuals).toHaveLength(1);
+    expect(records.recentActuals[0].personalActivityId).toBe(PUSH_UPS_ID);
+    expect(records.recentActuals[0].entries).toHaveLength(2);
+  });
+
+  it("names no link for a row whose library entry is gone", () => {
+    // The coach may only link an entry it was sent in "library".
+    const records = select({
+      completions: [
+        completion("2026-10-05", [
+          {
+            personalActivityId: "5d000000-0000-4000-8000-0000000000e1",
+            position: 0,
+            name: "Dips",
+            sport: "Strength",
+            measurementMode: "sets_reps_load",
+            actualMeasurement: { groups: [{ sets: 3, reps: 8 }] },
+          },
+        ]),
+      ],
+    }) as SessionDetailRecords;
+
+    expect(records.recentActuals).toEqual([
+      expect.objectContaining({ name: "Dips", personalActivityId: null }),
+    ]);
+  });
+
+  it("keeps a removed entry's rows apart from a new entry of the same name", () => {
+    // Push-ups deleted and made again: the old rows link the old id, and
+    // the new entry's link never matches them.
+    const records = select({
+      library: [
+        libraryEntry({
+          id: PUSH_UPS_ID,
+          name: "Push-ups",
+          sport: "Bodyweight",
+        }),
+      ],
+      completions: [
+        completion("2026-10-05", [
+          {
+            personalActivityId: PUSH_UPS_ID,
+            position: 0,
+            name: "Push-ups",
+            sport: "Bodyweight",
+            measurementMode: "sets_reps_load",
+            actualMeasurement: { groups: [{ sets: 3, reps: 15 }] },
+          },
+        ]),
+        completion("2026-09-20", [
+          {
+            personalActivityId: "5d000000-0000-4000-8000-0000000000e1",
+            position: 0,
+            name: "Push-ups",
+            sport: "Bodyweight",
+            measurementMode: "sets_reps_load",
+            actualMeasurement: { groups: [{ sets: 3, reps: 10 }] },
+          },
+        ]),
+      ],
+    }) as SessionDetailRecords;
+
+    expect(
+      records.recentActuals.map((activity) => [
+        activity.personalActivityId,
+        activity.entries.map((entry) => entry.localDate),
+      ]),
+    ).toEqual([
+      [PUSH_UPS_ID, ["2026-10-05"]],
+      [null, ["2026-09-20"]],
+    ]);
+  });
+
+  it("sends an unlinked row once when the session names its removed entry", () => {
+    const removedId = "5d000000-0000-4000-8000-0000000000e1";
+    const records = select({
+      planSessions: [
+        planSession({
+          activities: [
+            {
+              personalActivityId: removedId,
+              position: 0,
+              name: "Dips",
+              sport: "Strength",
+              measurementMode: "sets_reps_load",
+            },
+          ] as RollingPlanSession["activities"],
+        }),
+      ],
+      completions: [
+        completion("2026-10-05", [
+          {
+            position: 0,
+            name: "Dips",
+            sport: "Strength",
+            measurementMode: "sets_reps_load",
+            actualMeasurement: { groups: [{ sets: 3, reps: 8 }] },
+          },
+        ]),
+        completion("2026-10-01", [
+          {
+            personalActivityId: removedId,
+            position: 0,
+            name: "Dips",
+            sport: "Strength",
+            measurementMode: "sets_reps_load",
+            actualMeasurement: { groups: [{ sets: 3, reps: 6 }] },
+          },
+        ]),
+      ],
+    }) as SessionDetailRecords;
+
+    expect(records.recentActuals).toHaveLength(1);
+    expect(
+      records.recentActuals[0].entries.map((entry) => entry.localDate),
+    ).toEqual(["2026-10-05", "2026-10-01"]);
+  });
+
+  it("reads nothing twice behind an unlinked activity of the session", () => {
+    // The session's unlinked "Dips" matches every row of that name: the
+    // library's entry and a removed one add nothing beside it.
+    const records = select({
+      planSessions: [
+        planSession({
+          activities: [
+            {
+              position: 0,
+              name: "Dips",
+              sport: "Strength",
+              measurementMode: "sets_reps_load",
+            },
+          ] as RollingPlanSession["activities"],
+        }),
+      ],
+      library: [
+        libraryEntry({ id: PUSH_UPS_ID, name: "dips", sport: "Bodyweight" }),
+      ],
+      completions: [
+        completion("2026-10-05", [
+          {
+            personalActivityId: PUSH_UPS_ID,
+            position: 0,
+            name: "Dips",
+            sport: "Bodyweight",
+            measurementMode: "sets_reps_load",
+            actualMeasurement: { groups: [{ sets: 3, reps: 8 }] },
+          },
+        ]),
+        completion("2026-10-01", [
+          {
+            personalActivityId: "5d000000-0000-4000-8000-0000000000e1",
+            position: 0,
+            name: "Dips",
+            sport: "Strength",
+            measurementMode: "sets_reps_load",
+            actualMeasurement: { groups: [{ sets: 3, reps: 6 }] },
+          },
+        ]),
+      ],
+    }) as SessionDetailRecords;
+
+    expect(records.recentActuals).toHaveLength(1);
+    expect(
+      records.recentActuals[0].entries.map((entry) => entry.localDate),
+    ).toEqual(["2026-10-05", "2026-10-01"]);
+    // Still sent as a definition the coach can link.
+    expect(records.library.map((entry) => entry.id)).toEqual([PUSH_UPS_ID]);
+  });
+
+  it("lists a library entry with a result before untried ones of other sports", () => {
+    // So the trim to 8,000 bytes keeps the definition its result can link to.
+    const records = select({
+      library: [
+        libraryEntry({ id: ROW_ID, name: "Alpha drill", sport: "Rowing" }),
+        libraryEntry({
+          id: PUSH_UPS_ID,
+          name: "Push-ups",
+          sport: "Bodyweight",
+        }),
+      ],
+      completions: [
+        completion("2026-10-05", [
+          {
+            personalActivityId: PUSH_UPS_ID,
+            position: 0,
+            name: "Push-ups",
+            sport: "Bodyweight",
+            measurementMode: "sets_reps_load",
+            actualMeasurement: { groups: [{ sets: 3, reps: 12 }] },
+          },
+        ]),
+      ],
+    }) as SessionDetailRecords;
+
+    expect(records.library.map((entry) => entry.name)).toEqual([
+      "Push-ups",
+      "Alpha drill",
     ]);
   });
 
