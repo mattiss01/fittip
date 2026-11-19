@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { Chivo_Mono, Schibsted_Grotesk } from "next/font/google";
 import "./globals.css";
@@ -29,6 +29,25 @@ export const metadata: Metadata = {
     follow: false,
     nocache: true,
   },
+  // Saved to an iPhone's home screen, FitTip opens without Safari's bars.
+  // "default" keeps the status bar as its own strip above the page, so
+  // nothing slides under the clock.
+  appleWebApp: {
+    capable: true,
+    title: "FitTip",
+    statusBarStyle: "default",
+  },
+};
+
+// viewportFit "cover" lets the page reach the screen's edges in an installed
+// app, which is what switches on the env(safe-area-inset-*) padding the
+// bottom navigation, docks and sheets already carry; without it those insets
+// are zero. themeColor is the sage page background, for the status bar.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#edf0e8",
 };
 
 export default function RootLayout({
