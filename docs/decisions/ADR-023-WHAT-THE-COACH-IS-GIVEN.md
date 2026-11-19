@@ -113,6 +113,15 @@ than being cut silently.
     source when it supplied a result, and what travels of it is the date, how the
     activity is measured, and the result itself; for an activity measured in the owner's
     own words, that result holds their label and unit.
+    Amended 19 November 2026 (owner): whose results. First the session's own activities and
+    its saved sessions', in their order; then library entries of the session's sport, most
+    recently done first; then anything else the athlete did in those six months, most
+    recently done first. Still twelve activities and three results each at most. Before,
+    only the first two groups were read, so push-ups filed under another sport, or logged
+    without a library link, never reached a fill that could have used them. A row whose
+    library entry was removed, or that has none, goes without a link. A library entry
+    whose result is sent ranks with those of the session's sport when decision 17's
+    allocation trims the library, so the coach can still link it.
 19. The prompt: use only equipment the athlete has for where the session is done; at
     home, what the setup lists.
 
