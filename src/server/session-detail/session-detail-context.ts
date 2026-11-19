@@ -317,7 +317,15 @@ export function selectSessionDetailRecords(input: {
       considerLinkable(activity.name, activity.personalActivityId, "own");
     }
   }
+  // An unlinked "own" activity matches every row of its name, linked or not,
+  // so nothing of that name is read a second time under another activity.
+  const ownUnlinkedNames = new Set(
+    relevant
+      .filter((activity) => activity.personalActivityId === null)
+      .map((activity) => activityNameKey(activity.name)),
+  );
   for (const entry of input.library) {
+    if (ownUnlinkedNames.has(activityNameKey(entry.name))) continue;
     considerLinkable(
       entry.name,
       entry.id,
@@ -334,6 +342,7 @@ export function selectSessionDetailRecords(input: {
       const removedId = done.personalActivityId;
       if (removedId) {
         if (seen.has(removedId)) continue;
+        if (ownUnlinkedNames.has(activityNameKey(done.name))) continue;
         consider(
           {
             name: done.name,

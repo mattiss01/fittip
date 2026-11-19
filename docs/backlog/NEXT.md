@@ -80,6 +80,10 @@ Ordered by dependency. A lane is named where it is not the build lane.
       cap of twelve, the three results each and the 4,000-byte share stay, so a call costs
       no more; no migration, no new kind of data. A library entry whose result is sent is
       kept ahead of untried ones when the library is trimmed, so it can still be linked.
+- [ ] **A fill's targets can build on a painful session.** A result from a log flagged for
+      pain more than four weeks ago reaches a fill as plain numbers: ADR-023 decision 15
+      sends flags from the last four weeks only (review, 19 Nov 2026). Whether such a result
+      should be marked or left out is the owner's to say; careful lane.
 - [ ] **The plan coach does not see a recovery day.** Live run, 12 Nov 2026: Tom at All in
       was offered hard trainer intervals in place of Tuesday's easy ride, a day marked
       "Already a recovery day" (and his physio appointment). Since 17 Oct 2026 the coach

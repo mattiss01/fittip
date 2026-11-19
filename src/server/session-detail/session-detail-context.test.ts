@@ -629,6 +629,57 @@ describe("selectSessionDetailRecords", () => {
     ).toEqual(["2026-10-05", "2026-10-01"]);
   });
 
+  it("reads nothing twice behind an unlinked activity of the session", () => {
+    // The session's unlinked "Dips" matches every row of that name: the
+    // library's entry and a removed one add nothing beside it.
+    const records = select({
+      planSessions: [
+        planSession({
+          activities: [
+            {
+              position: 0,
+              name: "Dips",
+              sport: "Strength",
+              measurementMode: "sets_reps_load",
+            },
+          ] as RollingPlanSession["activities"],
+        }),
+      ],
+      library: [
+        libraryEntry({ id: PUSH_UPS_ID, name: "dips", sport: "Bodyweight" }),
+      ],
+      completions: [
+        completion("2026-10-05", [
+          {
+            personalActivityId: PUSH_UPS_ID,
+            position: 0,
+            name: "Dips",
+            sport: "Bodyweight",
+            measurementMode: "sets_reps_load",
+            actualMeasurement: { groups: [{ sets: 3, reps: 8 }] },
+          },
+        ]),
+        completion("2026-10-01", [
+          {
+            personalActivityId: "5d000000-0000-4000-8000-0000000000e1",
+            position: 0,
+            name: "Dips",
+            sport: "Strength",
+            measurementMode: "sets_reps_load",
+            actualMeasurement: { groups: [{ sets: 3, reps: 6 }] },
+          },
+        ]),
+      ],
+    }) as SessionDetailRecords;
+
+    expect(records.recentActuals).toHaveLength(1);
+    expect(
+      records.recentActuals[0].entries.map((entry) => entry.localDate),
+    ).toEqual(["2026-10-05", "2026-10-01"]);
+    // Still sent as a definition the coach can link.
+    expect(records.library.map((entry) => entry.id)).toEqual([PUSH_UPS_ID]);
+  });
+
   it("lists a library entry with a result before untried ones of other sports", () => {
     // So the trim to 8,000 bytes keeps the definition its result can link to.
     const records = select({
