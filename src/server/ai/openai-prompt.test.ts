@@ -21,8 +21,9 @@ import {
 
 // 8,100 since 19 Oct 2026 (ADR-034): the goal suggestion's sentence. 8,500
 // since 21 Oct 2026: the safety rule for a health condition. The worst case
-// is 19,366 tokens against the 20,000 ceiling.
-const STATIC_PREFIX_BUDGET = 8_500;
+// is 19,366 tokens against the 20,000 ceiling. 8,600 since 20 Nov 2026: the
+// rule against writing "prescribe".
+const STATIC_PREFIX_BUDGET = 8_600;
 
 /**
  * The plan prompt gets a larger allowance than the roadmap's, and that is a
@@ -81,7 +82,8 @@ const STATIC_PREFIX_BUDGET = 8_500;
  */
 // 9,800 since 19 Oct 2026 (ADR-034): the goal suggestion's sentence, and
 // the decisions on a previous proposal. 16,766 tokens of 20,000.
-const PLAN_STATIC_PREFIX_BUDGET = 10_100;
+// 10,200 since 20 Nov 2026: the rule against writing "prescribe".
+const PLAN_STATIC_PREFIX_BUDGET = 10_200;
 
 describe("what every prompt says about the athlete's data (ADR-023)", () => {
   it.each([
@@ -95,6 +97,12 @@ describe("what every prompt says about the athlete's data (ADR-023)", () => {
     // conservatively and pointed to a professional (owner, 21 Oct 2026).
     expect(prefix).toContain(
       "keep load conservative and say once that a health professional can advise on what suits them.",
+    );
+    // The output filter refuses any form of "prescribe", and a coach used it
+    // for a masters swim's set: two of four live fills were refused (owner,
+    // 20 Nov 2026, chose the prompt over loosening the filter).
+    expect(prefix).toContain(
+      'Never write "prescribe", "prescribed" or "prescription", even about training',
     );
     // The basics are for load, and body weight is not the coach's subject.
     expect(prefix).toContain(
@@ -128,15 +136,17 @@ describe("what every prompt says about the athlete's data (ADR-023)", () => {
     // 17,966 until ADR-035 sent the "don't repeat" list.
     // 19,341 until the safety rule for a health condition (21 Oct 2026).
     // 19,366 until how hard to push took its paragraph (12 Nov 2026).
-    expect(tokens("create_roadmap", STATIC_PREFIX_BUDGET)).toBe(19_616);
+    // 19,616 until the rule against writing "prescribe" (20 Nov 2026).
+    expect(tokens("create_roadmap", STATIC_PREFIX_BUDGET)).toBe(19_641);
     // 14,991 until the plan's logs took 10,200 bytes (16 Oct 2026); 15,216
     // until the prompt said an empty week is an answer (17 Oct 2026); 15,291
     // until the coach could suggest a cancel (ADR-033, 19 Oct 2026); 15,391
     // until every decision went back with the previous proposal (same day);
     // 16,766 until ADR-035 sent the "don't repeat" list; 18,141 until how
     // hard to push took its paragraph (12 Nov 2026).
+    // 18,391 until the rule against writing "prescribe" (20 Nov 2026).
     expect(tokens("create_seven_day_plan", PLAN_STATIC_PREFIX_BUDGET)).toBe(
-      18_391,
+      18_416,
     );
     // 14,929 until timed sets and intervals joined the mode lines (ADR-038);
     // 14,954 until the safety rule for a health condition (21 Oct 2026);
@@ -150,7 +160,8 @@ describe("what every prompt says about the athlete's data (ADR-023)", () => {
         "fill_session_activities",
         SESSION_ACTIVITIES_STATIC_PREFIX_BUDGET,
       ),
-    ).toBe(16_579);
+      // 16,579 until the rule against writing "prescribe" (20 Nov 2026).
+    ).toBe(16_629);
   });
 });
 
@@ -527,7 +538,8 @@ describe("the plan response grammar", () => {
  *
  *   9,800 + 64 + 55,450 = 65,314   ceil(65,314 / 4) = 16,329  vs  20,000
  */
-const SESSION_ACTIVITIES_STATIC_PREFIX_BUDGET = 9_800;
+// 10,000 since 20 Nov 2026: the rule against writing "prescribe".
+const SESSION_ACTIVITIES_STATIC_PREFIX_BUDGET = 10_000;
 
 describe("the session activities prompt", () => {
   it("says what ADR-023 gave a fill to read, and how to read it", () => {
