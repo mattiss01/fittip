@@ -5,6 +5,7 @@ import {
   mergeAuthResponseHeaders,
   privateRedirect,
 } from "@/lib/supabase/server-user-client";
+import { readRuntimePolicy } from "@/lib/auth/runtime-policy";
 import { requireAllowedVerifiedUser } from "@/lib/auth/verified-user";
 import { ProfileRepository } from "@/server/repositories/profile-repository";
 import { safeAuthReturn } from "@/lib/auth/safe-return";
@@ -26,12 +27,17 @@ export async function POST(request: Request) {
     try {
       await requireAllowedVerifiedUser(client);
       // An account that signed up here was sent a confirmation mail, which
-      // Auth records and the account cannot change. One made for it another
-      // way (a test's, or the local owner's) was not, and goes where signing
-      // in always went.
+      // Auth records and the account cannot change. On the hosted app every
+      // other account is a friend's, made by hand by the owner (ADR-043
+      // decision 3), and is new to FitTip in the same way (owner, 20 Nov
+      // 2026). Locally, one made another way (a test's, or the local
+      // owner's) goes where signing in always went.
       firstSignIn =
         (await profiles.getCurrentProfile()) === null &&
-        Boolean((await client.auth.getUser()).data.user?.confirmation_sent_at);
+        (readRuntimePolicy().mode === "founder-staging" ||
+          Boolean(
+            (await client.auth.getUser()).data.user?.confirmation_sent_at,
+          ));
       await profiles.ensureCurrentProfile();
     } catch {
       await client.auth.signOut();

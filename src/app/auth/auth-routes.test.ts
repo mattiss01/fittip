@@ -257,6 +257,37 @@ describe("production authentication route handlers", () => {
     expectPrivate303(response, "/home/today");
   });
 
+  it("starts setup at the first sign-in of an account the owner made by hand, on the hosted app", async () => {
+    // ADR-043 decision 3: friends' accounts are made in the dashboard, so
+    // no confirmation mail was ever sent (owner, 20 Nov 2026).
+    vi.stubEnv("FITTIP_RUNTIME_MODE", "founder-staging");
+    vi.stubEnv(
+      "FITTIP_ALLOWED_USER_IDS",
+      "00000000-0000-4000-8000-000000000001",
+    );
+    try {
+      getCurrentProfileMock.mockResolvedValue(null);
+      client.auth.getUser.mockResolvedValue({ data: { user: {} } });
+      startSetupMock.mockImplementation(async () => {
+        getSetupStateMock.mockResolvedValue({
+          step: 1,
+          finished: false,
+          skipped: false,
+        });
+      });
+      const response = await signin(
+        post("/auth/signin", {
+          email: "friend@example.com",
+          password: "password",
+        }),
+      );
+      expect(startSetupMock).toHaveBeenCalledOnce();
+      expectPrivate303(response, "/home/you/onboarding");
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
   it("does not start setup for an older account that never ran it", async () => {
     const response = await signin(
       post("/auth/signin", { email: "old@example.com", password: "password" }),
