@@ -39,6 +39,16 @@ B2 and B3 have merged; B4 is the last step. All careful lane.
       and whether the coach then answers in it (the prompts, careful lane); the user's own
       names (activities, sports) are never translated.
 
+- [ ] **Push notifications.** Owner, 20 Nov 2026: one of the next items, not started.
+      Careful lane: a table of each person's push subscriptions (migration, RLS), a
+      signing key pair whose private half is a Vercel secret (owner's approval), and a
+      scheduled sender. Needs a service worker that only receives pushes and caches no
+      pages. On iPhone it works only once FitTip is on the home screen (iOS 16.4+). To
+      settle with the owner first: which events notify (today's session, a coach
+      proposal waiting, an unlogged session), where the schedule runs, and the wording;
+      lock-screen text stays generic, with no health or coach content, and nothing nags
+      after a pain, illness or injury flag.
+
 **Activities in training.** The owner named this on 24 Sep 2026. A session can now hold
 activities and the editor writes them; what is left is everywhere else they should appear.
 The live tables are `rolling_plan_activities` and `completion_activities`; M3-11 dropped
