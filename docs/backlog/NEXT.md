@@ -49,6 +49,23 @@ B2 and B3 have merged; B4 is the last step. All careful lane.
       lock-screen text stays generic, with no health or coach content, and nothing nags
       after a pain, illness or injury flag.
 
+- [ ] **A free timer in the live workout.** Owner, 20 Nov 2026: a stopwatch the athlete
+      opens when they want one, for a 2-minute plank or anything else, and moves out of
+      the way. Nothing is saved: it never touches the workout clock, the log or the coach.
+      Closed by default behind a small button; open, a panel that can be dragged. To
+      settle with the owner on a prototype first: counting up only, or also a countdown
+      that signals the end (vibration works on Android, not on iPhone Safari, so the end
+      needs a sound or a visible flash there); free dragging, or snapping to a corner,
+      which fights page scrolling less at 390px; and whether it stays running when the
+      panel is closed. Build lane.
+
+- [ ] **Rethink "Anything off?" in the log — to talk through with the owner first.** Owner,
+      20 Nov 2026: the step should be thought about again. Today it cannot be passed by:
+      every log answers it with a signal or with "Nothing was off"
+      (`src/app/home/log/log-form.tsx`). What feels wrong is not yet said. The signals
+      feed the conservative pain, illness and fatigue behaviour, so changing what is asked
+      or whether it is required is a safety choice for the owner.
+
 **Activities in training.** The owner named this on 24 Sep 2026. A session can now hold
 activities and the editor writes them; what is left is everywhere else they should appear.
 The live tables are `rolling_plan_activities` and `completion_activities`; M3-11 dropped
