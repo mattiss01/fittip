@@ -376,7 +376,9 @@ export const COACH_AI_CONTEXT_LIMITS = {
       //   prefix 8,500 + wrapper 64 + context 68,900 = 77,464 characters
       //   ceil(77,464 / 4) = 19,366  against maxInputTokens 20,000
       //   (the prefix budget 8,400 until the safety rule for a health
-      //   condition, 21 Oct 2026).
+      //   condition, 21 Oct 2026; 8,600 since the rule against writing
+      //   "prescribe", 20 Nov 2026, which `openai-prompt.test.ts` holds
+      //   with the push paragraph to 19,641).
       total: 68_900,
     },
   },
@@ -504,6 +506,9 @@ export const COACH_AI_CONTEXT_LIMITS = {
       //
       //   prefix 10,100 + wrapper 64 + context 62,400 = 72,564 characters
       //   ceil(72,564 / 4) = 18,141  against maxInputTokens 20,000.
+      //   The prefix budget is 10,200 since the rule against writing
+      //   "prescribe" (20 Nov 2026); `openai-prompt.test.ts` holds the worst
+      //   case with the push paragraph to 18,416.
       total: 62_400,
     },
   },
