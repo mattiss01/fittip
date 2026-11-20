@@ -57,10 +57,10 @@ export async function POST(request: Request) {
     // the sign-in.
     //
     // A confirmation link opened in another browser confirms the account
-    // without reaching our callback, so nothing was begun for it. Such an
-    // account signed up here and has no profile until this sign-in makes
-    // one, and that is how it is told from an older account that never ran
-    // setup: its setup is begun here instead.
+    // without reaching our callback, so nothing was begun for it; nor was
+    // anything for a friend's account the owner made by hand. Either has no
+    // profile until this sign-in makes one, and that is how it is told from
+    // an older account that never ran setup: its setup is begun here instead.
     try {
       if (firstSignIn) await profiles.startSetup();
       const setup = await profiles.getSetupState();
