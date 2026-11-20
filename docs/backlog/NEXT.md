@@ -70,6 +70,15 @@ Ordered by dependency. A lane is named where it is not the build lane.
 
 **Coach and records.**
 
+- [~] **The coach never writes "prescribe".** Careful lane (the prompt). Live runs, 19 Nov
+      2026: two of four fills of Chris's Masters swim were refused as `unsafe_content` for
+      "the coach's prescribed workout", training language the deny list reads as medical.
+      A narrow filter exception was tried and dropped: its review found it let through
+      "I'd prescribe a plan: 400mg every 6 hours" and "your physio's prescribed plan for
+      the tendon". Owner, 20 Nov 2026: the filter stays as strict as it is; the shared
+      safety rules tell the coach never to write the word, even about training. All three
+      prompt versions move; each prefix budget grows to hold the line (worst case 19,641
+      of 20,000 tokens). No migration.
 - [ ] **A fill's targets can build on a painful session.** A result from a log flagged for
       pain more than four weeks ago reaches a fill as plain numbers: ADR-023 decision 15
       sends flags from the last four weeks only (review, 19 Nov 2026). Whether such a result

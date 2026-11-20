@@ -39,8 +39,12 @@ export const COACH_AI_PROMPT_VERSIONS = {
   // All three on 21 Oct 2026: the shared safety rules gained a health
   // condition (owner: a pregnancy in the note got no pointer to a
   // professional).
-  create_roadmap: "roadmap-v4.3-2026-10-21",
-  create_seven_day_plan: "seven-day-plan-v2.1-2026-10-21",
+  // All three again on 20 Nov 2026: never write "prescribe" in any form, which
+  // the output filter refuses (two of four live fills of a masters swim
+  // refused for "the coach's prescribed workout"; owner chose the prompt over
+  // loosening the filter).
+  create_roadmap: "roadmap-v4.4-2026-11-20",
+  create_seven_day_plan: "seven-day-plan-v2.2-2026-11-20",
   // 28 Oct 2026 (ADR-040): the session's coach's note and each activity's
   // reason are read, and the summary becomes that note.
   // 29 Oct 2026: a reason says why the activity, not why its numbers, so
@@ -53,7 +57,7 @@ export const COACH_AI_PROMPT_VERSIONS = {
   // 9 Nov 2026, last: the coach adds up the minutes before it answers, a
   // warm-up takes at most five, and a hard note goes past small steps
   // (one paid call: about 45 of 70 minutes, 8 of warm-up, +1 set each).
-  fill_session_activities: "session-activities-v1.7-2026-11-09",
+  fill_session_activities: "session-activities-v1.8-2026-11-20",
 } as const satisfies Record<CoachAIOperation, string>;
 
 /** The two runtimes ADR-006 and M0-06A permit. Nothing else may ever call out. */
